@@ -35,17 +35,21 @@ public class AuthController {
 		// Faz a autenticação de fato (verifica se existe, se a senha está certa, etc)
 		Authentication authentication = authenticationManager.authenticate(authToken);
 
-		// Depois de autenticar pega os dados do usuário
+		// Após autenticar pega os dados do usuário
 		CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
 		User user = userDetails.getUser();
 
 		System.out.println(user.getPasswordResetRequired());
 
-		// gerando o token jwt com base nesse usuário
+		// Gera o token jwt com base nesse usuário
 
 		String jwt = jwtService.generateToken(userDetails);
 
-		return ResponseEntity.ok(Map.of("token", jwt));
+		return ResponseEntity.ok(Map.of(
+				"token", jwt,
+				"passwordResetRequired", user.getPasswordResetRequired(),
+				"role", user.getRole()
+		));
 	}
 
 }

@@ -15,8 +15,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/companies")
-// Protege todos os endpoints deste controller, permitindo acesso apenas para ADMIN
-@PreAuthorize("hasRole('ADMIN')")
 public class CompanyController {
 
     private final CompanyService companyService;
@@ -33,6 +31,7 @@ public class CompanyController {
      * Recebe um DTO, passa para o serviço e retorna o DTO da empresa criada.
      */
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<CompanyResponseDTO> createCompany(@Valid @RequestBody CompanyRequestDTO dto) {
         Company newCompany = companyService.createCompany(dto);
         CompanyResponseDTO responseDto = companyMapper.toDto(newCompany);
@@ -43,6 +42,7 @@ public class CompanyController {
      * Endpoint para listar todas as empresas cadastradas.
      */
     @GetMapping
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<CompanyResponseDTO>> findAll() {
         List<Company> companies = companyService.findAll();
         List<CompanyResponseDTO> responseDtos = companyMapper.toDtoList(companies);
@@ -53,6 +53,7 @@ public class CompanyController {
      * Endpoint para buscar uma empresa específica pelo seu ID.
      */
     @GetMapping("/{id}")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<CompanyResponseDTO> findById(@PathVariable Long id) {
         Company company = companyService.findById(id);
         CompanyResponseDTO responseDto = companyMapper.toDto(company);
@@ -63,6 +64,7 @@ public class CompanyController {
      * Endpoint para atualizar os dados de uma empresa.
      */
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<CompanyResponseDTO> updateCompany(@PathVariable Long id, @Valid @RequestBody CompanyRequestDTO dto) {
         Company updatedCompany = companyService.updateCompany(id, dto);
         CompanyResponseDTO responseDto = companyMapper.toDto(updatedCompany);
@@ -73,6 +75,7 @@ public class CompanyController {
      * Endpoint para deletar uma empresa.
      */
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteCompany(@PathVariable Long id) {
         companyService.deleteCompany(id);
         return ResponseEntity.noContent().build(); // Retorna status 204 No Content

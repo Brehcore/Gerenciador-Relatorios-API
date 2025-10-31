@@ -2,6 +2,7 @@ package com.gotree.API.controllers;
 
 import com.gotree.API.config.security.CustomUserDetails;
 import com.gotree.API.dto.user.BatchUserInsertResponseDTO;
+import com.gotree.API.dto.user.ChangePasswordRequestDTO;
 import com.gotree.API.dto.user.UserRequestDTO;
 import com.gotree.API.dto.user.UserResponseDTO;
 import com.gotree.API.dto.user.UserUpdateDTO;
@@ -115,6 +116,21 @@ public class UserController {
 
 		// 4. Retornamos o DTO com todos os dados solicitados e o status OK (200).
 		return ResponseEntity.ok(userDto);
+	}
+
+
+
+	@PutMapping("/me/change-password")
+	@PreAuthorize("isAuthenticated()") // Garante que o utilizador esteja logado
+	public ResponseEntity<?> changePassword(Authentication authentication,
+											@Valid @RequestBody ChangePasswordRequestDTO dto) {
+
+		// Pega o e-mail do utilizador autenticado de forma segura
+		String userEmail = authentication.getName();
+
+		userService.changePassword(userEmail, dto.getNewPassword());
+
+		return ResponseEntity.ok(Map.of("message", "Senha alterada com sucesso."));
 	}
 
 }

@@ -2,7 +2,7 @@ package com.gotree.API.services;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional; // Importe Optional
+import java.util.Optional;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -24,6 +24,7 @@ import com.gotree.API.mappers.UserMapper;
 import com.gotree.API.repositories.UserRepository;
 import br.com.caelum.stella.validation.CPFValidator;
 import br.com.caelum.stella.validation.InvalidStateException;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class UserService implements UserDetailsService {
@@ -51,7 +52,7 @@ public class UserService implements UserDetailsService {
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário com ID " + id + " não encontrado."));
     }
 
-    // Método público para encontrar um usuário por email
+    // Metodo público para encontrar um usuário por email
     public Optional<User> findByEmail(String email) {
         return userRepository.findByEmail(email);
     }
@@ -91,7 +92,6 @@ public class UserService implements UserDetailsService {
         String newPassword = user.getEmail();
         user.setPassword(passwordEncoder.encode(newPassword));
         user.setPasswordResetRequired(true);
-
 
         userRepository.save(user);
     }
@@ -138,6 +138,28 @@ public class UserService implements UserDetailsService {
         }
     }
 
+
+    @Transactional
+    public void changePassword(String userEmail, String newPassword) {
+        // 1. Busca o utilizador pelo e-mail (que é o identificador do utilizador autenticado)
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new RuntimeException("Utilizador não encontrado."));
+
+        // 2. (Opcional, mas recomendado) Verifica se a flag de reset está ativa
+        if (!Boolean.TRUE.equals(user.getPasswordResetRequired())) {
+            throw new IllegalStateException("A alteração de senha não é necessária ou permitida no momento.");
+        }
+
+        // 3. Codifica a nova senha antes de salvar
+        user.setPassword(passwordEncoder.encode(newPassword));
+
+        // 4. Desativa a flag de reset, permitindo o acesso normal ao sistema
+        user.setPasswordResetRequired(false);
+
+        // 5. Salva as alterações no banco de dados
+        userRepository.save(user);
+    }
+
     // endregion
 
     // region Spring Security Integration
@@ -152,4 +174,5 @@ public class UserService implements UserDetailsService {
     }
 
     // endregion
+
 }

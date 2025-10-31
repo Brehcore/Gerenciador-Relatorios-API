@@ -61,10 +61,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 throw new BadCredentialsException("Token inválido");
             }
 
-            // 1. Crie o CustomUserDetails a partir do User encontrado
+            // Cria o CustomUserDetails a partir do User encontrado
             CustomUserDetails userDetails = new CustomUserDetails(user);
 
-            // 2. Use o userDetails (e não o 'user') como o principal da autenticação
+            // Usa o userDetails (e não o 'user') como o principal da autenticação
             var authToken = new UsernamePasswordAuthenticationToken(
                     userDetails,
                     null,

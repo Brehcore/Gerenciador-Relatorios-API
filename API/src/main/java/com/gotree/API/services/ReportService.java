@@ -1,19 +1,23 @@
 package com.gotree.API.services;
 
+import com.lowagie.text.pdf.BaseFont;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
-// CORREÇÃO: Altere o import do Context
-import org.thymeleaf.context.Context; // <-- Importação Correta
+import org.thymeleaf.context.Context;
 import org.xhtmlrenderer.pdf.ITextRenderer;
 
-// import javax.naming.Context; // <-- REMOVA ESTA LINHA
-
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.IOException;
+import java.net.URL;
 import java.util.Map;
 
 @Service
 public class ReportService {
 
+    private static final Logger logger = LoggerFactory.getLogger(ReportService.class);
     private final TemplateEngine templateEngine;
 
     public ReportService(TemplateEngine templateEngine) {
@@ -21,23 +25,44 @@ public class ReportService {
     }
 
     public byte[] generatePdfFromHtml(String templateName, Map<String, Object> data) {
-        // Agora esta linha usará a classe Context correta do Thymeleaf
         Context context = new Context();
         context.setVariables(data);
 
-        // 2. Processa o template HTML com os dados
+        logger.info("Gerando HTML para o template: {}", templateName);
         String htmlContent = templateEngine.process(templateName, context);
+        logger.debug("Conteúdo HTML gerado:\n{}", htmlContent); // Loga o HTML completo para depuração
 
-        // 3. Usa o Flying Saucer para renderizar o HTML como PDF
         try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
             ITextRenderer renderer = new ITextRenderer();
-            renderer.setDocumentFromString(htmlContent);
-            renderer.layout();
-            renderer.createPDF(outputStream);
+
+            // Bloco da fonte (sabemos que funciona, mas mantemos para consistência)
+            try {
+                URL fontUrl = getClass().getResource("/fonts/Montserrat.ttf");
+                if (fontUrl == null) {
+                    throw new IOException("Arquivo da fonte '/fonts/Montserrat.ttf' não encontrado.");
+                }
+                renderer.getFontResolver().addFont(fontUrl.toString(), BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
+            } catch (Exception e) {
+                logger.error("Falha ao carregar a fonte:", e);
+                throw new RuntimeException("Falha ao carregar a fonte Montserrat.", e);
+            }
+
+            // Configuração do Base URI para encontrar imagens locais
+            String baseUri = new File("/").toURI().toString();
+            renderer.setDocumentFromString(htmlContent, baseUri);
+
+            logger.info("Renderizador configurado com Base URI: {}. Executando layout...", baseUri);
+            renderer.layout(); // O erro provavelmente acontece aqui
+
+            logger.info("Layout concluído. Criando PDF...");
+            renderer.createPDF(outputStream); // Ou aqui
+
+            logger.info("PDF gerado com sucesso.");
             return outputStream.toByteArray();
         } catch (Exception e) {
-            // Lide com a exceção apropriadamente
-            throw new RuntimeException("Erro ao gerar PDF", e);
+            // ESTE É O LOG QUE PRECISAMOS. Ele mostrará a exceção original.
+            logger.error("==== FALHA CRÍTICA NA GERAÇÃO DO PDF ====", e);
+            throw new RuntimeException("Erro ao renderizar o PDF. Verifique o log de erro para a causa raiz.", e);
         }
     }
 }

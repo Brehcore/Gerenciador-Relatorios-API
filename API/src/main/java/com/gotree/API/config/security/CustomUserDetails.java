@@ -8,10 +8,10 @@ import org.springframework.security.core.userdetails.UserDetails;
 import java.io.Serial; // Importa a anotação @Serial
 import java.util.Collection;
 
-@Getter // @Getter no nível da classe
+@Getter
 public class CustomUserDetails implements UserDetails {
 
-	@Serial // @Serial ao serialVersionUID
+	@Serial
 	private static final long serialVersionUID = 1L;
 
 	private final User user;
@@ -19,7 +19,6 @@ public class CustomUserDetails implements UserDetails {
 	public CustomUserDetails(User user) {
 		this.user = user;
 	}
-
 
 	@Override
 	public Collection<? extends GrantedAuthority> getAuthorities() {

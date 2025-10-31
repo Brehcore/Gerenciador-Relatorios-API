@@ -39,7 +39,7 @@ public class User implements Serializable, UserDetails {
     @Column(nullable = false)
     private UserRole role = UserRole.USER;
 
-    @Column(nullable = false)
+    @Column(name = "password_reset_required")
     private Boolean passwordResetRequired = false;
 
     private String siglaConselhoClasse;

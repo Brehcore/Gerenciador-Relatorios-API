@@ -1,7 +1,6 @@
 package com.gotree.API.services;
 
 import com.gotree.API.config.security.CustomUserDetails;
-import com.gotree.API.dto.report.ClientSignatureDTO;
 import com.gotree.API.dto.report.InspectionReportResponseDTO;
 import com.gotree.API.dto.report.SaveInspectionReportRequestDTO;
 import com.gotree.API.entities.*;
@@ -13,10 +12,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.thymeleaf.TemplateEngine;
-import org.thymeleaf.context.Context;
-import org.xhtmlrenderer.pdf.ITextRenderer;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -36,6 +32,7 @@ public class InspectionReportService {
     private final SectorRepository sectorRepository;
     private final TemplateEngine templateEngine;
     private final InspectionReportMapper inspectionReportMapper;
+    private final ReportService reportService;
 
     @Value("${app.generating-company.name}")
     private String generatingCompanyName;
@@ -51,13 +48,15 @@ public class InspectionReportService {
                                    UnitRepository unitRepository,
                                    SectorRepository sectorRepository,
                                    TemplateEngine templateEngine,
-                                   InspectionReportMapper inspectionReportMapper) {
+                                   InspectionReportMapper inspectionReportMapper,
+                                   ReportService reportService) {
         this.inspectionReportRepository = inspectionReportRepository;
         this.companyRepository = companyRepository;
         this.unitRepository = unitRepository;
         this.sectorRepository = sectorRepository;
         this.templateEngine = templateEngine;
         this.inspectionReportMapper = inspectionReportMapper;
+        this.reportService = reportService;
     }
 
     @Transactional
@@ -92,14 +91,13 @@ public class InspectionReportService {
         // Dados do Técnico
         report.setTechnician(technician);
         report.setTechnicianSignedAt(LocalDateTime.now());
-        if (dto.getTechnicianSignature() != null) {
-            report.setTechnicianSignatureImageBase64(dto.getTechnicianSignature().getImageBase64());
-        }
 
-        // Dados do Cliente
+        if (dto.getTechnicianSignature() != null) {
+            report.setTechnicianSignatureImageBase64(stripDataUrlPrefix(dto.getTechnicianSignature().getImageBase64()));
+        }
         if (dto.getClientSignature() != null) {
             report.setClientSignerName(dto.getClientSignature().getSignerName());
-            report.setClientSignatureImageBase64(dto.getClientSignature().getImageBase64());
+            report.setClientSignatureImageBase64(stripDataUrlPrefix(dto.getClientSignature().getImageBase64())); // Correção aqui
             report.setClientSignatureLatitude(dto.getClientSignature().getLatitude());
             report.setClientSignatureLongitude(dto.getClientSignature().getLongitude());
             report.setClientSignedAt(LocalDateTime.now());
@@ -136,12 +134,26 @@ public class InspectionReportService {
             Files.createDirectories(path.getParent());
             Files.write(path, pdfBytes);
 
-            savedReport.setPdfPath(path.toString());
+            savedReport.setPdfPath(fileName);
             return inspectionReportRepository.save(savedReport);
 
         } catch (IOException e) {
             throw new RuntimeException("Falha ao salvar o arquivo PDF.", e);
         }
+    }
+
+    /**
+     * Metodo auxiliar para remover o prefixo 'data:image/...' de uma string Base64.
+     */
+    private String stripDataUrlPrefix(String dataUrl) {
+        if (dataUrl == null) {
+            return null;
+        }
+        int commaIndex = dataUrl.indexOf(',');
+        if (commaIndex != -1) {
+            return dataUrl.substring(commaIndex + 1);
+        }
+        return dataUrl; // Retorna a string original se o prefixo não for encontrado
     }
 
     @Transactional(readOnly = true) // Melhora a performance para consultas
@@ -154,7 +166,6 @@ public class InspectionReportService {
         return inspectionReportMapper.toDtoList(reports);
     }
 
-    // --- MÉTODO DE BUSCA DO HISTÓRICO CORRIGIDO ---
     @Transactional(readOnly = true)
     // 4. ATUALIZE O TIPO DE RETORNO
     public List<InspectionReportResponseDTO> findLatestReportsByTechnician(User technician) {
@@ -186,32 +197,8 @@ public class InspectionReportService {
         // Define qual template usar com base no tipo do relatório
         String templateName = "checklist-inspensao-template"; // Lógica pode ser expandida aqui
 
-        // Chama o método reutilizável
-        return generatePdfFromHtml(templateName, data);
-    }
-
-    // MÉTODO 2: Lógica centralizada para converter HTML em PDF
-    private byte[] generatePdfFromHtml(String templateName, Map<String, Object> data) {
-        Context context = new Context();
-        context.setVariables(data);
-
-        String htmlContent = templateEngine.process(templateName, context);
-
-        // DEBUGAR
-        // REMOVER DEPOIS DE TESTAR
-//        System.out.println("---- INÍCIO DO HTML GERADO PARA O PDF ----");
-//        System.out.println(htmlContent);
-//        System.out.println("---- FIM DO HTML GERADO PARA O PDF ----");
-
-        try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
-            ITextRenderer renderer = new ITextRenderer();
-            renderer.setDocumentFromString(htmlContent);
-            renderer.layout();
-            renderer.createPDF(outputStream);
-            return outputStream.toByteArray();
-        } catch (Exception e) {
-            throw new RuntimeException("Erro ao gerar PDF a partir do HTML", e);
-        }
+        // Chama o metodo reutilizável
+        return reportService.generatePdfFromHtml(templateName, data);
     }
 
     @Transactional
@@ -229,7 +216,7 @@ public class InspectionReportService {
         // 3. APAGA O ARQUIVO PDF DO DISCO
         try {
             if (report.getPdfPath() != null && !report.getPdfPath().isBlank()) {
-                Path pdfPath = Paths.get(report.getPdfPath());
+                Path pdfPath = Paths.get(fileStoragePath, report.getPdfPath());
                 Files.deleteIfExists(pdfPath);
             }
         } catch (IOException e) {

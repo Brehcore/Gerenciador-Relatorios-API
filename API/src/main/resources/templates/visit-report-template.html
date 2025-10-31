@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <style>
+        @page {
+            size: A4 landscape;
+            margin: 0.5cm;
+        }
+        body { font-family: 'Montserrat', sans-serif; font-size: 10pt; color: #333; }
+        h1 { font-size: 14pt; text-align: center; margin-bottom: 20px; text-transform: uppercase; }
+        .info-block {
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+        .info-block p { margin: 5px 0; }
+        h2 { font-size: 11pt; background-color: #f2f2f2; padding: 6px; margin-top: 20px; margin-bottom: 10px; }
+        .summary-text { text-align: justify; }
+
+        /* Tabela de achados */
+        .findings-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-size: 8pt;
+        }
+        .findings-table th, .findings-table td {
+            border: 1px solid #999;
+            padding: 5px;
+            text-align: left;
+            vertical-align: top;
+        }
+        .findings-table th { background-color: #f2f2f2; }
+        .findings-table tr { page-break-inside: avoid; }
+        .findings-table td {
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            hyphens: auto;
+        }
+
+
+        /* Célula da foto */
+        .findings-table .photo-cell {
+            text-align: center;
+        }
+        /* AJUSTE 1: Regra para a imagem do registro fotográfico */
+        .findings-table .photo-cell img {
+            display: block;
+            margin: 0 auto 5px auto;
+            max-width: 6.8cm !important;
+            max-height: 5cm !important; /* opcional — evita fotos verticais gigantes */
+            width: auto !important;
+            height: auto !important;
+            object-fit: contain;
+            text-align: center;
+        }
+
+        /* Contêiner principal da seção de assinaturas */
+        .signatures {
+            margin-top: 50px;
+            width: 100%;
+            page-break-inside: avoid;
+            text-align: center;
+        }
+
+        .signatures table {
+            width: 90%;              /* respiro lateral */
+            margin: 0 auto;          /* centraliza a tabela */
+            border-collapse: collapse; /* remove espaçamento */
+        }
+
+        .signature-cell {
+            width: 50%;
+            vertical-align: bottom;
+            text-align: center;
+        }
+
+        .signature-box {
+            display: inline-block;
+            width: 100%;
+            text-align: center;
+        }
+
+        .signature-line {
+            display: block;
+            width: 60%;
+            border-top: 1px solid #333;
+            margin: 5px auto 8px auto; /* força centralização e visibilidade */
+        }
+
+
+
+    </style>
+</head>
+<body>
+
+<h1>Relatório de Visita Técnica de Segurança do Trabalho</h1>
+
+<div class="info-block">
+    <p><strong>Empresa:</strong> <span th:text="${generatingCompanyName}"></span></p>
+    <p><strong>CNPJ:</strong> <span th:text="${generatingCompanyCnpj}"></span></p>
+</div>
+
+<div class="info-block">
+    <p><strong>Empresa Cliente:</strong> <span th:text="${visit.clientCompany?.name}"></span></p>
+    <p><strong>CNPJ:</strong> <span th:text="${visit.clientCompany?.cnpj}"></span></p>
+    <p th:if="${visit.unit != null}"><strong>Unidade:</strong> <span th:text="${visit.unit.name}"></span></p>
+    <p th:if="${visit.sector != null}"><strong>Setor:</strong> <span th:text="${visit.sector.name}"></span></p>
+    <p><strong>Local da Visita:</strong> <span th:text="${visit.location}"></span></p>
+    <p><strong>Data da Visita:</strong> <span th:text="${#temporals.format(visit.visitDate, 'dd/MM/yyyy')}"></span></p>
+    <p><strong>Hora Inicial:</strong> <span th:text="${#temporals.format(visit.startTime, 'HH:mm')}"></span></p>
+    <p th:if="${visit.endTime != null}">
+        <strong>Hora Final:</strong> <span th:text="${#temporals.format(visit.endTime, 'HH:mm')}"></span>
+    </p>
+    <p th:if="${visit.endTime != null and visit.startTime != null}">
+        <strong>Tempo Total Estimado:</strong> <span th:text="${T(java.time.Duration).between(visit.startTime, visit.endTime).toMinutes() + ' minutos'}"></span>
+    </p>
+</div>
+
+<div class="info-block">
+    <p><strong>Responsável:</strong> <span th:text="${visit.technician?.name}"></span></p>
+    <p><strong>Sigla Conselho:</strong> <span th:text="${visit.technician?.siglaConselhoClasse}"></span></p>
+    <p><strong>Registro Conselho:</strong> <span th:text="${visit.technician?.conselhoClasse}"></span></p>
+    <p><strong>Especialidade:</strong> <span th:text="${visit.technician?.especialidade}"></span></p>
+</div>
+
+<div>
+<h2>Referências Técnicas Utilizadas</h2>
+<p style="white-space: pre-wrap; text-align: justify; line-height: 0.8;">
+    INSPEÇÃO Meio Ambiente<br/>
+    INSPEÇÃO NR 01 - Documentações<br/>
+    INSPEÇÃO NR 06 - EPI (Equipamento de Proteção Individual)<br/>
+    INSPEÇÃO NR 06 - EPC (Equipamento de Proteção Coletiva)<br/>
+    INSPEÇÃO NR 07 - Documentações<br/>
+    INSPEÇÃO NR 11 - Transporte, movimentação, manuseio e armazenagem de materiais<br/>
+    INSPEÇÃO NR 12 - Máquinas e equipamentos<br/>
+    INSPEÇÃO NR 23 - Proteção e Combate Contra Incêndios<br/>
+    INSPEÇÃO NR 35 - Trabalho em altura
+</p>
+</div>
+
+
+<h2>Resumo Geral da Visita</h2>
+<p class="summary-text" th:text="${visit.summary}"></p>
+
+<div style="page-break-before: auto;" th:if="${!visit.findings.isEmpty()}">
+    <h2>Registro Fotográfico e Recomendações</h2>
+    <table class="findings-table" style="table-layout: fixed; width: 100%;">
+        <colgroup>
+            <col style="width: 7.0cm;" />  <!-- Registro Fotográfico -->
+            <col style="width: 3cm;" />  <!-- Descrição -->
+            <col style="width: 3.5cm;" />  <!-- Consequências -->
+            <col style="width: 3cm;" />    <!-- Orientação Legal -->
+            <col style="width: 2.3cm;" />  <!-- Penalidades -->
+            <col style="width: 2.5cm;" />  <!-- Responsável -->
+            <col style="width: 2cm;" />    <!-- Prioridade -->
+            <col style="width: 2cm;" />    <!-- Prazo -->
+            <col style="width: 3cm;" />  <!-- Reincidência -->
+        </colgroup>
+
+        <thead>
+        <tr>
+            <th>Registro Fotográfico</th>
+            <th>Descrição</th>
+            <th>Consequências</th>
+            <th>Orientação Legal</th>
+            <th>Penalidades</th>
+            <th>Responsável</th>
+            <th>Prioridade</th>
+            <th>Prazo</th>
+            <th>Reincidência</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="finding : ${visit.findings}">
+            <td class="photo-cell">
+                <img th:if="${finding.photoPath1}" th:src="'file:///' + ${finding.photoPath1}" />
+                <img th:if="${finding.photoPath2}" th:src="'file:///' + ${finding.photoPath2}" />
+            </td>
+            <td th:text="${finding.description}" style="word-wrap: break-word;"></td>
+            <td th:text="${finding.consequences}" style="word-wrap: break-word;"></td>
+            <td th:text="${finding.legalGuidance}" style="word-wrap: break-word;"></td>
+            <td th:text="${finding.penalties}" style="word-wrap: break-word;"></td>
+            <td th:text="${finding.responsible}" style="word-wrap: break-word;"></td>
+            <td th:text="${finding.priority}" style="word-wrap: break-word;"></td>
+            <td th:text="${finding.deadline != null ? #temporals.format(finding.deadline, 'dd/MM/yyyy') : ''}" style="word-wrap: break-word;"></td>
+            <td th:text="${finding.recurrence ? 'Sim' : 'Não'}" style="word-wrap: break-word;"></td>
+        </tr>
+
+        </tbody>
+    </table>
+</div>
+
+<div class="signatures">
+    <table>
+        <tbody>
+        <tr>
+            <td class="signature-cell">
+                <div class="signature-box">
+                    <img th:if="${visit.technicianSignatureImageBase64}"
+                         th:src="'data:image/png;base64,' + ${visit.technicianSignatureImageBase64}"
+                         alt="Assinatura do Técnico"
+                         style="max-height: 40px;"/>
+
+                    <div class="signature-line"></div>
+
+                    <p th:text="${visit.technician?.name}" style="margin: 0; font-weight: bold;"></p>
+                    <p th:if="${visit.technician?.conselhoClasse != null}"
+                       style="font-size: 9pt; margin: 0;"
+                       th:text="${visit.technician.conselhoClasse + ' | ' + visit.technician.siglaConselhoClasse}"></p>
+                    <p th:if="${visit.technician?.especialidade != null}"
+                       style="font-size: 9pt; margin: 0;"
+                       th:text="${visit.technician.especialidade}"></p>
+                    <p th:if="${visit.technicianSignedAt != null}"
+                       style="font-size: 8pt; margin: 5px 0 0 0; color: #666;">
+                        <span th:text="${'Assinado em: ' + #temporals.format(visit.technicianSignedAt, 'dd/MM/yyyy HH:mm:ss')}"></span>
+                    </p>
+                </div>
+            </td>
+
+            <td class="signature-cell">
+                <div class="signature-box">
+                    <img th:if="${visit.clientSignatureImageBase64}"
+                         th:src="'data:image/png;base64,' + ${visit.clientSignatureImageBase64}"
+                         alt="Assinatura do Cliente"
+                         style="max-height: 40px;"/>
+
+                    <div class="signature-line"></div>
+
+                    <p th:text="${visit.clientSignerName}" style="margin: 0; font-weight: bold;"></p>
+                    <p style="font-size: 9pt; margin: 0;">Responsável</p>
+                    <p th:if="${visit.clientSignatureLatitude != null and visit.clientSignedAt != null}"
+                       style="font-size: 8pt; margin: 5px 0 0 0; color: #666;">
+                        <span th:text="${'Assinado em: ' + #temporals.format(visit.clientSignedAt, 'dd/MM/yyyy HH:mm:ss')}"></span>
+                        <span th:text="${'Lat ' + visit.clientSignatureLatitude + ', Lon ' + visit.clientSignatureLongitude}"> </span>
+                    </p>
+                </div>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+
+
+</body>
+</html>

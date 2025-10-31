@@ -1,12 +1,14 @@
 package com.gotree.API.admin;
 
 import com.gotree.API.repositories.UserRepository;
+import lombok.Getter;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
 import javax.sql.DataSource;
 
 @Service
+@Getter
 @Profile("test")
 public class DataBaseMaintenanceService {
 
@@ -33,17 +35,13 @@ public class DataBaseMaintenanceService {
 		userRepository.deleteAll();
 	}
 
-	// Pega nome do banco de dados de acordo com a conexão.
+	// Pega nome do banco de dados conforme a conexão.
 	public String getDatabaseName() {
 		try (var connection = dataSource.getConnection()) {
 			return connection.getCatalog();
 		} catch (Exception e) {
 			throw new RuntimeException("Erro ao obter o nome do banco de dados", e);
 		}
-	}
-
-	public String getToken() {
-		return token;
 	}
 
 }

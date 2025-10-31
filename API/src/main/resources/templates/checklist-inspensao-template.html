@@ -31,6 +31,10 @@
 <div class="general-info">
   <p><strong>Empresa Cliente:</strong> <span th:text="${report.company?.name}"></span></p>
   <p><strong>CNPJ:</strong> <span th:text="${report.company?.cnpj}"></span></p>
+
+  <p th:if="${report.unit != null}"><strong>Unidade:</strong> <span th:text="${report.unit.name}"></span></p>
+  <p th:if="${report.sector != null}"><strong>Setor:</strong> <span th:text="${report.sector.name}"></span></p>
+
   <p><strong>Local da Inspeção:</strong> <span th:text="${report.local}"></span></p>
   <p><strong>Data da inspeção:</strong> <span th:text="${#temporals.format(report.inspectionDate, 'dd/MM/yyyy')}"></span></p>
 </div>
