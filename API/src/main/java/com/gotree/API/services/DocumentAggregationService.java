@@ -4,6 +4,7 @@ import com.gotree.API.dto.document.DocumentSummaryDTO;
 import com.gotree.API.entities.InspectionReport;
 import com.gotree.API.entities.TechnicalVisit;
 import com.gotree.API.entities.User;
+import com.gotree.API.repositories.AepReportRepository;
 import com.gotree.API.repositories.InspectionReportRepository;
 import com.gotree.API.repositories.TechnicalVisitRepository;
 import org.springframework.beans.factory.annotation.Value;
@@ -27,6 +28,7 @@ public class DocumentAggregationService {
     private final InspectionReportService inspectionReportService;
     private final TechnicalVisitService technicalVisitService;
     private final AepService aepService;
+    private final AepReportRepository aepReportRepository;
 
     @Value("${file.storage.path}") // Injete o caminho base aqui também
     private String fileStoragePath;
@@ -35,12 +37,13 @@ public class DocumentAggregationService {
                                       TechnicalVisitRepository technicalVisitRepository,
                                       InspectionReportService inspectionReportService,
                                       TechnicalVisitService technicalVisitService,
-                                      AepService aepService) {
+                                      AepService aepService, AepReportRepository aepReportRepository) {
         this.inspectionReportRepository = inspectionReportRepository;
         this.technicalVisitRepository = technicalVisitRepository;
         this.inspectionReportService = inspectionReportService;
         this.technicalVisitService = technicalVisitService;
         this.aepService = aepService;
+        this.aepReportRepository = aepReportRepository;
     }
 
     @Transactional(readOnly = true)
@@ -73,8 +76,23 @@ public class DocumentAggregationService {
                 })
                 .toList();
 
+        // Bloco 3: Relatório AEP
+        List<DocumentSummaryDTO> aepReports = aepReportRepository.findAllByEvaluator(technician) // (Você precisará criar este método no AepReportRepository)
+                .stream()
+                .map(aep -> {
+                    DocumentSummaryDTO dto = new DocumentSummaryDTO();
+                    dto.setId(aep.getId());
+                    dto.setDocumentType("Avaliação Ergonômica Preliminar");
+                    dto.setTitle(aep.getEvaluatedFunction()); // Usa a "Função Avaliada" como título
+                    dto.setClientName(aep.getCompany() != null ? aep.getCompany().getName() : "N/A");
+                    dto.setCreationDate(aep.getEvaluationDate());
+                    return dto;
+                })
+                .toList();
+
         // 3. Junta todas as listas numa só
-        List<DocumentSummaryDTO> allDocuments = Stream.concat(inspectionReports.stream(), technicalVisits.stream())
+        List<DocumentSummaryDTO> allDocuments = Stream.of(inspectionReports, technicalVisits, aepReports)
+                .flatMap(List::stream)
                 .collect(Collectors.toList());
 
         // 4. Ordena a lista final pela data de criação, dos mais recentes para os mais antigos
@@ -91,11 +109,12 @@ public class DocumentAggregationService {
         return allDocuments.stream().limit(5).collect(Collectors.toList());
     }
 
-    public byte[] loadPdfFileByTypeAndId(String type, Long id) throws IOException {
-        String fileName;
+    public byte[] loadPdfFileByTypeAndId(String type, Long id, User currentUser) throws IOException {
+        System.out.println("--- DEBUG [Agregação]: Roteando para tipo: " + type); // DEBUG
 
-        // Usamos um 'if/else if' para decidir qual repositório usar
-        // "checklist" e "visit" são exemplos, use os nomes que fizerem sentido para você
+        String fileName = null;
+        byte[] pdfBytes = null;
+
         if ("checklist".equalsIgnoreCase(type)) {
             InspectionReport report = inspectionReportRepository.findById(id)
                     .orElseThrow(() -> new RuntimeException("Checklist com ID " + id + " não encontrado."));
@@ -106,15 +125,33 @@ public class DocumentAggregationService {
                     .orElseThrow(() -> new RuntimeException("Relatório de Visita com ID " + id + " não encontrado."));
             fileName = visit.getPdfPath();
 
+        } else if ("aep".equalsIgnoreCase(type)) {
+            System.out.println("--- DEBUG [Agregação]: Chamando AepService para ID: " + id); // DEBUG
+            pdfBytes = aepService.loadOrGenerateAepPdf(id, currentUser);
+            System.out.println("--- DEBUG [Agregação]: Retornou do AepService. Bytes: " + (pdfBytes != null ? pdfBytes.length : "null")); // DEBUG
+            // fileName permanece nulo, o que está correto
+
         } else {
             throw new IllegalArgumentException("Tipo de documento inválido: " + type);
         }
 
-        if (fileName == null || fileName.isBlank()) {
-            throw new RuntimeException("Este documento não possui um PDF associado.");
+        // Se os bytes foram gerados (é um AEP), retorne imediatamente.
+        if (pdfBytes != null) {
+            System.out.println("--- DEBUG [Agregação]: Retornando bytes do AEP imediatamente."); // DEBUG
+            return pdfBytes;
         }
 
-        // A lógica de reconstrução do caminho que já corrigimos continua a mesma
+        // --- INÍCIO DA CORREÇÃO ---
+        // Se o código chegou aqui, é um "checklist" ou "visit".
+        // Precisamos garantir que o fileName não seja nulo ANTES de usá-lo.
+        if (fileName == null || fileName.isBlank()) {
+            System.err.println("--- ERRO DEBUG [Agregação]: fileName está nulo ou em branco para o tipo: " + type); // DEBUG
+            throw new RuntimeException("Este documento não possui um PDF associado.");
+        }
+        // --- FIM DA CORREÇÃO ---
+
+        // Agora, este código só é executado se tivermos um fileName válido.
+        System.out.println("--- DEBUG [Agregação]: Carregando arquivo do disco: " + fileName); // DEBUG
         Path path = Paths.get(fileStoragePath, fileName);
         if (!Files.exists(path)) {
             throw new IOException("Arquivo PDF não encontrado no caminho: " + path);

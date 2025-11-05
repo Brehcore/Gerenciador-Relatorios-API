@@ -24,4 +24,7 @@ public class CreateTechnicalVisitRequestDTO {
     private String clientSignerName;
     private Double clientSignatureLatitude;
     private Double clientSignatureLongitude;
+
+    // Agendamento da próxima visita
+    private LocalDate nextVisitDate;
 }

@@ -14,4 +14,16 @@ public interface TechnicalVisitRepository extends JpaRepository<TechnicalVisit, 
 
     @Query("SELECT v FROM TechnicalVisit v LEFT JOIN FETCH v.clientCompany WHERE v.technician = :technician ORDER BY v.visitDate DESC")
     List<TechnicalVisit> findAllWithCompanyByTechnician(@Param("technician") User technician);
+
+    /**
+     * Encontra todas as visitas que têm uma "próxima visita" agendada,
+     * já trazendo a Empresa (clientCompany), a Unidade (unit) e o Setor (sector).
+     */
+    @Query("SELECT v FROM TechnicalVisit v " +
+            "LEFT JOIN FETCH v.clientCompany " +
+            "LEFT JOIN FETCH v.unit " +
+            "LEFT JOIN FETCH v.sector " +
+            "WHERE v.technician = :technician AND v.nextVisitDate IS NOT NULL " +
+            "ORDER BY v.nextVisitDate ASC")
+    List<TechnicalVisit> findAllScheduledWithCompanyByTechnician(@Param("technician") User technician);
 }

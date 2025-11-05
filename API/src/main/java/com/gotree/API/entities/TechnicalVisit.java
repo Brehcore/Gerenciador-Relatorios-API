@@ -55,4 +55,7 @@ public class TechnicalVisit {
     private LocalDateTime clientSignedAt;
     private Double clientSignatureLatitude;
     private Double clientSignatureLongitude;
+
+    @Column(name = "next_visit_date")
+    private LocalDate nextVisitDate;
 }

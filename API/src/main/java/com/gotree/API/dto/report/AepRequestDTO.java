@@ -12,6 +12,5 @@ public class AepRequestDTO {
     private List<String> selectedRiskIds; // Apenas os IDs dos riscos selecionados
 
     // --- Campos para a Fisioterapeuta
-    private String physioName;
-    private String physioCrefito;
+    private Long physiotherapistId;
 }

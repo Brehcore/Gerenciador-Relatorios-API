@@ -84,6 +84,9 @@ public class TechnicalVisitService {
         visit.setLocation(dto.getLocation());
         visit.setSummary(dto.getSummary());
 
+        // Mapear os dados do agendamento da próxima visita
+        visit.setNextVisitDate(dto.getNextVisitDate());
+
         // Mapear dados das assinaturas
         visit.setTechnicianSignatureImageBase64(stripDataUrlPrefix(dto.getTechnicianSignatureImageBase64()));
         visit.setTechnicianSignedAt(LocalDateTime.now());

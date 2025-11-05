@@ -62,22 +62,40 @@ public class DocumentController {
      */
     @GetMapping("/{type}/{id}/pdf") // Ex: /documents/visit/45/pdf
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<byte[]> downloadDocumentPdf(@PathVariable String type, @PathVariable Long id) {
+    public ResponseEntity<byte[]> downloadDocumentPdf(@PathVariable String type, @PathVariable Long id, Authentication authentication) {
+
+        //DEBUGGER
+        System.out.println("--- DEBUG [Controller]: Recebi requisição para baixar um documento PDF. ---");
+
         try {
+            CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+            User currentUser = userDetails.getUser();
+
             // Agora passamos o tipo e o ID para o serviço
-            byte[] pdfBytes = documentAggregationService.loadPdfFileByTypeAndId(type, id);
+            byte[] pdfBytes = documentAggregationService.loadPdfFileByTypeAndId(type, id, currentUser);
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_PDF);
             String filename = type + "_" + id + ".pdf";
             headers.setContentDispositionFormData("attachment", filename);
 
+            //DEBUGGER
+            System.out.println("--- DEBUG [Controller]: Enviando resposta 200 Ok. ---");
+
             return new ResponseEntity<>(pdfBytes, headers, HttpStatus.OK);
 
         } catch (IOException e) {
+            //DEBUGGER
+            System.out.println("--- DEBUG [Controller]: Capturando erro de IO. ---" + e.getMessage());
+            e.printStackTrace();
+
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         } catch (RuntimeException e) {
             // Captura erros como "Tipo de documento inválido" ou "Documento não encontrado"
+            //DEBUGGER
+            System.out.println("--- DEBUG [Controller]: Capturando RuntimeException. ---" + e.getMessage());
+            e.printStackTrace();
+
             return ResponseEntity.notFound().build();
         }
     }

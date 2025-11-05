@@ -53,10 +53,7 @@ public class AepReport {
     private List<String> selectedRisks;
 
     // --- Informações da Fisioterapeuta ---
-
-    @Column(name = "physio_name")
-    private String physioName;
-
-    @Column(name = "physio_crefito")
-    private String physioCrefito;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "physiotherapist_id")
+   private Physiotherapist physiotherapist;
 }

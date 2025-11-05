@@ -1,6 +1,7 @@
 package com.gotree.API.controllers;
 
 import com.gotree.API.config.security.CustomUserDetails;
+import com.gotree.API.dto.report.AepDetailDTO;
 import com.gotree.API.dto.report.AepRequestDTO;
 import com.gotree.API.entities.AepReport;
 import com.gotree.API.entities.User;
@@ -58,6 +59,18 @@ public class AepController {
                         "message", "AEP atualizada com sucesso!",
                         "reportId", updatedAep.getId()
                 ));
+    }
+
+    // --- NOVO ENDPOINT PARA CARREGAR DADOS PARA EDIÇÃO ---
+    @GetMapping("/{id}")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<AepDetailDTO> getAepReportDetails(@PathVariable Long id, Authentication authentication) {
+        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+        User currentUser = userDetails.getUser();
+
+        AepDetailDTO aepDetails = aepService.findAepDetails(id, currentUser);
+
+        return ResponseEntity.ok(aepDetails);
     }
 
 }

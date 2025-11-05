@@ -1,9 +1,11 @@
 package com.gotree.API.services;
 
+import com.gotree.API.dto.report.AepDetailDTO;
 import com.gotree.API.dto.report.AepRequestDTO;
 import com.gotree.API.entities.*;
 import com.gotree.API.repositories.AepReportRepository;
 import com.gotree.API.repositories.CompanyRepository;
+import com.gotree.API.repositories.PhysiotherapistRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,17 +25,47 @@ public class AepService {
 
     // A LISTA MESTRE DE TODOS OS RISCOS
     private static final List<String> MASTER_RISK_LIST = Arrays.asList(
-            "Trabalho em posturas incômodas ou pouco confortáveis por longos periodos",
+            "Trabalho em posturas incômodas ou pouco confortáveis por longos períodos",
             "Postura sentada por longos períodos",
-            "Postura de pé por longos periodos",
+            "Postura de pé por longos períodos",
             "Frequente deslocamento a pé durante a jornada de trabalho",
-            // ... (todos os outros riscos da sua lista) ...
+            "Trabalho com esforço físico intenso",
+            "Levantamento e transporte manual de cargas ou volumes",
+            "Frequente ação de puxar/empurrar cargas ou volumes",
+            "Frequente execução de movimentos repetitivos",
+            "Manuseio de ferramentas e/ou objetos pesados por longos períodos",
+            "Exigência de uso frequente de força, pressão, preensão, flexão, extensão ou torção dos segmentos corporais",
+            "Compressão de partes do corpo por superfícies rígidas ou com quinas",
+            "Exigência de flexões de coluna vertebral frequentes",
+            "Uso frequente de pedais",
+            "Uso frequente de alavancas",
+            "Exigência de elevação frequente de membros superiores",
+            "Manuseio ou movimentação de cargas e volumes sem pega ou com \"pega pobre\"",
+            "Uso frequente de escadas",
+            "Trabalho intensivo com teclado ou outros dispositivos de entrada de dados",
+            "Posto de trabalho improvisado",
+            "Mobiliário sem meios de regulagem de ajuste",
+            "Equipamentos e/ou máquinas sem meios de regulagem de ajuste ou sem condições de uso",
+            "Posto de trabalho não planejado/adaptado para a posição sentada",
+            "Assento inadequado",
+            "Encosto do assento inadequado ou ausente",
+            "Mobiliário ou equipamento sem espaço para movimentação de segmentos corporais",
+            "Trabalho com necessidade de alcançar objetos, documentos, controles ou qualquer ponto além das zonas de alcance ideais para as características antropométricas do trabalhador",
+            "Equipamentos ou mobiliários não adaptados à antropometria do trabalhador",
+            "Condições de trabalho com níveis de pressão sonora fora dos parâmetros de conforto",
+            "Condições de trabalho com índice de temperatura efetiva fora dos parâmetros de conforto",
+            "Condições de trabalho com velocidade do ar fora dos parâmetros de conforto",
+            "Condições de trabalho com umidade do ar fora dos parâmetros de conforto",
+            "Condições de trabalho com Iluminação diurna inadequada",
+            "Condições de trabalho com Iluminação noturna inadequada",
+            "Presença de reflexos em telas, painéis, vidros, monitores ou qualquer superfície, que causem desconforto ou prejudiquem a visualização",
             "Piso escorregadio e/ou irregular"
     );
 
     private final AepReportRepository aepReportRepository;
     private final CompanyRepository companyRepository;
     private final ReportService reportService;
+    private final PhysiotherapistRepository physioRepository;
 
     @Value("${file.storage.path}")
     private String fileStoragePath;
@@ -44,10 +76,11 @@ public class AepService {
     private String generatingCompanyCnpj;
 
     public AepService(AepReportRepository aepReportRepository, CompanyRepository companyRepository,
-                      ReportService reportService) {
+                      ReportService reportService, PhysiotherapistRepository physioRepository) {
         this.aepReportRepository = aepReportRepository;
         this.companyRepository = companyRepository;
         this.reportService = reportService;
+        this.physioRepository = physioRepository;
     }
 
     // apenas cria ou atualiza os dados no banco
@@ -64,6 +97,12 @@ public class AepService {
             throw new SecurityException("Usuário não autorizado a editar esta AEP.");
         }
 
+        // Busca a entidade Physiotherapist com base no ID vindo do DTO
+        Physiotherapist physio = (dto.getPhysiotherapistId() != null)
+                ? physioRepository.findById(dto.getPhysiotherapistId())
+                .orElseThrow(() -> new RuntimeException("Fisioterapeuta não encontrado."))
+                : null; // Permite salvar sem um fisio
+
         Company company = companyRepository.findById(dto.getCompanyId())
                 .orElseThrow(() -> new RuntimeException("Empresa não encontrada."));
 
@@ -74,8 +113,7 @@ public class AepService {
         aep.setSelectedRisks(dto.getSelectedRiskIds());
 
         // Dados da Fisio
-        aep.setPhysioName(dto.getPhysioName());
-        aep.setPhysioCrefito(dto.getPhysioCrefito());
+        aep.setPhysiotherapist(physio);
 
         // Se o documento foi editado, limpa o caminho do PDF antigo
         if (existingId != null && aep.getPdfPath() != null) {
@@ -126,6 +164,32 @@ public class AepService {
         aepReportRepository.save(aep);
 
         return pdfBytes;
+    }
+
+    @Transactional(readOnly = true)
+    public AepDetailDTO findAepDetails(Long id, User currentUser) {
+        AepReport aep = aepReportRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("AEP com ID " + id + " não encontrada."));
+
+        // Verificação de segurança: Só o criador (ou um admin) pode ver os detalhes para editar
+        if (!aep.getEvaluator().getId().equals(currentUser.getId())) {
+            // Você pode adicionar uma verificação de "ROLE_ADMIN" aqui
+            throw new SecurityException("Usuário não autorizado a visualizar esta AEP.");
+        }
+
+        // Mapeamento manual da Entidade para o DTO de Detalhes
+        AepDetailDTO dto = new AepDetailDTO();
+        dto.setId(aep.getId());
+        dto.setCompanyId(aep.getCompany() != null ? aep.getCompany().getId() : null);
+        dto.setEvaluationDate(aep.getEvaluationDate());
+        dto.setEvaluatedFunction(aep.getEvaluatedFunction());
+        dto.setSelectedRisks(aep.getSelectedRisks()); // <-- AQUI ESTÁ A LISTA DE RISCOS MARCADOS
+        dto.setPhysiotherapistId(aep.getPhysiotherapist() != null ? aep.getPhysiotherapist().getId() : null);
+
+        dto.setEvaluatorId(aep.getEvaluator().getId());
+        dto.setEvaluatorName(aep.getEvaluator().getName());
+
+        return dto;
     }
 
     // Deleta o relatório e o arquivo PDF associado

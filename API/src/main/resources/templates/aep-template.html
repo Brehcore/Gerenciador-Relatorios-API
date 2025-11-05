@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org" lang="">
 <head>
     <meta charset="UTF-8"/>
     <title>AEP</title>
@@ -114,7 +114,7 @@
 <table class="risk-table">
     <thead>
     <tr>
-        <th>✅</th> <th>RISCO</th>
+        <th>X</th> <th>RISCO</th>
         <th>FATOR DE RISCO</th>
     </tr>
     </thead>
@@ -130,24 +130,18 @@
 <div class="signatures">
     <div class="signature-block">
 
-        <p style="margin: 0; padding: 0; font-weight: bold;"
-           th:text="${aep.physioName != null and !aep.physioName.isEmpty()} ? ${aep.physioName} : 'Fisioterapeuta'">
-            Nome do Fisioterapeuta
-        </p>
+        <p style="margin: 0 0 4px 0; padding: 0; font-weight: bold;" th:text="${aep.physiotherapist?.name}"></p>
 
         <p style="margin: 0; padding: 0; font-size: 9pt;">
+            <span style="font-weight: bold;">Crefito:</span>
 
-            <span style="font-weight: bold;">CREFITO:</span>
+            <span th:if="${aep.physiotherapist != null}" th:text="' ' + ${aep.physiotherapist.crefito}"></span>
 
-            <span th:text="${aep.physioCrefito != null and !aep.physioCrefito.isEmpty()} ? ' ' + ${aep.physioCrefito} : ' _________________'">
-                _________________
-            </span>
+            <span th:if="${aep.physiotherapist == null}"> _________________</span>
         </p>
+
     </div>
 </div>
-
-</body>
-</html>
 
 </body>
 </html>

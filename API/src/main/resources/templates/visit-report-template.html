@@ -58,7 +58,7 @@
 
         /* Contêiner principal da seção de assinaturas */
         .signatures {
-            margin-top: 50px;
+            margin-top: 25px;
             width: 100%;
             page-break-inside: avoid;
             text-align: center;
@@ -192,18 +192,29 @@
     </table>
 </div>
 
+<div th:if="${visit.nextVisitDate != null}" style="page-break-inside: avoid; margin-top: 30px;">
+    <h2>Agendamento da Próxima Visita</h2>
+
+    <div class="info-block" style="border-style: dashed; background-color: #fcfcfc;">
+        <p>
+            <strong>Data Programada:</strong>
+            <span th:text="${#temporals.format(visit.nextVisitDate, 'dd/MM/yyyy')}"></span>
+        </p>
+    </div>
+</div>
+
 <div class="signatures">
     <table>
         <tbody>
         <tr>
             <td class="signature-cell">
-                <div class="signature-box">
-                    <img th:if="${visit.technicianSignatureImageBase64}"
-                         th:src="'data:image/png;base64,' + ${visit.technicianSignatureImageBase64}"
-                         alt="Assinatura do Técnico"
-                         style="max-height: 40px;"/>
+                <div class="signature-box" style="text-align: center;"> <img th:if="${visit.technicianSignatureImageBase64}"
+                                                                             th:src="'data:image/png;base64,' + ${visit.technicianSignatureImageBase64}"
+                                                                             alt="Assinatura do Técnico"
+                                                                             style="max-height: 40px;"/>
 
-                    <div class="signature-line"></div>
+                    <div class="signature-line"
+                         style="width: 70%; margin: 5px auto 8px auto; border-top: 1px solid #333;"></div>
 
                     <p th:text="${visit.technician?.name}" style="margin: 0; font-weight: bold;"></p>
                     <p th:if="${visit.technician?.conselhoClasse != null}"
@@ -220,20 +231,26 @@
             </td>
 
             <td class="signature-cell">
-                <div class="signature-box">
-                    <img th:if="${visit.clientSignatureImageBase64}"
-                         th:src="'data:image/png;base64,' + ${visit.clientSignatureImageBase64}"
-                         alt="Assinatura do Cliente"
-                         style="max-height: 40px;"/>
+                <div class="signature-box" style="text-align: center;"> <img th:if="${visit.clientSignatureImageBase64}"
+                                                                             th:src="'data:image/png;base64,' + ${visit.clientSignatureImageBase64}"
+                                                                             alt="Assinatura do Cliente"
+                                                                             style="max-height: 40px;"/>
 
-                    <div class="signature-line"></div>
+                    <div class="signature-line"
+                         style="width: 70%; margin: 5px auto 8px auto; border-top: 1px solid #333;"></div>
 
                     <p th:text="${visit.clientSignerName}" style="margin: 0; font-weight: bold;"></p>
                     <p style="font-size: 9pt; margin: 0;">Responsável</p>
+
                     <p th:if="${visit.clientSignatureLatitude != null and visit.clientSignedAt != null}"
                        style="font-size: 8pt; margin: 5px 0 0 0; color: #666;">
-                        <span th:text="${'Assinado em: ' + #temporals.format(visit.clientSignedAt, 'dd/MM/yyyy HH:mm:ss')}"></span>
-                        <span th:text="${'Lat ' + visit.clientSignatureLatitude + ', Lon ' + visit.clientSignatureLongitude}"> </span>
+
+                        <span th:text="${'Assinado em: ' + #temporals.format(visit.clientSignedAt, 'dd/MM/yyyy HH:mm:ss')}"
+                              style="display: block;"></span>
+
+                        <span th:text="${'Lat ' + visit.clientSignatureLatitude + ', Lon ' + visit.clientSignatureLongitude}"
+                              style="display: block; margin-top: 2px;"></span>
+
                     </p>
                 </div>
             </td>
