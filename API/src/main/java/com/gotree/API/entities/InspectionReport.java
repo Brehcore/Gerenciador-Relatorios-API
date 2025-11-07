@@ -71,4 +71,8 @@ public class InspectionReport {
     // --- Relação com os Itens do Checklist ---
     @OneToMany(mappedBy = "report", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ReportSection> sections = new ArrayList<>();
+
+    // --- Relação com os Itens do Checklist C/NC/NA ---
+    @OneToMany(mappedBy = "report", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<NrsSection> nrsSections = new ArrayList<>();
 }

@@ -152,7 +152,8 @@ public class DocumentAggregationService {
 
         // Agora, este código só é executado se tivermos um fileName válido.
         System.out.println("--- DEBUG [Agregação]: Carregando arquivo do disco: " + fileName); // DEBUG
-        Path path = Paths.get(fileStoragePath, fileName);
+        // Path path = Paths.get(fileStoragePath, fileName); // EXCLUIR SE PASSAR NOS TESTES
+        Path path = Paths.get(fileName);
         if (!Files.exists(path)) {
             throw new IOException("Arquivo PDF não encontrado no caminho: " + path);
         }

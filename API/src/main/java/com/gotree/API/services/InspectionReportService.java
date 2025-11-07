@@ -1,230 +1,265 @@
 package com.gotree.API.services;
 
-import com.gotree.API.config.security.CustomUserDetails;
-import com.gotree.API.dto.report.InspectionReportResponseDTO;
-import com.gotree.API.dto.report.SaveInspectionReportRequestDTO;
+import com.gotree.API.dto.report.*;
 import com.gotree.API.entities.*;
 import com.gotree.API.entities.enums.DocumentType;
-import com.gotree.API.mappers.InspectionReportMapper;
+import com.gotree.API.entities.enums.NrsCheckStatus;
 import com.gotree.API.repositories.*;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.thymeleaf.TemplateEngine;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 @Service
 public class InspectionReportService {
 
+    // --- Repositórios ---
     private final InspectionReportRepository inspectionReportRepository;
+    private final ReportService reportService;
     private final CompanyRepository companyRepository;
     private final UnitRepository unitRepository;
     private final SectorRepository sectorRepository;
-    private final TemplateEngine templateEngine;
-    private final InspectionReportMapper inspectionReportMapper;
-    private final ReportService reportService;
-
-    @Value("${app.generating-company.name}")
-    private String generatingCompanyName;
-
-    @Value("${app.generating-company.cnpj}")
-    private String generatingCompanyCnpj;
+    // (Não precisamos dos novos repos NrsSection/Item aqui, o Cascade.ALL cuida)
 
     @Value("${file.storage.path}")
     private String fileStoragePath;
 
     public InspectionReportService(InspectionReportRepository inspectionReportRepository,
+                                   ReportService reportService,
                                    CompanyRepository companyRepository,
                                    UnitRepository unitRepository,
-                                   SectorRepository sectorRepository,
-                                   TemplateEngine templateEngine,
-                                   InspectionReportMapper inspectionReportMapper,
-                                   ReportService reportService) {
+                                   SectorRepository sectorRepository) {
         this.inspectionReportRepository = inspectionReportRepository;
+        this.reportService = reportService;
         this.companyRepository = companyRepository;
         this.unitRepository = unitRepository;
         this.sectorRepository = sectorRepository;
-        this.templateEngine = templateEngine;
-        this.inspectionReportMapper = inspectionReportMapper;
-        this.reportService = reportService;
     }
 
+    // ==========================================
+    // --- MÉTODO PÚBLICO: CHECKLIST ANTIGO ---
+    // ==========================================
     @Transactional
-    public InspectionReport saveReportAndGeneratePdf(SaveInspectionReportRequestDTO dto, Authentication authentication) {
-        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
-        User technician = userDetails.getUser();
+    public InspectionReport saveReportAndGeneratePdf(SaveInspectionReportRequestDTO dto, User technician) {
 
-        Company company = companyRepository.findById(dto.getCompanyId())
-                .orElseThrow(() -> new RuntimeException("Empresa não encontrada."));
+        // 1. Constrói o relatório com todos os dados comuns
+        InspectionReport report = buildCommonReport(
+                dto.getCompanyId(), dto.getUnitId(), dto.getSectorId(), technician,
+                dto.getTitle(), dto.getInspectionDate(), dto.getLocal(),
+                dto.getNotes(), dto.getObservations(), dto.getResponsavelSigla(),
+                dto.getResponsavelRegistro(), dto.isUseDigitalSignature(),
+                dto.getTechnicianSignature(), dto.getClientSignature()
+        );
 
-        Unit unit = dto.getUnitId() != null ? unitRepository.findById(dto.getUnitId())
-                .orElseThrow(() -> new RuntimeException("Unidade não encontrada.")) : null;
-
-        Sector sector = dto.getSectorId() != null ? sectorRepository.findById(dto.getSectorId())
-                .orElseThrow(() -> new RuntimeException("Setor não encontrado.")) : null;
-
-        InspectionReport report = new InspectionReport();
-        report.setCompany(company);
-        report.setUnit(unit);
-        report.setSector(sector);
-        report.setTitle(dto.getTitle());
-        report.setType(DocumentType.CHECKLIST_INSPECAO);
-        report.setInspectionDate(dto.getInspectionDate());
-        report.setLocal(dto.getLocal());
-        report.setNotes(dto.getNotes());
-        report.setObservations(dto.getObservations());
-        report.setResponsavelSigla(dto.getResponsavelSigla());
-        report.setResponsavelRegistro(dto.getResponsavelRegistro());
-
-        // --- Lógica de Assinaturas Consolidada ---
-
-        // Dados do Técnico
-        report.setTechnician(technician);
-        report.setTechnicianSignedAt(LocalDateTime.now());
-
-        if (dto.getTechnicianSignature() != null) {
-            report.setTechnicianSignatureImageBase64(stripDataUrlPrefix(dto.getTechnicianSignature().getImageBase64()));
-        }
-        if (dto.getClientSignature() != null) {
-            report.setClientSignerName(dto.getClientSignature().getSignerName());
-            report.setClientSignatureImageBase64(stripDataUrlPrefix(dto.getClientSignature().getImageBase64())); // Correção aqui
-            report.setClientSignatureLatitude(dto.getClientSignature().getLatitude());
-            report.setClientSignatureLongitude(dto.getClientSignature().getLongitude());
-            report.setClientSignedAt(LocalDateTime.now());
-        }
-
-        // Itens do Checklist (Sua lógica aqui já está perfeita)
+        // 2. Adiciona a lógica ÚNICA deste checklist (mapeia 'sections')
         if (dto.getSections() != null) {
-            dto.getSections().forEach(sectionDto -> {
+            for (SectionDTO sectionDto : dto.getSections()) {
                 ReportSection section = new ReportSection();
                 section.setTitle(sectionDto.getTitle());
                 section.setNa(sectionDto.isNa());
                 section.setReport(report);
 
-                if (!section.isNa() && sectionDto.getItems() != null) {
-                    sectionDto.getItems().forEach(itemDto -> {
+                if (sectionDto.getItems() != null) {
+                    for (ChecklistItemDTO itemDto : sectionDto.getItems()) {
                         ReportItem item = new ReportItem();
                         item.setDescription(itemDto.getDescription());
                         item.setChecked(itemDto.isChecked());
                         item.setNa(itemDto.isNa());
                         item.setSection(section);
                         section.getItems().add(item);
-                    });
+                    }
                 }
                 report.getSections().add(section);
-            });
+            }
         }
 
-        InspectionReport savedReport = inspectionReportRepository.save(report);
-        byte[] pdfBytes = generatePdfForReport(savedReport);
+        // 3. Gera o PDF e salva
+        return generateAndSavePdf(report, "checklist-template"); // Template antigo
+    }
 
-        try {
-            String fileName = "report_" + savedReport.getId() + "_" + UUID.randomUUID() + ".pdf";
-            Path path = Paths.get(fileStoragePath, fileName);
-            Files.createDirectories(path.getParent());
-            Files.write(path, pdfBytes);
+    // ==========================================
+    // --- MÉTODO PÚBLICO: NOVO CHECKLIST C/NC/NA ---
+    // ==========================================
+    @Transactional
+    public InspectionReport saveNrsReportAndGeneratePdf(SaveNrsReportRequestDTO dto, User technician) {
 
-            savedReport.setPdfPath(fileName);
-            return inspectionReportRepository.save(savedReport);
+        // 1. Constrói o relatório com todos os dados comuns (usando o MESMO helper)
+        InspectionReport report = buildCommonReport(
+                dto.getCompanyId(), dto.getUnitId(), dto.getSectorId(), technician,
+                dto.getTitle(), dto.getInspectionDate(), dto.getLocal(),
+                dto.getNotes(), dto.getObservations(), dto.getResponsavelSigla(),
+                dto.getResponsavelRegistro(), dto.isUseDigitalSignature(),
+                dto.getTechnicianSignature(), dto.getClientSignature()
+        );
 
-        } catch (IOException e) {
-            throw new RuntimeException("Falha ao salvar o arquivo PDF.", e);
+        // 2. Adiciona a lógica ÚNICA deste checklist (mapeia 'nrsSections')
+        if (dto.getNrsSections() != null) {
+            for (NrsSectionDTO sectionDto : dto.getNrsSections()) {
+                NrsSection nrsSection = new NrsSection();
+                nrsSection.setTitle(sectionDto.getTitle());
+                nrsSection.setReport(report);
+
+                if (sectionDto.getItems() != null) {
+                    for (NrsChecklistItemDTO itemDto : sectionDto.getItems()) {
+                        NrsItem nrsItem = new NrsItem();
+                        nrsItem.setDescription(itemDto.getDescription());
+                        nrsItem.setJustification(itemDto.getJustification());
+                        nrsItem.setStatus(convertStringToNrsStatus(itemDto.getStatus()));
+                        nrsItem.setSection(nrsSection);
+                        nrsSection.getItems().add(nrsItem);
+                    }
+                }
+                report.getNrsSections().add(nrsSection);
+            }
         }
+
+        // 3. Gera o PDF e salva
+        // CRIE UM NOVO TEMPLATE HTML com este nome!
+        return generateAndSavePdf(report, "nrs-checklist-template");
+    }
+
+    // ==========================================
+    // --- MÉTODOS AUXILIARES PRIVADOS ---
+    // ==========================================
+
+    /**
+     * Constrói a entidade InspectionReport com todos os dados comuns
+     * (cabeçalho, assinaturas, etc.), sem salvar no banco.
+     */
+    private InspectionReport buildCommonReport(
+            Long companyId, Long unitId, Long sectorId, User technician,
+            String title, LocalDate inspectionDate, String local, String notes,
+            String observations, String responsavelSigla, String responsavelRegistro,
+            boolean useDigitalSignature, TechnicianSignatureDTO technicianSignature,
+            ClientSignatureDTO clientSignature
+    ) {
+        Company company = companyRepository.findById(companyId)
+                .orElseThrow(() -> new RuntimeException("Empresa não encontrada."));
+        Unit unit = (unitId != null) ? unitRepository.findById(unitId).orElse(null) : null;
+        Sector sector = (sectorId != null) ? sectorRepository.findById(sectorId).orElse(null) : null;
+
+        InspectionReport report = new InspectionReport();
+        report.setTechnician(technician);
+        report.setCompany(company);
+        report.setUnit(unit);
+        report.setSector(sector);
+        report.setType(DocumentType.CHECKLIST_INSPECAO);
+        report.setTitle(title);
+        report.setInspectionDate(inspectionDate);
+        report.setLocal(local);
+        report.setNotes(notes);
+        report.setObservations(observations);
+        report.setResponsavelSigla(responsavelSigla);
+        report.setResponsavelRegistro(responsavelRegistro);
+        report.setDigitallySigned(useDigitalSignature);
+
+        if (technicianSignature != null) {
+            report.setTechnicianSignatureImageBase64(stripDataUrlPrefix(technicianSignature.getImageBase64()));
+            report.setTechnicianSignedAt(LocalDateTime.now());
+        }
+        if (clientSignature != null) {
+            report.setClientSignerName(clientSignature.getSignerName());
+            report.setClientSignatureImageBase64(stripDataUrlPrefix(clientSignature.getImageBase64()));
+            report.setClientSignatureLatitude(clientSignature.getLatitude());
+            report.setClientSignatureLongitude(clientSignature.getLongitude());
+            report.setClientSignedAt(LocalDateTime.now());
+        }
+
+        return report;
     }
 
     /**
-     * Metodo auxiliar para remover o prefixo 'data:image/...' de uma string Base64.
+     * Salva o relatório, gera o PDF, salva o arquivo e atualiza o relatório.
      */
-    private String stripDataUrlPrefix(String dataUrl) {
-        if (dataUrl == null) {
-            return null;
+    private InspectionReport generateAndSavePdf(InspectionReport report, String templateName) {
+        // Salva uma vez para obter o ID
+        InspectionReport savedReport = inspectionReportRepository.save(report);
+
+        Map<String, Object> templateData = new HashMap<>();
+        templateData.put("report", savedReport);
+        templateData.put("company", savedReport.getCompany());
+        // (Adicione 'generatingCompanyName' etc. se o template precisar)
+
+        byte[] pdfBytes = reportService.generatePdfFromHtml(templateName, templateData);
+
+        try {
+            String fileName = templateName + "_" + savedReport.getId() + "_" + UUID.randomUUID() + ".pdf";
+            Path path = Paths.get(fileStoragePath, fileName);
+            Files.createDirectories(path.getParent());
+            Files.write(path, pdfBytes);
+            savedReport.setPdfPath(path.toString());
+
+            return inspectionReportRepository.save(savedReport); // Salva novamente com o caminho
+
+        } catch (IOException e) {
+            throw new RuntimeException("Falha ao salvar o arquivo PDF: " + e.getMessage(), e);
         }
-        int commaIndex = dataUrl.indexOf(',');
-        if (commaIndex != -1) {
-            return dataUrl.substring(commaIndex + 1);
-        }
-        return dataUrl; // Retorna a string original se o prefixo não for encontrado
     }
 
-    @Transactional(readOnly = true) // Melhora a performance para consultas
-    // 3. ATUALIZE O TIPO DE RETORNO
-    public List<InspectionReportResponseDTO> findReportsByTechnicianAndFilters(User technician, String title, String type) {
-        // Busca as entidades no banco
-        List<InspectionReport> reports = inspectionReportRepository.findByTechnician(technician);
+    // ==========================================
+    // --- METODO PÚBLICO: DELETAR RELATÓRIO --- (ADICIONE ESTE BLOCO)
+    // ==========================================
 
-        // Converte para DTOs AQUI DENTRO, com a transação ainda ativa
-        return inspectionReportMapper.toDtoList(reports);
-    }
-
-    @Transactional(readOnly = true)
-    // 4. ATUALIZE O TIPO DE RETORNO
-    public List<InspectionReportResponseDTO> findLatestReportsByTechnician(User technician) {
-        List<InspectionReport> latestReports = inspectionReportRepository.findTop5ByTechnicianOrderByInspectionDateDesc(technician);
-
-        // Converte para DTOs AQUI DENTRO
-        return inspectionReportMapper.toDtoList(latestReports);
-    }
-
-    public byte[] loadPdfFile(Long reportId) throws IOException {
-        InspectionReport report = inspectionReportRepository.findById(reportId)
-                .orElseThrow(() -> new RuntimeException("Relatório com ID " + reportId + " não encontrado."));
-
-        if (report.getPdfPath() == null || report.getPdfPath().isBlank()) {
-            throw new RuntimeException("Este relatório não possui um PDF associado.");
-        }
-
-        Path path = Paths.get(report.getPdfPath());
-        return Files.readAllBytes(path);
-    }
-
-    private byte[] generatePdfForReport(InspectionReport report) {
-        Map<String, Object> data = new HashMap<>();
-        data.put("report", report);
-
-        data.put("generatingCompanyName", generatingCompanyName);
-        data.put("generatingCompanyCnpj", generatingCompanyCnpj);
-
-        // Define qual template usar com base no tipo do relatório
-        String templateName = "checklist-inspensao-template"; // Lógica pode ser expandida aqui
-
-        // Chama o metodo reutilizável
-        return reportService.generatePdfFromHtml(templateName, data);
-    }
-
+    /**
+     * Deleta um Relatório de Inspeção e seu arquivo PDF associado.
+     */
     @Transactional
     public void deleteReport(Long reportId, User currentUser) {
-        // 1. Busca o relatório no banco de dados
+        // 1. Encontre o relatório ou lance um erro
         InspectionReport report = inspectionReportRepository.findById(reportId)
-                .orElseThrow(() -> new RuntimeException("Relatório com ID " + reportId + " não encontrado."));
+                .orElseThrow(() -> new RuntimeException("Relatório de Inspeção com ID " + reportId + " não encontrado."));
 
-        // 2. VERIFICAÇÃO DE SEGURANÇA: Garante que só o técnico que criou (ou um admin) pode apagar.
+        // 2. Verificação de Segurança: Só o técnico que criou pode apagar.
         if (!report.getTechnician().getId().equals(currentUser.getId())) {
-            // Você pode adicionar uma verificação de role de ADMIN aqui também se quiser
-            throw new SecurityException("Usuário não autorizado a deletar este relatório.");
+            throw new SecurityException("Usuário não autorizado a deletar este relatório de inspeção.");
         }
 
-        // 3. APAGA O ARQUIVO PDF DO DISCO
+        // 3. Delete o arquivo PDF do disco
         try {
             if (report.getPdfPath() != null && !report.getPdfPath().isBlank()) {
-                Path pdfPath = Paths.get(fileStoragePath, report.getPdfPath());
+                Path pdfPath = Paths.get(report.getPdfPath());
                 Files.deleteIfExists(pdfPath);
             }
         } catch (IOException e) {
-            // Logar o erro, mas não impedir a exclusão do registro do banco
-            System.err.println("Falha ao deletar o arquivo PDF: " + report.getPdfPath());
+            // Loga o erro, mas não impede a exclusão do registro do banco
+            System.err.println("Falha ao deletar o arquivo PDF da inspeção: " + report.getPdfPath() + " | Erro: " + e.getMessage());
         }
 
-        // 4. APAGA O REGISTRO DO BANCO DE DADOS
-        inspectionReportRepository.deleteById(reportId);
+        // 4. Delete o relatório do banco de dados
+        // (O Cascade.ALL cuidará de deletar as 'sections' e 'nrsSections' filhas)
+        inspectionReportRepository.delete(report);
+    }
+
+
+    // ==========================================
+    // --- MÉTODOS AUXILIARES PRIVADOS ---
+    // (Seus métodos 'buildCommonReport', 'generateAndSavePdf', etc. ficam aqui)
+    // ==========================================
+
+    // --- Outros Métodos Auxiliares ---
+
+    private NrsCheckStatus convertStringToNrsStatus(String status) {
+        if (status == null || status.isBlank()) return null;
+        try {
+            return NrsCheckStatus.valueOf(status.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            System.err.println("Status inválido recebido: " + status);
+            return null;
+        }
+    }
+
+    private String stripDataUrlPrefix(String dataUrl) {
+        if (dataUrl == null) return null;
+        int commaIndex = dataUrl.indexOf(',');
+        return commaIndex != -1 ? dataUrl.substring(commaIndex + 1) : dataUrl;
     }
 }
