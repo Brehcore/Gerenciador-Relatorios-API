@@ -19,9 +19,16 @@ import org.springframework.web.bind.annotation.RestController;
 import java.io.IOException;
 import java.util.List;
 
+/**
+ * Controlador REST responsável por gerenciar documentos relacionados a visitas técnicas.
+ * Fornece endpoints para listar, baixar e excluir documentos gerados durante as visitas.
+ * Todos os endpoints requerem autenticação do usuário.
+ */
 @RestController
 @RequestMapping("/documents")
 public class DocumentController {
+    
+    
 
     private final DocumentAggregationService documentAggregationService;
 
@@ -30,7 +37,12 @@ public class DocumentController {
     }
 
     /**
-     * Endpoint para a página "Gerenciar Documentos", listando TODOS os tipos.
+     * Retorna todos os documentos associados ao usuário autenticado.
+     * Este endpoint é utilizado na página "Gerenciar Documentos" para listar
+     * documentos de todos os tipos de visitas.
+     *
+     * @param authentication Objeto de autenticação do Spring Security contendo os detalhes do usuário
+     * @return ResponseEntity com uma lista de DocumentSummaryDTO contendo os resumos dos documentos
      */
     @GetMapping
     @PreAuthorize("isAuthenticated()")
@@ -44,7 +56,12 @@ public class DocumentController {
     }
 
     /**
-     * Endpoint para o histórico do dashboard, listando os últimos 5 documentos.
+     * Retorna os documentos mais recentes do usuário autenticado.
+     * Este endpoint é utilizado no dashboard para exibir um histórico resumido
+     * dos últimos documentos gerados, limitado aos 5 mais recentes.
+     *
+     * @param authentication Objeto de autenticação do Spring Security contendo os detalhes do usuário
+     * @return ResponseEntity com uma lista limitada de DocumentSummaryDTO
      */
     @GetMapping("/latest")
     @PreAuthorize("isAuthenticated()")
@@ -58,14 +75,20 @@ public class DocumentController {
     }
 
     /**
-     * Endpoint para baixar ou visualizar(em modal) qualquer tipo de documento.
+     * Permite o download ou visualização de um documento PDF específico.
+     * O documento é identificado pelo seu tipo (ex: visita, inspeção) e ID.
+     * Verifica se o usuário tem permissão para acessar o documento solicitado.
+     *
+     * @param type Tipo do documento (ex: "visit", "inspection")
+     * @param id ID do documento
+     * @param authentication Objeto de autenticação do Spring Security
+     * @return ResponseEntity contendo o arquivo PDF ou status de erro apropriado
+     * @throws IOException Em caso de erro ao ler o arquivo
      */
     @GetMapping("/{type}/{id}/pdf") // Ex: /documents/visit/45/pdf
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<byte[]> downloadDocumentPdf(@PathVariable String type, @PathVariable Long id, Authentication authentication) {
 
-        //DEBUGGER
-        System.out.println("--- DEBUG [Controller]: Recebi requisição para baixar um documento PDF. ---");
 
         try {
             CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
@@ -79,22 +102,12 @@ public class DocumentController {
             String filename = type + "_" + id + ".pdf";
             headers.setContentDispositionFormData("attachment", filename);
 
-            //DEBUGGER
-            System.out.println("--- DEBUG [Controller]: Enviando resposta 200 Ok. ---");
 
             return new ResponseEntity<>(pdfBytes, headers, HttpStatus.OK);
 
         } catch (IOException e) {
-            //DEBUGGER
-            System.out.println("--- DEBUG [Controller]: Capturando erro de IO. ---" + e.getMessage());
-            e.printStackTrace();
-
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         } catch (RuntimeException e) {
-            // Captura erros como "Tipo de documento inválido" ou "Documento não encontrado"
-            //DEBUGGER
-            System.out.println("--- DEBUG [Controller]: Capturando RuntimeException. ---" + e.getMessage());
-            e.printStackTrace();
 
             return ResponseEntity.notFound().build();
         }

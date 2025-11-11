@@ -3,6 +3,7 @@ package com.gotree.API.controllers;
 import com.gotree.API.dto.company.CompanyRequestDTO;
 import com.gotree.API.dto.company.CompanyResponseDTO;
 import com.gotree.API.entities.Company;
+import com.gotree.API.exceptions.ResourceNotFoundException;
 import com.gotree.API.mappers.CompanyMapper;
 import com.gotree.API.services.CompanyService;
 import jakarta.validation.Valid;
@@ -13,9 +14,17 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/**
+ * Controlador REST responsável pelo gerenciamento de empresas.
+ * Fornece endpoints para operações CRUD em empresas.
+ * <p>
+ * Base URL: /companies
+ */
 @RestController
 @RequestMapping("/companies")
 public class CompanyController {
+    
+    
 
     private final CompanyService companyService;
     private final CompanyMapper companyMapper;
@@ -27,8 +36,12 @@ public class CompanyController {
     }
 
     /**
-     * Endpoint para criar uma nova empresa.
-     * Recebe um DTO, passa para o serviço e retorna o DTO da empresa criada.
+     * Cria uma nova empresa no sistema.
+     *
+     * @param dto Objeto DTO contendo os dados da empresa a ser criada
+     * @return ResponseEntity com o DTO da empresa criada e status HTTP 201 (CREATED)
+     * @throws IllegalArgumentException se os dados fornecidos forem inválidos
+     * @secured Requer papel ADMIN
      */
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
@@ -39,7 +52,10 @@ public class CompanyController {
     }
 
     /**
-     * Endpoint para listar todas as empresas cadastradas.
+     * Lista todas as empresas cadastradas no sistema.
+     *
+     * @return ResponseEntity com a lista de DTOs das empresas e status HTTP 200 (OK)
+     * @secured Requer autenticação
      */
     @GetMapping
     @PreAuthorize("isAuthenticated()")
@@ -50,7 +66,12 @@ public class CompanyController {
     }
 
     /**
-     * Endpoint para buscar uma empresa específica pelo seu ID.
+     * Busca uma empresa específica pelo seu ID.
+     *
+     * @param id ID da empresa a ser buscada
+     * @return ResponseEntity com o DTO da empresa encontrada e status HTTP 200 (OK)
+     * @throws ResourceNotFoundException se a empresa não for encontrada
+     * @secured Requer autenticação
      */
     @GetMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
@@ -61,7 +82,14 @@ public class CompanyController {
     }
 
     /**
-     * Endpoint para atualizar os dados de uma empresa.
+     * Atualiza os dados de uma empresa existente.
+     *
+     * @param id  ID da empresa a ser atualizada
+     * @param dto Objeto DTO contendo os novos dados da empresa
+     * @return ResponseEntity com o DTO da empresa atualizada e status HTTP 200 (OK)
+     * @throws ResourceNotFoundException se a empresa não for encontrada
+     * @throws IllegalArgumentException  se os dados fornecidos forem inválidos
+     * @secured Requer papel ADMIN
      */
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
@@ -72,7 +100,12 @@ public class CompanyController {
     }
 
     /**
-     * Endpoint para deletar uma empresa.
+     * Remove uma empresa do sistema.
+     *
+     * @param id ID da empresa a ser removida
+     * @return ResponseEntity com status HTTP 204 (NO_CONTENT)
+     * @throws ResourceNotFoundException se a empresa não for encontrada
+     * @secured Requer papel ADMIN
      */
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")

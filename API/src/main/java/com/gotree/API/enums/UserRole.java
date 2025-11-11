@@ -1,5 +1,8 @@
 package com.gotree.API.enums;
 
+import lombok.Getter;
+
+@Getter
 public enum UserRole {
 
     ADMIN("ROLE_ADMIN"), USER("ROLE_USER");
@@ -8,10 +11,6 @@ public enum UserRole {
 
     UserRole(String roleName) {
         this.roleName = roleName;
-    }
-
-    public String getRoleName() {
-        return roleName;
     }
 
 }

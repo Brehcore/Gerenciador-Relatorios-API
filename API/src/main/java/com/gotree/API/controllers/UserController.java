@@ -20,16 +20,33 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Controlador REST para gerenciamento de usuários.
+ * Fornece endpoints para operações CRUD de usuários e funcionalidades relacionadas.
+ * <p>
+ * Endpoints Admin:
+ * - GET /users - Lista todos os usuários
+ * - GET /users/{id} - Busca usuário por ID
+ * - POST /users/insert - Cria novo usuário
+ * - POST /users/batch - Cria múltiplos usuários
+ * - PUT /users/{id} - Atualiza usuário existente
+ * - PUT /users/admin/reset-password/{id} - Redefine senha do usuário
+ * - DELETE /users/{id} - Remove usuário
+ * <p>
+ * Endpoints Comuns (Admin e User):
+ * - GET /users/me - Obtém dados do usuário logado
+ * - PUT /users/me/change-password - Altera senha do usuário logado
+ */
 @RestController
 @RequestMapping(value = "/users")
 public class UserController {
+	
 
 	private final UserService userService;
 	private final UserMapper userMapper;
@@ -40,9 +57,11 @@ public class UserController {
 	}
 
 	/**
-	 * Endpoints do Admin
+	 * Lista todos os usuários do sistema.
+	 * Acesso restrito a administradores.
+	 *
+	 * @return ResponseEntity contendo lista de UserResponseDTO com todos os usuários
 	 */
-
 	@GetMapping
 	@PreAuthorize("hasRole('ADMIN')")
 	public ResponseEntity<List<UserResponseDTO>> findAll() {
@@ -50,6 +69,13 @@ public class UserController {
 		return ResponseEntity.ok(userMapper.toDtoList(users));
 	}
 
+	/**
+	 * Busca um usuário específico por ID.
+	 * Acesso restrito a administradores.
+	 *
+	 * @param id ID do usuário a ser buscado
+	 * @return ResponseEntity contendo UserResponseDTO com dados do usuário
+	 */
 	@GetMapping("/{id}")
 	@PreAuthorize("hasRole('ADMIN')")
 	public ResponseEntity<UserResponseDTO> findById(@PathVariable Long id) {
@@ -57,6 +83,13 @@ public class UserController {
 		return ResponseEntity.ok(userMapper.toDto(user));
 	}
 
+	/**
+	 * Cria um novo usuário no sistema.
+	 * Acesso restrito a administradores.
+	 *
+	 * @param dto UserRequestDTO contendo dados do novo usuário
+	 * @return ResponseEntity contendo UserResponseDTO do usuário criado
+	 */
 	@PostMapping("/insert")
 	@PreAuthorize("hasRole('ADMIN')")
 	public ResponseEntity<UserResponseDTO> insertUser(@RequestBody @Valid UserRequestDTO dto) {
@@ -64,6 +97,13 @@ public class UserController {
 		return ResponseEntity.ok(userMapper.toDto(createdUser));
 	}
 
+	/**
+	 * Cria múltiplos usuários em lote.
+	 * Acesso restrito a administradores.
+	 *
+	 * @param userDTOs Lista de UserRequestDTO contendo dados dos novos usuários
+	 * @return ResponseEntity contendo BatchUserInsertResponseDTO com resultado da operação
+	 */
 	@PostMapping("/batch")
 	@PreAuthorize("hasRole('ADMIN')")
 	public ResponseEntity<BatchUserInsertResponseDTO> insertMultiplerUsers(
@@ -73,6 +113,14 @@ public class UserController {
 		return ResponseEntity.status(HttpStatus.MULTI_STATUS).body(result);
 	}
 
+	/**
+	 * Atualiza dados de um usuário existente.
+	 * Acesso restrito a administradores.
+	 *
+	 * @param id  ID do usuário a ser atualizado
+	 * @param dto UserUpdateDTO contendo novos dados
+	 * @return ResponseEntity contendo UserResponseDTO com dados atualizados
+	 */
 	@PutMapping("/{id}")
 	@PreAuthorize("hasRole('ADMIN')")
 	public ResponseEntity<UserResponseDTO> updateUser(@PathVariable Long id, @RequestBody @Valid UserUpdateDTO dto) {
@@ -89,6 +137,13 @@ public class UserController {
 
 	}
 
+	/**
+	 * Remove um usuário do sistema.
+	 * Acesso restrito a administradores.
+	 *
+	 * @param id ID do usuário a ser removido
+	 * @return ResponseEntity sem conteúdo
+	 */
 	@DeleteMapping("/{id}")
 	@PreAuthorize("hasRole('ADMIN')")
 	public ResponseEntity<UserResponseDTO> deleteUser(@PathVariable Long id) {
@@ -97,8 +152,11 @@ public class UserController {
 	}
 
 	/**
+	 * Retorna dados do usuário atualmente autenticado.
+	 * Disponível para todos os usuários autenticados.
 	 *
-	 *Endpoint Profile ADMIN e USER
+	 * @param authentication Objeto de autenticação do Spring Security
+	 * @return ResponseEntity contendo UserResponseDTO com dados do usuário logado
 	 */
 	@GetMapping("/me")
 	public ResponseEntity<UserResponseDTO> getCurrentUser(Authentication authentication) {
@@ -119,12 +177,18 @@ public class UserController {
 	}
 
 
-
+	/**
+	 * Altera a senha do usuário atualmente autenticado.
+	 * Disponível para todos os usuários autenticados.
+	 *
+	 * @param authentication Objeto de autenticação do Spring Security
+	 * @param dto            ChangePasswordRequestDTO contendo a nova senha
+	 * @return ResponseEntity com mensagem de sucesso
+	 */
 	@PutMapping("/me/change-password")
 	@PreAuthorize("isAuthenticated()") // Garante que o utilizador esteja logado
 	public ResponseEntity<?> changePassword(Authentication authentication,
 											@Valid @RequestBody ChangePasswordRequestDTO dto) {
-
 		// Pega o e-mail do utilizador autenticado de forma segura
 		String userEmail = authentication.getName();
 

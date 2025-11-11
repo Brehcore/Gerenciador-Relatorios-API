@@ -15,16 +15,36 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import javax.swing.*;
 import java.util.Map;
 
+/**
+ * Controlador responsável por gerenciar as operações de autenticação.
+ * Fornece endpoints para login e geração de tokens JWT.
+ */
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor
 public class AuthController {
 
+
+	/**
+	 * Gerenciador de autenticação do Spring Security
+	 */
 	private final AuthenticationManager authenticationManager;
+
+	/**
+	 * Serviço responsável pela geração e validação de tokens JWT
+	 */
 	private final JwtService jwtService;
 
+	/**
+	 * Autentica um usuário e gera um token JWT.
+	 *
+	 * @param request DTO contendo as credenciais do usuário (email e senha)
+	 * @return ResponseEntity contendo o token JWT, flag de reset de senha e role do usuário
+	 * @throws org.springframework.security.core.AuthenticationException se as credenciais forem inválidas
+	 */
 	@PostMapping("/login")
 	public ResponseEntity<?> login(@RequestBody @Valid LoginRequestDTO request) {
 

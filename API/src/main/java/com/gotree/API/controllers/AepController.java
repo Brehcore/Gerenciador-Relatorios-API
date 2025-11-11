@@ -15,9 +15,15 @@ import org.springframework.web.bind.annotation.*; // Importe o PathVariable
 
 import java.util.Map;
 
+/**
+ * Controlador REST responsável por gerenciar operações relacionadas a Avaliações de Eficácia Profissional (AEPs).
+ * Fornece endpoints para criar, atualizar e recuperar informações de AEPs.
+ */
 @RestController
 @RequestMapping("/aep-reports")
 public class AepController {
+    
+    
 
     private final AepService aepService;
 
@@ -25,7 +31,13 @@ public class AepController {
         this.aepService = aepService;
     }
 
-    // CRIA uma nova AEP (só salva no banco)
+    /**
+     * Cria uma nova Avaliação de Eficácia Profissional (AEP).
+     *
+     * @param dto            - Objeto DTO contendo os dados da AEP a ser criada
+     * @param authentication - Objeto de autenticação do usuário atual
+     * @return ResponseEntity contendo mensagem de sucesso e ID da AEP criada
+     */
     @PostMapping
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> createAepReport(@RequestBody @Valid AepRequestDTO dto, Authentication authentication) {
@@ -43,7 +55,14 @@ public class AepController {
                 ));
     }
 
-    // EDITA uma AEP existente (salva no banco e apaga PDF antigo)
+    /**
+     * Atualiza uma Avaliação de Eficácia Profissional (AEP) existente.
+     *
+     * @param id             - ID da AEP a ser atualizada
+     * @param dto            - Objeto DTO contendo os novos dados da AEP
+     * @param authentication - Objeto de autenticação do usuário atual
+     * @return ResponseEntity contendo mensagem de sucesso e ID da AEP atualizada
+     */
     @PutMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> updateAepReport(@PathVariable Long id, @RequestBody @Valid AepRequestDTO dto, Authentication authentication) {
@@ -61,7 +80,13 @@ public class AepController {
                 ));
     }
 
-    // --- NOVO ENDPOINT PARA CARREGAR DADOS PARA EDIÇÃO ---
+    /**
+     * Recupera os detalhes de uma Avaliação de Eficácia Profissional (AEP) específica.
+     *
+     * @param id             - ID da AEP a ser consultada
+     * @param authentication - Objeto de autenticação do usuário atual
+     * @return ResponseEntity contendo os detalhes da AEP solicitada
+     */
     @GetMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<AepDetailDTO> getAepReportDetails(@PathVariable Long id, Authentication authentication) {

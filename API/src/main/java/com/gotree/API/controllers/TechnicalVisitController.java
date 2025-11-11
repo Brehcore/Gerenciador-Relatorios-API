@@ -21,9 +21,19 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Controller responsável por gerenciar as operações relacionadas às visitas técnicas.
+ * Fornece endpoints para:
+ * - Criar novas visitas técnicas e gerar relatórios em PDF
+ * - Listar visitas técnicas do técnico autenticado
+ * <p>
+ * Base URL: /technical-visits
+ */
 @RestController
 @RequestMapping("/technical-visits")
 public class TechnicalVisitController {
+    
+    
 
     private final TechnicalVisitService technicalVisitService;
     private final TechnicalVisitMapper technicalVisitMapper;
@@ -33,6 +43,13 @@ public class TechnicalVisitController {
         this.technicalVisitMapper = technicalVisitMapper;
     }
 
+    /**
+     * Cria uma nova visita técnica e gera o relatório em PDF.
+     *
+     * @param dto            Dados da visita técnica a ser criada
+     * @param authentication Dados do usuário autenticado
+     * @return ResponseEntity com mensagem de sucesso e ID da visita criada
+     */
     @PostMapping
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> createVisit(@RequestBody @Valid CreateTechnicalVisitRequestDTO dto, Authentication authentication) {
@@ -52,6 +69,12 @@ public class TechnicalVisitController {
                 ));
     }
 
+    /**
+     * Retorna todas as visitas técnicas realizadas pelo técnico autenticado.
+     *
+     * @param authentication Dados do usuário autenticado
+     * @return Lista de visitas técnicas do técnico
+     */
     @GetMapping
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<TechnicalVisitResponseDTO>> findMyVisits(Authentication authentication) {
