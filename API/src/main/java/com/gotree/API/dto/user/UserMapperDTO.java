@@ -1,7 +1,7 @@
 package com.gotree.API.dto.user;
 
 import com.gotree.API.entities.User;
-import com.gotree.API.entities.enums.UserRole;
+import com.gotree.API.enums.UserRole;
 
 import java.util.List;
 import java.util.stream.Collectors;

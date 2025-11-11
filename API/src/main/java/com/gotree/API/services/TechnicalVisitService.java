@@ -28,10 +28,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * Serviço responsável por gerenciar visitas técnicas, incluindo criação,
+ * geração de relatórios PDF, e manipulação de imagens associadas.
+ */
 @Service
 public class TechnicalVisitService {
+    
 
-    // region Dependencies
     private final TechnicalVisitRepository technicalVisitRepository;
     private final CompanyRepository companyRepository;
     private final ReportService reportService; // Para gerar o PDF
@@ -60,8 +64,15 @@ public class TechnicalVisitService {
         this.sectorRepository = sectorRepository;
 
     }
-    // endregion
 
+    /**
+     * Cria uma nova visita técnica e gera o relatório PDF correspondente.
+     *
+     * @param dto        Objeto contendo os dados da visita técnica a ser criada
+     * @param technician Usuário técnico responsável pela visita
+     * @return A entidade TechnicalVisit criada e salva
+     * @throws RuntimeException se a empresa cliente não for encontrada ou houver erro ao salvar arquivos
+     */
     @Transactional
     public TechnicalVisit createAndGeneratePdf(CreateTechnicalVisitRequestDTO dto, User technician) {
         // 1. Buscar a empresa cliente
@@ -131,6 +142,13 @@ public class TechnicalVisitService {
         }
     }
 
+    /**
+     * Converte um DTO de achados da visita para sua entidade correspondente,
+     * incluindo o processamento e salvamento das imagens associadas.
+     *
+     * @param dto DTO contendo os dados do achado da visita
+     * @return Uma nova instância de VisitFinding com os dados convertidos
+     */
     private VisitFinding mapFindingDtoToEntity(VisitFindingDTO dto) {
         VisitFinding finding = new VisitFinding();
         // Lógica para salvar a IMAGEM 1
@@ -183,7 +201,7 @@ public class TechnicalVisitService {
                 System.err.println("Prioridade inválida recebida: " + dto.getPriority());
             }
         }
-// Se a prioridade for nula ou em branco, ela simplesmente não será definida, evitando erros.
+        // Se a prioridade for nula ou em branco, ela simplesmente não será definida, evitando erros.
 
         return finding;
     }
@@ -191,17 +209,37 @@ public class TechnicalVisitService {
     /**
      * Metodo auxiliar para remover o prefixo 'data:image/...' de uma string Base64.
      */
+    /**
+     * Remove o prefixo 'data:image/...' de uma string Base64.
+     *
+     * @param dataUrl String contendo a URL de dados da imagem
+     * @return String Base64 sem o prefixo ou null se a entrada for null
+     */
     private String stripDataUrlPrefix(String dataUrl) {
         if (dataUrl == null) return null;
         int commaIndex = dataUrl.indexOf(',');
         return commaIndex != -1 ? dataUrl.substring(commaIndex + 1) : dataUrl;
     }
 
+    /**
+     * Busca todas as visitas técnicas associadas a um técnico específico.
+     *
+     * @param technician Usuário técnico para filtrar as visitas
+     * @return Lista de visitas técnicas ordenadas por data em ordem decrescente
+     */
     @Transactional(readOnly = true)
     public List<TechnicalVisit> findAllByTechnician(User technician) {
         return technicalVisitRepository.findByTechnicianOrderByVisitDateDesc(technician);
     }
 
+    /**
+     * Exclui uma visita técnica e seus arquivos associados.
+     *
+     * @param visitId     ID da visita técnica a ser excluída
+     * @param currentUser Usuário atual que está tentando excluir a visita
+     * @throws RuntimeException  se a visita não for encontrada
+     * @throws SecurityException se o usuário atual não for o técnico que criou a visita
+     */
     @Transactional
     public void deleteVisit(Long visitId, User currentUser) {
         // 1. Busca o relatório no banco de dados

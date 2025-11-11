@@ -1,7 +1,7 @@
 package com.gotree.API.services;
 
-import com.gotree.API.dto.report.AepDetailDTO;
-import com.gotree.API.dto.report.AepRequestDTO;
+import com.gotree.API.dto.aep.AepDetailDTO;
+import com.gotree.API.dto.aep.AepRequestDTO;
 import com.gotree.API.entities.*;
 import com.gotree.API.repositories.AepReportRepository;
 import com.gotree.API.repositories.CompanyRepository;
@@ -20,8 +20,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * Serviço responsável pelo gerenciamento de Análises Ergonômicas Preliminares (AEP).
+ * Fornece funcionalidades para criar, atualizar, carregar, gerar PDF e excluir relatórios AEP.
+ */
 @Service
 public class AepService {
+    
+    
 
     // A LISTA MESTRE DE TODOS OS RISCOS
     private static final List<String> MASTER_RISK_LIST = Arrays.asList(
@@ -83,7 +89,17 @@ public class AepService {
         this.physioRepository = physioRepository;
     }
 
-    // apenas cria ou atualiza os dados no banco
+
+    /**
+     * Salva ou atualiza os dados de uma AEP no banco de dados.
+     *
+     * @param dto        DTO contendo os dados da AEP a serem salvos
+     * @param evaluator  Usuário que está realizando a avaliação
+     * @param existingId ID da AEP existente (null para nova AEP)
+     * @return AepReport entidade salva
+     * @throws RuntimeException  se a empresa ou fisioterapeuta não forem encontrados
+     * @throws SecurityException se o usuário não estiver autorizado a editar a AEP
+     */
     @Transactional
     public AepReport saveAepData(AepRequestDTO dto, User evaluator, Long existingId) {
         // Se um ID foi fornecido, busca o relatório para edição
@@ -124,7 +140,16 @@ public class AepService {
         return aepReportRepository.save(aep);
     }
 
-    // Carrega um PDF existente ou gera um novo sob demanda
+
+    /**
+     * Carrega um PDF existente ou gera um novo PDF para uma AEP.
+     *
+     * @param id          ID da AEP
+     * @param currentUser Usuário atual solicitando o PDF
+     * @return array de bytes contendo o PDF
+     * @throws IOException      em caso de erro na manipulação do arquivo
+     * @throws RuntimeException se a AEP não for encontrada
+     */
     @Transactional
     public byte[] loadOrGenerateAepPdf(Long id, User currentUser) throws IOException {
         AepReport aep = aepReportRepository.findById(id)
@@ -166,6 +191,15 @@ public class AepService {
         return pdfBytes;
     }
 
+    /**
+     * Busca os detalhes de uma AEP específica.
+     *
+     * @param id          ID da AEP
+     * @param currentUser Usuário atual solicitando os detalhes
+     * @return DTO contendo os detalhes da AEP
+     * @throws RuntimeException  se a AEP não for encontrada
+     * @throws SecurityException se o usuário não estiver autorizado a visualizar a AEP
+     */
     @Transactional(readOnly = true)
     public AepDetailDTO findAepDetails(Long id, User currentUser) {
         AepReport aep = aepReportRepository.findById(id)
@@ -192,7 +226,14 @@ public class AepService {
         return dto;
     }
 
-    // Deleta o relatório e o arquivo PDF associado
+    /**
+     * Deleta uma AEP e seu arquivo PDF associado.
+     *
+     * @param id          ID da AEP a ser deletada
+     * @param currentUser Usuário atual solicitando a deleção
+     * @throws RuntimeException  se a AEP não for encontrada
+     * @throws SecurityException se o usuário não estiver autorizado a deletar a AEP
+     */
     @Transactional
     public void deleteAepReport(Long id, User currentUser) {
         AepReport aep = aepReportRepository.findById(id)
@@ -210,6 +251,11 @@ public class AepService {
         aepReportRepository.delete(aep);
     }
 
+    /**
+     * Deleta um arquivo PDF do sistema de arquivos.
+     *
+     * @param pdfPath Caminho completo do arquivo PDF a ser deletado
+     */
     private void deletePdfFile(String pdfPath) {
         try {
             Path path = Paths.get(pdfPath);

@@ -17,7 +17,7 @@ import br.com.caelum.stella.format.CPFFormatter;
 public interface UserMapper {
 
     @Mapping(target = "id", ignore = true)
-    @Mapping(target = "role", expression = "java(com.gotree.API.entities.enums.UserRole.USER)")
+    @Mapping(target = "role", expression = "java(com.gotree.API.enums.UserRole.USER)")
     @Mapping(target = "authorities", ignore = true)
     User toEntity(UserRequestDTO dto);
 

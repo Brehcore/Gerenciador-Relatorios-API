@@ -1,6 +1,6 @@
 package com.gotree.API.entities;
 
-import com.gotree.API.entities.enums.UserRole;
+import com.gotree.API.enums.UserRole;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.security.core.GrantedAuthority;

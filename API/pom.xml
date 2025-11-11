@@ -94,31 +94,7 @@
 			<scope>provided</scope>
 		</dependency>
 
-		<!-- ITEXT 7 -->
-		<dependency>
-			<groupId>com.itextpdf</groupId>
-			<artifactId>kernel</artifactId>
-			<version>${itext.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>com.itextpdf</groupId>
-			<artifactId>layout</artifactId>
-			<version>${itext.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>com.itextpdf</groupId>
-			<artifactId>sign</artifactId>
-			<version>${itext.version}</version>
-		</dependency>
-
-		<!-- BOUNCY CASTLE (criptografia segura para assinatura digital) -->
-		<dependency>
-			<groupId>org.bouncycastle</groupId>
-			<artifactId>bcpkix-jdk15on</artifactId>
-			<version>1.70</version>
-		</dependency>
-
-		<!-- PDF via HTML (opcional, pra relatórios Thymeleaf) -->
+		<!-- PDF via HTML (para relatórios Thymeleaf) -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-thymeleaf</artifactId>
@@ -128,6 +104,12 @@
 			<groupId>org.xhtmlrenderer</groupId>
 			<artifactId>flying-saucer-pdf</artifactId>
 			<version>9.1.22</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springdoc</groupId>
+			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+			<version>2.5.0</version>
 		</dependency>
 
 		<!-- TESTES -->

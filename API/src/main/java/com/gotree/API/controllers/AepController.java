@@ -1,8 +1,8 @@
 package com.gotree.API.controllers;
 
 import com.gotree.API.config.security.CustomUserDetails;
-import com.gotree.API.dto.report.AepDetailDTO;
-import com.gotree.API.dto.report.AepRequestDTO;
+import com.gotree.API.dto.aep.AepDetailDTO;
+import com.gotree.API.dto.aep.AepRequestDTO;
 import com.gotree.API.entities.AepReport;
 import com.gotree.API.entities.User;
 import com.gotree.API.services.AepService;

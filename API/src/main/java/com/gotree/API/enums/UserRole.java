@@ -1,4 +1,4 @@
-package com.gotree.API.entities.enums;
+package com.gotree.API.enums;
 
 public enum UserRole {
 

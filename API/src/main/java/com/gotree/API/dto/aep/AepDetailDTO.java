@@ -1,4 +1,4 @@
-package com.gotree.API.dto.report;
+package com.gotree.API.dto.aep;
 
 import lombok.Data;
 import java.time.LocalDate;

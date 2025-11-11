@@ -1,4 +1,4 @@
-package com.gotree.API.dto.report;
+package com.gotree.API.dto.aep;
 
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;

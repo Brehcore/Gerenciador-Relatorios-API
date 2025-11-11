@@ -26,10 +26,14 @@ import br.com.caelum.stella.validation.CPFValidator;
 import br.com.caelum.stella.validation.InvalidStateException;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Serviço responsável por gerenciar operações relacionadas a usuários no sistema.
+ * Implementa UserDetailsService para integração com Spring Security.
+ */
 @Service
 public class UserService implements UserDetailsService {
-
-    // region Dependencies
+    
+    
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final UserMapper userMapper;
@@ -39,9 +43,6 @@ public class UserService implements UserDetailsService {
         this.userRepository = userRepository;
         this.userMapper = userMapper;
     }
-    // endregion
-
-    // region CRUD Operations
 
     public List<User> findAll() {
         return userRepository.findAll();
@@ -64,6 +65,14 @@ public class UserService implements UserDetailsService {
         return userRepository.save(user);
     }
 
+    /**
+     * Atualiza os dados de um usuário existente.
+     *
+     * @param id  ID do usuário a ser atualizado
+     * @param dto DTO contendo os novos dados
+     * @return Usuário atualizado
+     * @throws ResourceNotFoundException se o usuário não for encontrado
+     */
     public User updateUser(Long id, UserUpdateDTO dto) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário com ID: " + id + " não encontrado."));
@@ -77,6 +86,12 @@ public class UserService implements UserDetailsService {
         return userRepository.save(user);
     }
 
+    /**
+     * Remove um usuário do sistema.
+     *
+     * @param id ID do usuário a ser removido
+     * @throws ResourceNotFoundException se o usuário não for encontrado
+     */
     public void deleteUser(Long id) {
         if (!userRepository.existsById(id)) {
             throw new ResourceNotFoundException("Usuário com ID: " + id + "não encontrado");
@@ -84,6 +99,12 @@ public class UserService implements UserDetailsService {
         userRepository.deleteById(id);
     }
 
+    /**
+     * Redefine a senha do usuário para seu email e marca para alteração obrigatória.
+     *
+     * @param userId ID do usuário
+     * @throws ResourceNotFoundException se o usuário não for encontrado
+     */
     // Logica pra resetar a senha (fazendo com que o username vire a senha email ==
     // senha
     public void resetPassword(Long userId) {
@@ -100,6 +121,11 @@ public class UserService implements UserDetailsService {
 
     // region Batch Insert
 
+    /**
+     * Realiza a inserção em lote de múltiplos usuários.
+     * @param userDTOs Lista de DTOs contendo os dados dos usuários
+     * @return DTO contendo os usuários inseridos com sucesso e os que falharam
+     */
     public BatchUserInsertResponseDTO insertUsers(List<UserRequestDTO> userDTOs) {
         List<UserResponseDTO> successUsers = new ArrayList<>();
         List<FailedUserDTO> failedUsers = new ArrayList<>();
@@ -123,6 +149,12 @@ public class UserService implements UserDetailsService {
 
     // region Validation
 
+    /**
+     * Valida os dados do usuário antes da inserção.
+     * @param userDTO DTO contendo os dados do usuário
+     * @throws DataIntegrityViolationException se o email já estiver cadastrado
+     * @throws CpfValidationException se o CPF for inválido
+     */
     public void validateUser(UserRequestDTO userDTO) {
         userRepository.findByEmail(userDTO.getEmail()).ifPresent(u -> {
             throw new DataIntegrityViolationException("Email já cadastrado: " + u.getEmail());
@@ -139,6 +171,13 @@ public class UserService implements UserDetailsService {
     }
 
 
+    /**
+     * Altera a senha do usuário.
+     * @param userEmail Email do usuário
+     * @param newPassword Nova senha
+     * @throws RuntimeException se o usuário não for encontrado
+     * @throws IllegalStateException se a alteração de senha não for necessária
+     */
     @Transactional
     public void changePassword(String userEmail, String newPassword) {
         // 1. Busca o utilizador pelo e-mail (que é o identificador do utilizador autenticado)
@@ -164,6 +203,12 @@ public class UserService implements UserDetailsService {
 
     // region Spring Security Integration
 
+    /**
+     * Carrega os detalhes do usuário para autenticação no Spring Security.
+     * @param email Email do usuário
+     * @return Detalhes do usuário para autenticação
+     * @throws UsernameNotFoundException se o usuário não for encontrado
+     */
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
         System.out.println("Buscando usuário por email: " + email);

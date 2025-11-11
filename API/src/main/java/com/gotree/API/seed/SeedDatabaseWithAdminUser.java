@@ -2,7 +2,7 @@ package com.gotree.API.seed;
 
 import com.gotree.API.dto.user.UserRequestDTO;
 import com.gotree.API.entities.User;
-import com.gotree.API.entities.enums.UserRole;
+import com.gotree.API.enums.UserRole;
 import com.gotree.API.services.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -6,7 +6,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import lombok.Getter;
+import lombok.Setter;
 
+@Getter
+@Setter
 public class StandardError {
 
     private Instant timestamp;
@@ -29,56 +33,8 @@ public class StandardError {
 
     }
 
-    // Region Getters/Setters
-
-    public Instant getTimestamp() {
-        return timestamp;
-    }
-
-    public void setTimestamp(Instant timestamp) {
-        this.timestamp = timestamp;
-    }
-
-    public Integer getStatus() {
-        return status;
-    }
-
-    public void setStatus(Integer status) {
-        this.status = status;
-    }
-
-    public String getError() {
-        return error;
-    }
-
-    public void setError(String error) {
-        this.error = error;
-    }
-
-    public String getMessage() {
-        return message;
-    }
-
-    public void setMessage(String message) {
-        this.message = message;
-    }
-
-    public String getPath() {
-        return path;
-    }
-
-    public void setPath(String path) {
-        this.path = path;
-    }
-
-    public List<ValidationError> getValidationErrors() {
-        return validationErrors;
-    }
-
     public void addValidationError(String field, String message) {
         this.validationErrors.add(new ValidationError(field, message));
     }
-
-    // endregion
 
 }

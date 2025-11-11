@@ -6,11 +6,13 @@ import java.time.LocalDate;
 @Data
 public class AgendaResponseDTO {
     private String title;
-    private LocalDate date;
+    private LocalDate date; // Esta será a "Nova Data" (eventDate)
     private String type; // "EVENTO" ou "VISITA"
-    private String description; // Nulo para visitas
-    private Long referenceId; // O ID original (do Evento ou da Visita)
+    private String description; // "Essa visita foi reagendado..."
+    private Long referenceId; // O ID do AgendaEvent ou do TechnicalVisit
+    private String unitName;
+    private String sectorName;
 
-    private String unitName; // Null se for evento
-    private String sectorName; // Null se for evento
+    private LocalDate originalVisitDate; // A "Data original"
+    private Long sourceVisitId; // O ID do relatório de visita original
 }

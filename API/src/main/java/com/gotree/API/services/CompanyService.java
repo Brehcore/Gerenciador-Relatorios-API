@@ -13,15 +13,34 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+/**
+ * Serviço responsável por gerenciar operações relacionadas a empresas.
+ * Fornece funcionalidades para criar, buscar, atualizar e deletar empresas,
+ * além de gerenciar suas unidades e setores.
+ */
 @Service
 public class CompanyService {
+    
+    
 
     private final CompanyRepository companyRepository;
 
+    /**
+     * Construtor do serviço de empresas.
+     *
+     * @param companyRepository repositório para operações de persistência de empresas
+     */
     public CompanyService(CompanyRepository companyRepository) {
         this.companyRepository = companyRepository;
     }
 
+    /**
+     * Cria uma nova empresa com suas unidades e setores.
+     *
+     * @param dto objeto contendo os dados da empresa a ser criada
+     * @return a empresa criada e persistida
+     * @throws IllegalArgumentException se o CNPJ for inválido ou se não houver setores definidos
+     */
     @Transactional
     public Company createCompany(CompanyRequestDTO dto) {
         // É mais eficiente criar o validador uma vez
@@ -78,15 +97,35 @@ public class CompanyService {
         return companyRepository.save(company);
     }
 
+    /**
+     * Retorna todas as empresas cadastradas.
+     *
+     * @return lista com todas as empresas
+     */
     public List<Company> findAll() {
         return companyRepository.findAll();
     }
 
+    /**
+     * Busca uma empresa pelo seu ID.
+     *
+     * @param id identificador da empresa
+     * @return a empresa encontrada
+     * @throws RuntimeException se a empresa não for encontrada
+     */
     public Company findById(Long id) {
         return companyRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Empresa não encontrada com o ID: " + id)); // Use sua exceção customizada aqui
     }
 
+    /**
+     * Atualiza os dados de uma empresa existente.
+     *
+     * @param id  identificador da empresa a ser atualizada
+     * @param dto objeto contendo os novos dados da empresa
+     * @return a empresa atualizada
+     * @throws RuntimeException se a empresa não for encontrada
+     */
     @Transactional
     public Company updateCompany(Long id, CompanyRequestDTO dto) {
         Company company = findById(id); // Reutiliza o método findById para buscar e tratar erro
@@ -101,6 +140,12 @@ public class CompanyService {
         return companyRepository.save(company);
     }
 
+    /**
+     * Remove uma empresa do sistema.
+     *
+     * @param id identificador da empresa a ser removida
+     * @throws RuntimeException se a empresa não for encontrada
+     */
     public void deleteCompany(Long id) {
         Company company = findById(id);
         companyRepository.delete(company);

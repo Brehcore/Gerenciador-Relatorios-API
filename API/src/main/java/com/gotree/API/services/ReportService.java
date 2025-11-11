@@ -14,6 +14,10 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.Map;
 
+/**
+ * Serviço responsável pela geração de relatórios em formato PDF a partir de templates HTML.
+ * Utiliza Thymeleaf para processamento de templates e Flying Saucer para conversão HTML para PDF.
+ */
 @Service
 public class ReportService {
 
@@ -24,6 +28,14 @@ public class ReportService {
         this.templateEngine = templateEngine;
     }
 
+    /**
+     * Gera um documento PDF a partir de um template HTML processado com Thymeleaf.
+     *
+     * @param templateName Nome do arquivo de template HTML a ser processado
+     * @param data         Mapa contendo as variáveis a serem utilizadas no template
+     * @return Array de bytes contendo o documento PDF gerado
+     * @throws RuntimeException se ocorrer algum erro durante a geração do PDF ou carregamento de fontes
+     */
     public byte[] generatePdfFromHtml(String templateName, Map<String, Object> data) {
         Context context = new Context();
         context.setVariables(data);

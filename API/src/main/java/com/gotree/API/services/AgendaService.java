@@ -2,6 +2,7 @@ package com.gotree.API.services;
 
 import com.gotree.API.dto.agenda.AgendaResponseDTO;
 import com.gotree.API.dto.agenda.CreateEventDTO;
+import com.gotree.API.dto.agenda.RescheduleVisitDTO;
 import com.gotree.API.entities.AgendaEvent;
 import com.gotree.API.entities.TechnicalVisit;
 import com.gotree.API.entities.User;
@@ -13,9 +14,18 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
+/**
+ * Serviço responsável pelo gerenciamento de eventos na agenda, incluindo eventos genéricos
+ * e visitas técnicas. Oferece funcionalidades para criar, atualizar, excluir e consultar
+ * eventos, além de gerenciar reagendamentos de visitas técnicas.
+ */
 @Service
 public class AgendaService {
+    
+    
 
     private final AgendaEventRepository agendaEventRepository;
     private final TechnicalVisitRepository technicalVisitRepository;
@@ -36,78 +46,221 @@ public class AgendaService {
         event.setDescription(dto.getDescription());
         event.setEventDate(dto.getEventDate());
         event.setUser(user);
+        event.setEventType("EVENTO"); // Garante que é um evento genérico
+        return agendaEventRepository.save(event);
+    }
+
+    /**
+     * Atualiza um evento existente na agenda.
+     *
+     * @param eventId     ID do evento a ser atualizado
+     * @param dto         Objeto contendo os novos dados do evento
+     * @param currentUser Usuário que está realizando a atualização
+     * @return O evento atualizado
+     * @throws RuntimeException         Se o evento não for encontrado
+     * @throws SecurityException        Se o usuário não tiver permissão para modificar o evento
+     * @throws IllegalArgumentException Se tentar modificar um evento que não seja genérico
+     */
+    @Transactional
+    public AgendaEvent updateEvent(Long eventId, CreateEventDTO dto, User currentUser) {
+        AgendaEvent event = agendaEventRepository.findById(eventId)
+                .orElseThrow(() -> new RuntimeException("Evento com ID " + eventId + " não encontrado."));
+
+        if (!event.getUser().getId().equals(currentUser.getId())) {
+            throw new SecurityException("Usuário não autorizado a modificar este evento.");
+        }
+
+        // Só permite alterar eventos genéricos por este método
+        if (!"EVENTO".equals(event.getEventType())) {
+            throw new IllegalArgumentException("Visitas reagendadas devem ser alteradas pela sua própria rota.");
+        }
+
+        event.setTitle(dto.getTitle());
+        event.setDescription(dto.getDescription());
+        event.setEventDate(dto.getEventDate());
+
+        return agendaEventRepository.save(event);
+    }
+
+    // --- LÓGICA DE REAGENDAMENTO DE VISITA (NOVO) ---
+
+    /**
+     * Reagenda uma visita técnica existente.
+     *
+     * @param visitId     ID da visita técnica a ser reagendada
+     * @param dto         Objeto contendo os dados do reagendamento
+     * @param currentUser Usuário que está realizando o reagendamento
+     * @return O evento de reagendamento criado
+     * @throws RuntimeException  Se a visita técnica não for encontrada
+     * @throws SecurityException Se o usuário não tiver permissão para reagendar a visita
+     */
+    @Transactional
+    public AgendaEvent rescheduleVisit(Long visitId, RescheduleVisitDTO dto, User currentUser) {
+
+        // 1. Busca o Relatório de Visita original (que é imutável)
+        TechnicalVisit visit = technicalVisitRepository.findById(visitId)
+                .orElseThrow(() -> new RuntimeException("Relatório de Visita com ID " + visitId + " não encontrado."));
+
+        // 2. Verifica permissão
+        if (!visit.getTechnician().getId().equals(currentUser.getId())) {
+            throw new SecurityException("Usuário não autorizado a reagendar esta visita.");
+        }
+
+        // 3. Verifica se já existe um "evento de reagendamento" para esta visita
+        AgendaEvent event = agendaEventRepository.findBySourceVisitId(visitId)
+                .orElse(new AgendaEvent()); // Se não existe, cria um novo
+
+        // 4. Preenche os dados conforme sua regra de negócio
+        event.setUser(currentUser);
+        event.setEventType("VISITA_REAGENDADA");
+        event.setTitle("Reagendamento: " + visit.getTitle());
+
+        // O log que você pediu
+        event.setDescription("Visita reagendada. Motivo: " + (dto.getReason() != null ? dto.getReason() : "Não especificado."));
+        event.setOriginalVisitDate(visit.getNextVisitDate()); // "Data original"
+        event.setEventDate(dto.getNewDate()); // "Novo agendamento"
+        event.setSourceVisitId(visit.getId()); // Link para o relatório
 
         return agendaEventRepository.save(event);
     }
 
     /**
-     * Busca TODOS os compromissos de um usuário (Eventos + Visitas Agendadas)
-     * e os consolida em uma única lista para o front-end.
+     * Remove um evento da agenda.
+     *
+     * @param eventId     ID do evento a ser removido
+     * @param currentUser Usuário que está realizando a remoção
+     * @throws RuntimeException  Se o evento não for encontrado
+     * @throws SecurityException Se o usuário não tiver permissão para deletar o evento
+     */
+    @Transactional
+    public void deleteEvent(Long eventId, User currentUser) {
+        // Agora este método pode deletar *qualquer* tipo de evento (genérico ou reagendado)
+        AgendaEvent event = agendaEventRepository.findById(eventId)
+                .orElseThrow(() -> new RuntimeException("Evento com ID " + eventId + " não encontrado."));
+
+        if (!event.getUser().getId().equals(currentUser.getId())) {
+            throw new SecurityException("Usuário não autorizado a deletar este evento.");
+        }
+
+        // Se deletar um evento "VISITA_REAGENDADA", o relatório original (Próxima Visita)
+        // voltará a aparecer automaticamente na agenda no próximo GET.
+        agendaEventRepository.delete(event);
+    }
+
+    /**
+     * Busca todos os compromissos de um usuário específico.
      */
     @Transactional(readOnly = true)
     public List<AgendaResponseDTO> findAllEventsForUser(User user) {
+        // 1. Busca os eventos reais do usuário
+        List<AgendaEvent> persistentEvents = agendaEventRepository.findByUserOrderByEventDateAsc(user);
+        // 2. Busca as visitas virtuais do usuário
+        List<TechnicalVisit> scheduledVisits = technicalVisitRepository.findAllScheduledWithCompanyByTechnician(user);
+        // 3. Delega ao helper para processar e ordenar
+        return aggregateAndSortEvents(persistentEvents, scheduledVisits);
+    }
 
+    /**
+     * Busca TODOS os compromissos de TODOS os usuários (para Admin).
+     */
+    /**
+     * Busca todos os eventos de todos os usuários do sistema.
+     * Este metodo é destinado apenas para usuários com perfil administrativo.
+     *
+     * @return Lista de eventos ordenada por data
+     */
+    @Transactional(readOnly = true)
+    public List<AgendaResponseDTO> findAllEventsForAdmin() {
+        // 1. Busca TODOS os eventos reais
+        List<AgendaEvent> persistentEvents = agendaEventRepository.findAllByOrderByEventDateAsc();
+        // 2. Busca TODAS as visitas virtuais
+        List<TechnicalVisit> scheduledVisits = technicalVisitRepository.findAllScheduledWithCompany();
+        // 3. Delega ao helper para processar e ordenar
+        return aggregateAndSortEvents(persistentEvents, scheduledVisits);
+    }
+
+    // ==========================================
+    // --- MÉTODOS AUXILIARES (HELPERS) ---
+    // ==========================================
+
+    /**
+     * Converte um AgendaEvent (do banco) em um DTO de resposta.
+     */
+    private List<AgendaResponseDTO> aggregateAndSortEvents(List<AgendaEvent> persistentEvents, List<TechnicalVisit> scheduledVisits) {
         List<AgendaResponseDTO> allEvents = new ArrayList<>();
 
-        // 1. Buscar os Eventos Genéricos (Reuniões, Integrações, etc.)
-        List<AgendaEvent> genericEvents = agendaEventRepository.findByUserOrderByEventDateAsc(user);
-        for (AgendaEvent event : genericEvents) {
-            AgendaResponseDTO dto = new AgendaResponseDTO();
-            dto.setTitle(event.getTitle());
-            dto.setDate(event.getEventDate());
-            dto.setDescription(event.getDescription());
-            dto.setType("EVENTO");
-            dto.setReferenceId(event.getId());
-            allEvents.add(dto);
+        // 1. Extrai os IDs das visitas que JÁ FORAM REAGENDADAS
+        Set<Long> rescheduledVisitIds = persistentEvents.stream()
+                .filter(e -> "VISITA_REAGENDADA".equals(e.getEventType()) && e.getSourceVisitId() != null)
+                .map(AgendaEvent::getSourceVisitId)
+                .collect(Collectors.toSet());
+
+        // 2. Mapeia os eventos reais (do banco)
+        for (AgendaEvent event : persistentEvents) {
+            allEvents.add(mapToDto(event));
         }
 
-        // 2. Buscar as Visitas Agendadas (que vêm dos relatórios)
-        List<TechnicalVisit> scheduledVisits = technicalVisitRepository.findAllScheduledWithCompanyByTechnician(user);
-
+        // 3. Mapeia as visitas "virtuais", IGNORANDO as que já foram reagendadas
         for (TechnicalVisit visit : scheduledVisits) {
-            AgendaResponseDTO dto = new AgendaResponseDTO();
-
-            // --- Lógica de nomes (com verificação de nulo) ---
-            String companyName = (visit.getClientCompany() != null) ? visit.getClientCompany().getName() : "Empresa N/A";
-            String unitName = (visit.getUnit() != null) ? visit.getUnit().getName() : null;
-            String sectorName = (visit.getSector() != null) ? visit.getSector().getName() : null;
-
-            // --- Construção do Título ---
-            // Título base: "Próxima Visita: Nome da Empresa"
-            StringBuilder titleBuilder = new StringBuilder("Próxima Visita: " + companyName);
-
-            // Adiciona Unidade, se existir
-            if (unitName != null && !unitName.isBlank()) {
-                titleBuilder.append(" (Unidade: ").append(unitName);
-
-                // Adiciona Setor, mas SÓ SE a unidade também existir
-                if (sectorName != null && !sectorName.isBlank()) {
-                    titleBuilder.append(" - Setor: ").append(sectorName);
-                }
-                titleBuilder.append(")"); // Fecha o parêntese
+            if (!rescheduledVisitIds.contains(visit.getId())) {
+                allEvents.add(mapVisitToDto(visit)); // Só adiciona se NÃO foi reagendada
             }
-            // Caso não tenha Unidade, mas tenha Setor
-            else if (sectorName != null && !sectorName.isBlank()) {
-                titleBuilder.append(" (Setor: ").append(sectorName).append(")");
-            }
-
-            // --- Atribuição dos valores ao DTO ---
-            dto.setTitle(titleBuilder.toString());
-            dto.setDate(visit.getNextVisitDate());
-            dto.setDescription(null);
-            dto.setType("VISITA");
-            dto.setReferenceId(visit.getId());
-
-            // Popula os novos campos do DTO
-            dto.setUnitName(unitName);
-            dto.setSectorName(sectorName);
-
-            allEvents.add(dto);
         }
 
-        // 3. Ordenar a lista combinada por data
+        // 4. Ordena a lista final
         allEvents.sort(Comparator.comparing(AgendaResponseDTO::getDate));
-
         return allEvents;
+    }
+
+    /**
+     * Converte um AgendaEvent (do banco) em um DTO de resposta.
+     */
+    public AgendaResponseDTO mapToDto(AgendaEvent event) {
+        AgendaResponseDTO dto = new AgendaResponseDTO();
+        dto.setTitle(event.getTitle());
+        dto.setDate(event.getEventDate());
+        dto.setDescription(event.getDescription());
+        dto.setType(event.getEventType());
+        dto.setReferenceId(event.getId());
+        dto.setOriginalVisitDate(event.getOriginalVisitDate());
+        dto.setSourceVisitId(event.getSourceVisitId());
+        return dto;
+    }
+
+    /**
+     * Converte uma TechnicalVisit (virtual) em um DTO de resposta.
+     */
+    /**
+     * Converte uma entidade TechnicalVisit em um DTO de resposta.
+     * O metodo constrói um título descritivo incluindo informações da empresa,
+     * unidade e setor quando disponíveis.
+     *
+     * @param visit Visita técnica a ser convertida
+     * @return DTO contendo os dados da visita
+     */
+    private AgendaResponseDTO mapVisitToDto(TechnicalVisit visit) {
+        AgendaResponseDTO dto = new AgendaResponseDTO();
+        String companyName = (visit.getClientCompany() != null) ? visit.getClientCompany().getName() : "Empresa N/A";
+        String unitName = (visit.getUnit() != null) ? visit.getUnit().getName() : null;
+        String sectorName = (visit.getSector() != null) ? visit.getSector().getName() : null;
+        StringBuilder titleBuilder = new StringBuilder("Próxima Visita: " + companyName);
+        if (unitName != null && !unitName.isBlank()) {
+            titleBuilder.append(" (Unidade: ").append(unitName);
+            if (sectorName != null && !sectorName.isBlank()) {
+                titleBuilder.append(" - Setor: ").append(sectorName);
+            }
+            titleBuilder.append(")");
+        } else if (sectorName != null && !sectorName.isBlank()) {
+            titleBuilder.append(" (Setor: ").append(sectorName).append(")");
+        }
+        dto.setTitle(titleBuilder.toString());
+        dto.setDate(visit.getNextVisitDate());
+        dto.setType("VISITA");
+        dto.setReferenceId(visit.getId());
+        dto.setUnitName(unitName);
+        dto.setSectorName(sectorName);
+        dto.setOriginalVisitDate(null);
+        dto.setSourceVisitId(null);
+        return dto;
     }
 }

@@ -1,4 +1,4 @@
-package com.gotree.API.dto.report;
+package com.gotree.API.dto.signatures;
 
 import lombok.Data;
 

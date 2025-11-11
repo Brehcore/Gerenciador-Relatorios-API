@@ -1,11 +1,9 @@
 package com.gotree.API.services;
 
 import com.gotree.API.dto.document.DocumentSummaryDTO;
-import com.gotree.API.entities.InspectionReport;
 import com.gotree.API.entities.TechnicalVisit;
 import com.gotree.API.entities.User;
 import com.gotree.API.repositories.AepReportRepository;
-import com.gotree.API.repositories.InspectionReportRepository;
 import com.gotree.API.repositories.TechnicalVisitRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -19,13 +17,15 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
+/**
+ * Serviço responsável por agregar e gerenciar diferentes tipos de documentos no sistema,
+ * incluindo Relatórios de Visita Técnica e Avaliações Ergonômicas Preliminares (AEP).
+ * Fornece funcionalidades para buscar, carregar e deletar documentos.
+ */
 @Service
 public class DocumentAggregationService {
 
-    private final InspectionReportRepository inspectionReportRepository;
     private final TechnicalVisitRepository technicalVisitRepository;
-    private final InspectionReportService inspectionReportService;
     private final TechnicalVisitService technicalVisitService;
     private final AepService aepService;
     private final AepReportRepository aepReportRepository;
@@ -33,41 +33,24 @@ public class DocumentAggregationService {
     @Value("${file.storage.path}") // Injete o caminho base aqui também
     private String fileStoragePath;
 
-    public DocumentAggregationService(InspectionReportRepository inspectionReportRepository,
-                                      TechnicalVisitRepository technicalVisitRepository,
-                                      InspectionReportService inspectionReportService,
+    public DocumentAggregationService(TechnicalVisitRepository technicalVisitRepository,
                                       TechnicalVisitService technicalVisitService,
                                       AepService aepService, AepReportRepository aepReportRepository) {
-        this.inspectionReportRepository = inspectionReportRepository;
         this.technicalVisitRepository = technicalVisitRepository;
-        this.inspectionReportService = inspectionReportService;
         this.technicalVisitService = technicalVisitService;
         this.aepService = aepService;
         this.aepReportRepository = aepReportRepository;
     }
 
+    /**
+     * Recupera todos os documentos associados a um técnico específico.
+     * Inclui tanto Relatórios de Visita Técnica quanto Avaliações Ergonômicas Preliminares.
+     *
+     * @param technician O usuário técnico para o qual os documentos serão buscados
+     * @return Lista de DocumentSummaryDTO contendo todos os documentos ordenados por data de criação
+     */
     @Transactional(readOnly = true)
     public List<DocumentSummaryDTO> findAllDocumentsForUser(User technician) {
-        // Bloco 1: Checklists de Inspeção
-        List<DocumentSummaryDTO> inspectionReports = inspectionReportRepository.findAllWithCompanyByTechnician(technician)
-                .stream()
-                .map(report -> {
-                    DocumentSummaryDTO dto = new DocumentSummaryDTO();
-                    dto.setId(report.getId());
-
-                    // Define o nome com base no nome do arquivo PDF
-                    String docType = "Checklist de Inspeção"; // Nome padrão
-                    if (report.getPdfPath() != null && report.getPdfPath().contains("nrs-checklist-template")) {
-                        docType = "Checklist de Inspeção NR";
-                    }
-                    dto.setDocumentType(docType);
-
-                    dto.setTitle(report.getTitle());
-                    dto.setClientName(report.getCompany() != null ? report.getCompany().getName() : "N/A");
-                    dto.setCreationDate(report.getInspectionDate());
-                    return dto; // CORREÇÃO: Adicionado o 'return'
-                })
-                .toList();
 
         // Bloco 2: Relatórios de Visita Técnica
         List<DocumentSummaryDTO> technicalVisits = technicalVisitRepository.findAllWithCompanyByTechnician(technician)
@@ -98,7 +81,7 @@ public class DocumentAggregationService {
                 .toList();
 
         // 3. Junta todas as listas numa só
-        List<DocumentSummaryDTO> allDocuments = Stream.of(inspectionReports, technicalVisits, aepReports)
+        List<DocumentSummaryDTO> allDocuments = Stream.of(technicalVisits, aepReports)
                 .flatMap(List::stream)
                 .collect(Collectors.toList());
 
@@ -108,6 +91,12 @@ public class DocumentAggregationService {
         return allDocuments;
     }
 
+    /**
+     * Recupera os 5 documentos mais recentes associados a um técnico específico.
+     *
+     * @param technician O usuário técnico para o qual os documentos serão buscados
+     * @return Lista limitada a 5 DocumentSummaryDTO ordenados por data de criação
+     */
     @Transactional(readOnly = true)
     public List<DocumentSummaryDTO> findLatestDocumentsForUser(User technician) {
         List<DocumentSummaryDTO> allDocuments = findAllDocumentsForUser(technician);
@@ -116,27 +105,29 @@ public class DocumentAggregationService {
         return allDocuments.stream().limit(5).collect(Collectors.toList());
     }
 
+    /**
+     * Carrega o arquivo PDF de um documento específico com base em seu tipo e ID.
+     *
+     * @param type        Tipo do documento ("visit" ou "aep")
+     * @param id          ID do documento
+     * @param currentUser Usuário atual que está solicitando o documento
+     * @return Array de bytes contendo o PDF do documento
+     * @throws IOException              Se houver erro ao ler o arquivo
+     * @throws RuntimeException         Se o documento não for encontrado
+     * @throws IllegalArgumentException Se o tipo de documento for inválido
+     */
     public byte[] loadPdfFileByTypeAndId(String type, Long id, User currentUser) throws IOException {
-        System.out.println("--- DEBUG [Agregação]: Roteando para tipo: " + type); // DEBUG
 
         String fileName = null;
         byte[] pdfBytes = null;
 
-        if ("checklist".equalsIgnoreCase(type)) {
-            InspectionReport report = inspectionReportRepository.findById(id)
-                    .orElseThrow(() -> new RuntimeException("Checklist com ID " + id + " não encontrado."));
-            fileName = report.getPdfPath();
-
-        } else if ("visit".equalsIgnoreCase(type)) {
+        if ("visit".equalsIgnoreCase(type)) {
             TechnicalVisit visit = technicalVisitRepository.findById(id)
                     .orElseThrow(() -> new RuntimeException("Relatório de Visita com ID " + id + " não encontrado."));
             fileName = visit.getPdfPath();
 
         } else if ("aep".equalsIgnoreCase(type)) {
-            System.out.println("--- DEBUG [Agregação]: Chamando AepService para ID: " + id); // DEBUG
             pdfBytes = aepService.loadOrGenerateAepPdf(id, currentUser);
-            System.out.println("--- DEBUG [Agregação]: Retornou do AepService. Bytes: " + (pdfBytes != null ? pdfBytes.length : "null")); // DEBUG
-            // fileName permanece nulo, o que está correto
 
         } else {
             throw new IllegalArgumentException("Tipo de documento inválido: " + type);
@@ -144,23 +135,18 @@ public class DocumentAggregationService {
 
         // Se os bytes foram gerados (é um AEP), retorne imediatamente.
         if (pdfBytes != null) {
-            System.out.println("--- DEBUG [Agregação]: Retornando bytes do AEP imediatamente."); // DEBUG
             return pdfBytes;
         }
 
         // Se o código chegou aqui, é um "checklist" ou "visit".
         // Precisamos garantir que o fileName não seja nulo ANTES de usá-lo.
         if (fileName == null || fileName.isBlank()) {
-            System.err.println("--- ERRO DEBUG [Agregação]: fileName está nulo ou em branco para o tipo: " + type); // DEBUG
             throw new RuntimeException("Este documento não possui um PDF associado.");
         }
 
         // Agora, este código só é executado se tivermos um fileName válido.
         Path path;
-        if ("checklist".equalsIgnoreCase(type)) {
-            // O InspectionReportService salva o CAMINHO COMPLETO
-            path = Paths.get(fileName);
-        } else if ("visit".equalsIgnoreCase(type)) {
+        if ("visit".equalsIgnoreCase(type)) {
             // O TechnicalVisitService salva SÓ O NOME DO ARQUIVO
             path = Paths.get(fileStoragePath, fileName);
         } else {
@@ -174,14 +160,18 @@ public class DocumentAggregationService {
         return Files.readAllBytes(path);
     }
 
+    /**
+     * Deleta um documento específico com base em seu tipo e ID.
+     *
+     * @param type        Tipo do documento ("visit" ou "aep")
+     * @param id          ID do documento a ser deletado
+     * @param currentUser Usuário atual que está solicitando a deleção
+     * @throws IllegalArgumentException Se o tipo de documento for inválido
+     */
     @Transactional
     public void deleteDocumentByTypeAndId(String type, Long id, User currentUser) {
         // Usamos um 'if/else if' para ir ao serviço correto, sem ambiguidade
-        if ("checklist".equalsIgnoreCase(type)) {
-            // A lógica de deleção (incluindo verificação de segurança) já está no serviço
-            inspectionReportService.deleteReport(id, currentUser);
-
-        } else if ("visit".equalsIgnoreCase(type)) {
+        if ("visit".equalsIgnoreCase(type)) {
             // A mesma lógica para o serviço de visita técnica
             technicalVisitService.deleteVisit(id, currentUser);
 
