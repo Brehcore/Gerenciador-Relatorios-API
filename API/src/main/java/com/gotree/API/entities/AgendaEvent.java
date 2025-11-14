@@ -5,34 +5,68 @@ import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDate;
 
+/**
+ * Entidade que representa eventos de agenda no sistema.
+ * Esta classe é usada para registrar eventos relacionados a visitas técnicas,
+ * como reagendamentos e cancelamentos.
+ */
 @Entity
 @Table(name = "tb_agenda_event")
 @Data
 public class AgendaEvent {
 
+
+    /**
+     * Identificador único do evento de agenda.
+     */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    /**
+     * Título do evento de agenda.
+     */
     private String title;
-    @Lob
-    private String description; // Aqui podemos salvar: "Essa visita foi reagendado"
 
-    // Este campo guardará o "Novo agendamento"
+    /**
+     * Descrição detalhada do evento.
+     * Pode conter informações como motivo de reagendamento ou cancelamento.
+     */
+    @Lob
+    private String description;
+
+    /**
+     * Data em que o evento está programado para ocorrer.
+     * No caso de reagendamentos, representa a nova data agendada.
+     */
     private LocalDate eventDate;
 
+    /**
+     * Usuário associado ao evento.
+     * Relacionamento muitos-para-um com a entidade User.
+     */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private User user;
 
-    // Guarda o ID do TechnicalVisit de origem.
+    /**
+     * ID da visita técnica original que gerou este evento.
+     * Campo único que permite rastrear a origem do evento.
+     */
     @Column(name = "source_visit_id", unique = true, nullable = true)
     private Long sourceVisitId;
 
-    // Guarda a "Data original" do TechnicalVisit
+    /**
+     * Data original da visita técnica.
+     * Utilizado para manter histórico em caso de reagendamentos.
+     */
     @Column(name = "original_visit_date")
     private LocalDate originalVisitDate;
 
+    /**
+     * Tipo do evento de agenda.
+     * Define a natureza do evento (ex: reagendamento, cancelamento).
+     */
     @Enumerated(EnumType.STRING)
     @Column(name = "event_type")
     private AgendaEventType eventType;

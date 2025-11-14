@@ -2,9 +2,11 @@ package com.gotree.API.services;
 
 import com.gotree.API.dto.document.DocumentSummaryDTO;
 import com.gotree.API.entities.AepReport;
+import com.gotree.API.entities.OccupationalRiskReport;
 import com.gotree.API.entities.TechnicalVisit;
 import com.gotree.API.entities.User;
 import com.gotree.API.repositories.AepReportRepository;
+import com.gotree.API.repositories.OccupationalRiskReportRepository;
 import com.gotree.API.repositories.TechnicalVisitRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -25,22 +27,39 @@ import java.util.stream.Stream;
  */
 @Service
 public class DocumentAggregationService {
+    
+    
 
     private final TechnicalVisitRepository technicalVisitRepository;
     private final TechnicalVisitService technicalVisitService;
     private final AepService aepService;
     private final AepReportRepository aepReportRepository;
+    private final RiskChecklistService riskChecklistService;
+    private final OccupationalRiskReportRepository riskReportRepository;
 
     @Value("${file.storage.path}") // Injete o caminho base aqui também
     private String fileStoragePath;
 
+    /**
+     * Construtor do serviço de agregação de documentos.
+     *
+     * @param technicalVisitRepository Repositório de visitas técnicas
+     * @param technicalVisitService    Serviço de visitas técnicas
+     * @param aepService               Serviço de AEP
+     * @param aepReportRepository      Repositório de relatórios AEP
+     * @param riskChecklistService     Serviço de checklist de riscos
+     * @param riskReportRepository     Repositório de relatórios de riscos ocupacionais
+     */
     public DocumentAggregationService(TechnicalVisitRepository technicalVisitRepository,
                                       TechnicalVisitService technicalVisitService,
-                                      AepService aepService, AepReportRepository aepReportRepository) {
+                                      AepService aepService, AepReportRepository aepReportRepository,
+                                      RiskChecklistService riskChecklistService, OccupationalRiskReportRepository riskReportRepository) {
         this.technicalVisitRepository = technicalVisitRepository;
         this.technicalVisitService = technicalVisitService;
         this.aepService = aepService;
         this.aepReportRepository = aepReportRepository;
+        this.riskChecklistService = riskChecklistService;
+        this.riskReportRepository = riskReportRepository;
     }
 
     /**
@@ -65,7 +84,21 @@ public class DocumentAggregationService {
                 .map(this::mapAepToSummaryDto) // Refatorado para helper
                 .toList();
 
-        // 3. Junta as listas
+        // Bloco 4: CHECKLIST DE RISCOS
+        List<DocumentSummaryDTO> riskReports = riskReportRepository.findByTechnicianOrderByInspectionDateDesc(technician)
+                .stream()
+                .map(report -> {
+                    DocumentSummaryDTO dto = new DocumentSummaryDTO();
+                    dto.setId(report.getId());
+                    dto.setDocumentType("Checklist de Riscos"); // Identificador visual
+                    dto.setTitle(report.getTitle());
+                    dto.setClientName(report.getCompany() != null ? report.getCompany().getName() : "N/A");
+                    dto.setCreationDate(report.getInspectionDate());
+                    return dto;
+                })
+                .toList();
+
+        // Junta as listas
         List<DocumentSummaryDTO> allDocuments = Stream.of(technicalVisits, aepReports)
                 .flatMap(List::stream)
                 .collect(Collectors.toList());
@@ -83,6 +116,13 @@ public class DocumentAggregationService {
      * @return Lista limitada a 5 DocumentSummaryDTO ordenados por data de criação
      */
     @Transactional(readOnly = true)
+    /**
+     * Recupera os 5 documentos mais recentes associados a um técnico específico.
+     * Inclui relatórios de visita técnica, avaliações ergonômicas preliminares e checklists de risco.
+     *
+     * @param technician O usuário técnico para o qual os documentos serão buscados
+     * @return Lista limitada a 5 DocumentSummaryDTO ordenados por data de criação decrescente
+     */
     public List<DocumentSummaryDTO> findLatestDocumentsForUser(User technician) {
         List<DocumentSummaryDTO> allDocuments = findAllDocumentsForUser(technician);
 
@@ -91,6 +131,12 @@ public class DocumentAggregationService {
     }
 
     @Transactional(readOnly = true)
+    /**
+     * Recupera os 5 documentos mais recentes do sistema para visualização administrativa.
+     * Inclui todos os tipos de documentos sem restrição por usuário.
+     *
+     * @return Lista limitada a 5 DocumentSummaryDTO ordenados por data de criação decrescente
+     */
     public List<DocumentSummaryDTO> findAllLatestDocumentsForAdmin() {
         // 1. Busca TODOS os relatórios (sem filtro de usuário)
         List<DocumentSummaryDTO> technicalVisits = technicalVisitRepository.findAll()
@@ -136,6 +182,11 @@ public class DocumentAggregationService {
 
         } else if ("aep".equalsIgnoreCase(type)) {
             pdfBytes = aepService.loadOrGenerateAepPdf(id, currentUser);
+
+        } else if ("risk".equalsIgnoreCase(type)) {
+            OccupationalRiskReport report = riskReportRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Relatório não encontrado."));
+            fileName = report.getPdfPath();
 
         } else {
             throw new IllegalArgumentException("Tipo de documento inválido: " + type);
@@ -187,15 +238,24 @@ public class DocumentAggregationService {
             // A mesma lógica para o serviço da AEP
             aepService.deleteAepReport(id, currentUser);
 
+        } else if ("risk".equalsIgnoreCase(type)) {
+            // A mesma lógica para o serviço do checklist
+            riskChecklistService.deleteReport(id, currentUser);
         } else {
-            // Se o tipo for desconhecido, lançamos um erro
-            throw new IllegalArgumentException("Tipo de documento inválido para deleção: " + type);
+                // Se o tipo for desconhecido, lançamos um erro
+                throw new IllegalArgumentException("Tipo de documento inválido: " + type);
+            }
         }
-    }
 
     // --- HELPERS DE MAPEAMENTO ---
     /**
      * Converte um TechnicalVisit em DTO de resumo.
+     */
+    /**
+     * Converte um objeto TechnicalVisit em um DocumentSummaryDTO.
+     *
+     * @param visit A visita técnica a ser convertida
+     * @return DocumentSummaryDTO contendo as informações resumidas da visita
      */
     public DocumentSummaryDTO mapVisitToSummaryDto(TechnicalVisit visit) {
         DocumentSummaryDTO dto = new DocumentSummaryDTO();
@@ -209,6 +269,12 @@ public class DocumentAggregationService {
 
     /**
      * Converte um AepReport em DTO de resumo.
+     */
+    /**
+     * Converte um objeto AepReport em um DocumentSummaryDTO.
+     *
+     * @param aep O relatório AEP a ser convertido
+     * @return DocumentSummaryDTO contendo as informações resumidas da avaliação ergonômica
      */
     public DocumentSummaryDTO mapAepToSummaryDto(AepReport aep) {
         DocumentSummaryDTO dto = new DocumentSummaryDTO();

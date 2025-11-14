@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Checklist de Riscos Ocupacionais</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 10pt;
+            margin: 0;
+            padding: 0;
+        }
+        .header {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        .header td {
+            border: 1px solid #ccc;
+            padding: 8px;
+            vertical-align: middle;
+            text-align: center; /* Tudo centralizado */
+        }
+
+        .header .logo {
+            width: 15%;
+        }
+        .header .logo img {
+            max-width: 80px;
+            max-height: 80px;
+            object-fit: contain;
+        }
+
+        .header .title {
+            width: 70%;
+            font-size: 14pt;
+            font-weight: bold;
+            background-color: #f2f2f2;
+            text-transform: uppercase;
+        }
+        .header .info {
+            width: 15%;
+            text-align: right;
+            font-size: 8pt;
+        }
+        .section-title {
+            background-color: #e0e0e0;
+            padding: 5px;
+            margin-top: 15px;
+            margin-bottom: 10px;
+            font-weight: bold;
+            border: 1px solid #ccc;
+        }
+        .data-grid {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+        }
+        .data-grid td {
+            border: 1px solid #ccc;
+            padding: 6px;
+            vertical-align: top;
+        }
+        .data-grid .label {
+            width: 25%; /* Ajuste a largura das labels */
+            font-weight: bold;
+            background-color: #f9f9f9;
+        }
+        .risk-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        .risk-table th, .risk-table td {
+            border: 1px solid #000;
+            padding: 6px;
+            text-align: left;
+        }
+        .risk-table thead th {
+            background-color: #d0d0d0;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .risk-table tbody tr:nth-child(even) {
+            background-color: #f5f5f5;
+        }
+        .signature-block {
+            width: 100%;
+            margin-top: 40px;
+            page-break-inside: avoid; /* Evita que a assinatura seja quebrada entre páginas */
+        }
+        .signature-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .signature-table td {
+            width: 50%;
+            text-align: center;
+            padding: 20px 10px;
+            border-top: 1px solid #000;
+        }
+        .signature-table .label {
+            font-weight: bold;
+            margin-top: 5px;
+        }
+        .signature-table img {
+            max-width: 150px;
+            max-height: 70px;
+            display: block;
+            margin: 0 auto 5px auto;
+        }
+    </style>
+</head>
+<body>
+
+<table class="header">
+    <tr>
+        <td class="logo">
+            <img th:if="${generatingCompanyLogo != null}"
+                 th:src="'data:image/png;base64,' + ${generatingCompanyLogo}"
+                 alt="Logo" />
+        </td>
+
+        <td class="title">
+            CHECKLIST DE RISCOS OCUPACIONAIS
+        </td>
+
+        <td class="logo">
+            <img th:if="${generatingCompanyLogo != null}"
+                 th:src="'data:image/png;base64,' + ${generatingCompanyLogo}"
+                 alt="Logo" />
+        </td>
+    </tr>
+</table>
+
+<div class="section-title">DADOS DO CLIENTE</div>
+<table class="data-grid">
+    <tr>
+        <td class="label">Empresa</td>
+        <td th:text="${report.company?.name}"></td>
+        <td class="label">CNPJ</td>
+        <td th:text="${report.company?.cnpj}"></td>
+    </tr>
+    <tr>
+        <td class="label">Unidade</td>
+        <td th:text="${report.unit?.name ?: 'N/A'}"></td>
+        <td class="label">Setor</td>
+        <td th:text="${report.sector?.name ?: 'N/A'}"></td>
+    </tr>
+</table>
+
+<div class="section-title">INFORMAÇÕES DO RELATÓRIO</div>
+<table class="data-grid">
+    <tr>
+        <td class="label">Responsável</td>
+        <td th:text="${report.technician?.name}"></td>
+        <td class="label">Registro no Conselho</td>
+        <td th:text="${report.technician?.conselhoClasse} + ' | ' + ${report.technician?.siglaConselho}"></td>
+    </tr>
+    <tr>
+        <td class="label">Data da Inspeção</td>
+        <td th:text="${#temporals.format(report.inspectionDate, 'dd/MM/yyyy')}"></td>
+        <td class="label">Especialidade</td>
+        <td th:text="${report.technician?.especialidade}"></td>
+    </tr>
+</table>
+
+<div class="section-title" style="text-align: center">FUNÇÕES AVALIADAS E RISCOS IDENTIFICADOS</div>
+
+<div th:each="func : ${functionsData}" style="margin-bottom: 20px; page-break-inside: avoid;">
+    <p><strong>Função Avaliada:</strong> <span th:text="${func.name}"></span></p>
+
+    <table class="risk-table">
+        <thead>
+        <tr>
+            <th style="width: 30%;">TIPO DE RISCO</th>
+            <th style="width: 70%;">RISCOS IDENTIFICADOS</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="risk : ${func.risks}">
+            <td th:text="${risk.type}"></td>
+            <td th:text="${risk.factor}"></td>
+        </tr>
+        <tr th:if="${#lists.isEmpty(func.risks)}">
+            <td colspan="2" style="text-align: center;">
+                Nenhum risco identificado para esta função.
+            </td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+
+<div class="signature-block">
+    <div class="section-title">Assinatura</div>
+    <table class="signature-table">
+        <tr>
+            <td>
+                <img th:if="${report.technicianSignatureImageBase64 != null}"
+                     th:src="'data:image/png;base64,' + ${report.technicianSignatureImageBase64}"
+                     alt="Assinatura do Técnico" />
+
+                <div th:if="${report.technicianSignatureImageBase64 == null}" style="height: 50px;"></div>
+
+                <br/>
+                <span class="label" th:text="${report.technician?.name}"></span><br/>
+                <span>Técnico Responsável</span>
+
+                <span th:if="${report.technicianSignedAt != null}">
+                    <br/>Data: <span th:text="${#temporals.format(report.technicianSignedAt, 'dd/MM/yyyy HH:mm')}"></span>
+                </span>
+            </td>
+        </tr>
+    </table>
+</div>
+
+</body>
+</html>
