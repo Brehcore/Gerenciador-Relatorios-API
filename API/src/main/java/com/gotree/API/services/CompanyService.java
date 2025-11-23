@@ -13,6 +13,8 @@ import com.gotree.API.repositories.JobRoleRepository;
 import com.gotree.API.repositories.OccupationalRiskReportRepository;
 import com.gotree.API.repositories.TechnicalVisitRepository;
 import jakarta.transaction.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -101,6 +103,16 @@ public class CompanyService {
     public Company findById(Long id) {
         return companyRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Empresa não encontrada com o ID: " + id)); // Use sua exceção customizada aqui
+    }
+
+    /**
+     * Retorna empresas de forma paginada.
+     *
+     * @param pageable objeto contendo informações de paginação (página atual, tamanho, ordenação)
+     * @return Uma página (Page) contendo a lista de empresas e metadados
+     */
+    public Page<Company> findAllPaginated(Pageable pageable) {
+        return companyRepository.findAll(pageable);
     }
 
     /**

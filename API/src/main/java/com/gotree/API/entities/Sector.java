@@ -1,5 +1,6 @@
 package com.gotree.API.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -25,5 +26,6 @@ public class Sector {
     // A única relação necessária: o setor pertence a uma empresa.
     @ManyToOne
     @JoinColumn(name = "company_id")
+    @JsonIgnore
     private Company company;
 }

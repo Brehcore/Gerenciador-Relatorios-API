@@ -1,5 +1,6 @@
 package com.gotree.API.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType; // Este import está correto
@@ -29,5 +30,6 @@ public class Unit {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "company_id")
+    @JsonIgnore
     private Company company;
 }

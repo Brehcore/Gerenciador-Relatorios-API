@@ -7,6 +7,10 @@ import com.gotree.API.exceptions.ResourceNotFoundException;
 import com.gotree.API.mappers.CompanyMapper;
 import com.gotree.API.services.CompanyService;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -52,19 +56,19 @@ public class CompanyController {
         return ResponseEntity.status(HttpStatus.CREATED).body(responseDto);
     }
 
-    /**
-     * Lista todas as empresas cadastradas no sistema.
-     *
-     * @return ResponseEntity com a lista de DTOs das empresas e status HTTP 200 (OK)
-     * @secured Requer autenticação
-     */
-    @GetMapping
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<List<CompanyResponseDTO>> findAll() {
-        List<Company> companies = companyService.findAll();
-        List<CompanyResponseDTO> responseDtos = companyMapper.toDtoList(companies);
-        return ResponseEntity.ok(responseDtos);
-    }
+//    /**
+//     * Lista todas as empresas cadastradas no sistema.
+//     *
+//     * @return ResponseEntity com a lista de DTOs das empresas e status HTTP 200 (OK)
+//     * @secured Requer autenticação
+//     */
+//    @GetMapping
+//    @PreAuthorize("isAuthenticated()")
+//    public ResponseEntity<List<CompanyResponseDTO>> findAll() {
+//        List<Company> companies = companyService.findAll();
+//        List<CompanyResponseDTO> responseDtos = companyMapper.toDtoList(companies);
+//        return ResponseEntity.ok(responseDtos);
+//    }
 
     /**
      * Busca uma empresa específica pelo seu ID.
@@ -80,6 +84,18 @@ public class CompanyController {
         Company company = companyService.findById(id);
         CompanyResponseDTO responseDto = companyMapper.toDto(company);
         return ResponseEntity.ok(responseDto);
+    }
+
+    /**
+     * Lista todas as empresas com paginação.
+     * Exemplo de chamada: GET /companies?page=0&size=10&sort=name,asc
+     */
+    @GetMapping
+    public ResponseEntity<Page<Company>> getAll(
+            @PageableDefault(page = 0, size = 10, sort = "name", direction = Sort.Direction.ASC) Pageable pageable
+    ) {
+        Page<Company> companies = companyService.findAllPaginated(pageable);
+        return ResponseEntity.ok(companies);
     }
 
     /**
