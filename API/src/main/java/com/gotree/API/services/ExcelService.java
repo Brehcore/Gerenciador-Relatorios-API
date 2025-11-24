@@ -17,11 +17,11 @@ import java.io.InputStream;
 import java.util.*;
 
 @Service
-public class ExcelImportService {
+public class ExcelService {
 
     private final CompanyService companyService;
 
-    public ExcelImportService(CompanyService companyService) {
+    public ExcelService(CompanyService companyService) {
         this.companyService = companyService;
     }
 
@@ -94,16 +94,12 @@ public class ExcelImportService {
     }
 
     private void saveOrUpdateCompany(CompanyRequestDTO dto) {
-        // Verifica se a empresa já existe pelo CNPJ
-        Optional<Company> existing = companyService.findAll().stream()
-                .filter(c -> c.getCnpj().equals(dto.getCnpj()))
-                .findFirst();
+        // OTIMIZADO: Busca direto no banco
+        Optional<Company> existing = companyService.findByCnpj(dto.getCnpj());
 
         if (existing.isPresent()) {
-            // Se existe, chama o UPDATE (que agora tem a lógica de merge correta)
             companyService.updateCompany(existing.get().getId(), dto);
         } else {
-            // Se não existe, chama o CREATE
             companyService.createCompany(dto);
         }
     }

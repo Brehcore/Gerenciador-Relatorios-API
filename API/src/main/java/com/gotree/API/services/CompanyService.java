@@ -18,6 +18,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set; // Import necessário
 import java.util.stream.Collectors; // Import necessário
 
@@ -103,6 +104,10 @@ public class CompanyService {
     public Company findById(Long id) {
         return companyRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Empresa não encontrada com o ID: " + id)); // Use sua exceção customizada aqui
+    }
+
+    public Optional<Company> findByCnpj(String cnpj) {
+        return companyRepository.findByCnpj(cnpj);
     }
 
     /**

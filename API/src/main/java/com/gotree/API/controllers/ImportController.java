@@ -1,6 +1,6 @@
 package com.gotree.API.controllers;
 
-import com.gotree.API.services.ExcelImportService;
+import com.gotree.API.services.ExcelService;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -16,17 +16,17 @@ import java.io.IOException;
 @RequestMapping("/import")
 public class ImportController {
 
-    private final ExcelImportService excelImportService;
+    private final ExcelService excelService;
 
-    public ImportController(ExcelImportService excelImportService) {
-        this.excelImportService = excelImportService;
+    public ImportController(ExcelService excelService) {
+        this.excelService = excelService;
     }
 
     @PostMapping("/companies")
     @PreAuthorize("hasRole('ADMIN')") // Apenas admin deve importar
     public ResponseEntity<String> importCompanies(@RequestParam("file") MultipartFile file) {
         try {
-            excelImportService.importCompanies(file);
+            excelService.importCompanies(file);
             return ResponseEntity.ok("Importação concluída com sucesso!");
         } catch (IOException e) {
             return ResponseEntity.internalServerError().body("Erro ao ler o arquivo: " + e.getMessage());
@@ -38,7 +38,7 @@ public class ImportController {
     @GetMapping("/export")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<InputStreamResource> exportCompanies() throws IOException {
-        ByteArrayInputStream in = excelImportService.exportCompaniesToExcel(); // Ou excelService
+        ByteArrayInputStream in = excelService.exportCompaniesToExcel(); // Ou excelService
 
         HttpHeaders headers = new HttpHeaders();
         headers.add("Content-Disposition", "attachment; filename=empresas_exportadas.xlsx");
