@@ -139,12 +139,25 @@ public class DocumentEmailController {
             String subject = "Documento Emitido: " + subjectType + " - " + companyName;
 
             String body = String.format(
-                    "<div style='font-family: Arial, sans-serif; color: #333;'>" +
-                            "  <h2>Olá!</h2>" +
-                            "  <p>Segue em anexo o documento <strong>%s</strong> referente à empresa <strong>%s</strong>.</p>" +
-                            "  <p>Este e-mail foi enviado automaticamente pela Go-Tree Consultoria.</p>" +
-                            "  <br>" +
-                            "  <p style='font-size: 12px; color: #777;'>Favor não responder este e-mail.</p>" +
+                    "<div style='font-family: \"Segoe UI\", Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;'>" +
+                            "  <div style='background-color: #166534; padding: 24px; text-align: center;'>" +
+                            "    <h2 style='color: #ffffff; margin: 0; font-weight: 600; font-size: 24px;'>Go-Tree Consultoria</h2>" +
+                            "  </div>" +
+                            "  <div style='padding: 32px 24px; color: #333333; line-height: 1.6;'>" +
+                            "    <p style='font-size: 16px; margin-top: 0;'>Olá,</p>" +
+                            "    <p style='font-size: 16px;'>Informamos que um novo documento técnico foi emitido e está disponível para sua análise.</p>" +
+                            "    <div style='background-color: #f8f9fa; border-left: 4px solid #166534; padding: 16px; margin: 24px 0; border-radius: 4px;'>" +
+                            "      <p style='margin: 4px 0;'><strong>📄 Documento:</strong> %s</p>" +
+                            "      <p style='margin: 4px 0;'><strong>🏢 Empresa:</strong> %s</p>" +
+                            "    </div>" +
+                            "    <p style='font-size: 16px;'>O arquivo completo encontra-se em <strong>anexo (PDF)</strong> neste e-mail.</p>" +
+                            "    <p style='margin-top: 32px;'>Estamos à disposição para quaisquer dúvidas.</p>" +
+                            "    <p style='margin-bottom: 0;'>Atenciosamente,<br><strong>Equipe Go-Tree</strong></p>" +
+                            "  </div>" +
+                            "  <div style='background-color: #f4f4f4; padding: 16px; text-align: center; font-size: 12px; color: #666666; border-top: 1px solid #eeeeee;'>" +
+                            "    <p style='margin: 4px 0;'>© Go-Tree Consultoria em Segurança do Trabalho.</p>" +
+                            "    <p style='margin: 4px 0;'>Este é um envio automático do nosso sistema.</p>" +
+                            "  </div>" +
                             "</div>",
                     subjectType, companyName
             );
