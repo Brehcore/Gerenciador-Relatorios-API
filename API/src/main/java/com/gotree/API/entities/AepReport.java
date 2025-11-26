@@ -64,4 +64,7 @@ public class AepReport {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "sector_id")
     private Sector sector;
+
+    @Column(name = "sent_to_client_at")
+    private java.time.LocalDateTime sentToClientAt;
 }

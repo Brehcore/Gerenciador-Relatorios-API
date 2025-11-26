@@ -2,11 +2,13 @@ package com.gotree.API.repositories;
 
 import com.gotree.API.entities.TechnicalVisit;
 import com.gotree.API.entities.User;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Interface de repositório para gerenciamento de Visitas Técnicas.
@@ -104,4 +106,7 @@ public interface TechnicalVisitRepository extends JpaRepository<TechnicalVisit, 
     boolean existsByTechnician_Id(Long technicianId);
 
     boolean existsBySector_Id(Long sectorId);
+
+    @EntityGraph(attributePaths = {"clientCompany", "clientCompany.client"})
+    Optional<TechnicalVisit> findById(Long id);
 }

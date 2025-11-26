@@ -73,4 +73,7 @@ public class OccupationalRiskReport {
     // Lista de funções avaliadas neste relatório
     @OneToMany(mappedBy = "report", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<EvaluatedFunction> evaluatedFunctions = new ArrayList<>();
+
+    @Column(name = "sent_to_client_at")
+    private java.time.LocalDateTime sentToClientAt;
 }

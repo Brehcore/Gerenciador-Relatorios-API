@@ -58,4 +58,7 @@ public class TechnicalVisit {
 
     @Column(name = "next_visit_date")
     private LocalDate nextVisitDate;
+
+    @Column(name = "sent_to_client_at")
+    private java.time.LocalDateTime sentToClientAt;
 }

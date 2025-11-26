@@ -2,6 +2,7 @@ package com.gotree.API.dto.document; // Crie este novo pacote
 
 import lombok.Data;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Data
 public class DocumentSummaryDTO {
@@ -12,4 +13,8 @@ public class DocumentSummaryDTO {
     private String clientName;
     private LocalDate creationDate; // Um campo de data comum para ordenação
     private boolean signed;
+
+    private boolean emailSent;   // Controla a cor (Verde/Vermelho)
+    private String clientEmail;  // Para mostrar no Modal ("Enviado para...")
+    private LocalDateTime sentAt; // Opcional: Data do envio para mostrar no tooltip
 }

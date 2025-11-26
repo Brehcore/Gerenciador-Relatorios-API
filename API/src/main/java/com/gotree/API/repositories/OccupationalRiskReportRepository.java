@@ -2,10 +2,12 @@ package com.gotree.API.repositories;
 
 import com.gotree.API.entities.OccupationalRiskReport;
 import com.gotree.API.entities.User;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface OccupationalRiskReportRepository extends JpaRepository<OccupationalRiskReport, Long> {
@@ -25,4 +27,8 @@ public interface OccupationalRiskReportRepository extends JpaRepository<Occupati
     boolean existsByCompany_Id(Long companyId);
 
     boolean existsByTechnician_Id(Long technicianId);
+
+    // Busca o relatório trazendo junto a Empresa e o Cliente
+    @EntityGraph(attributePaths = {"company", "company.client"})
+    Optional<OccupationalRiskReport> findById(Long id);
 }

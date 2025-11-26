@@ -2,9 +2,11 @@ package com.gotree.API.repositories;
 
 import com.gotree.API.entities.AepReport;
 import com.gotree.API.entities.User;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Repositório responsável por gerenciar operações de banco de dados para entidades AepReport.
@@ -45,4 +47,7 @@ public interface AepReportRepository extends JpaRepository<AepReport, Long> {
     boolean existsByCompany_Id(Long companyId);
 
     boolean existsByEvaluator_Id(Long evaluatorId);
+
+    @EntityGraph(attributePaths = {"company", "company.client"})
+    Optional<AepReport> findById(Long id);
 }
