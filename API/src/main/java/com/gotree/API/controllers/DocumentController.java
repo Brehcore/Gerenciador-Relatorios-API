@@ -114,7 +114,7 @@ public class DocumentController {
             CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
             User currentUser = userDetails.user();
 
-            // 1. Chama o novo método que retorna o DTO (Nome + Bytes)
+            // 1. Chama o novo metodo que retorna o DTO (Nome + Bytes)
             FileDownloadDTO fileDto = documentAggregationService.downloadDocument(type, id, currentUser);
 
             // 2. Retorna com o cabeçalho Content-Disposition configurado com o nome correto
