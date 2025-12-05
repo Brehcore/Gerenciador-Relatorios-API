@@ -94,7 +94,6 @@ public class CompanyController {
     public ResponseEntity<Page<CompanyResponseDTO>> getAll(
                                                             @PageableDefault(page = 0, size = 10, sort = "name", direction = Sort.Direction.ASC) Pageable pageable
     ) {
-        // O serviço agora retorna Page<CompanyResponseDTO>
         Page<CompanyResponseDTO> companies = companyService.findAllPaginated(pageable);
 
         return ResponseEntity.ok(companies);

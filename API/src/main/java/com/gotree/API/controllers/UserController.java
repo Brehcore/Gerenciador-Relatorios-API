@@ -11,6 +11,9 @@ import com.gotree.API.exceptions.ResourceNotFoundException;
 import com.gotree.API.mappers.UserMapper;
 import com.gotree.API.services.UserService;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -43,16 +46,21 @@ public class UserController {
 	}
 
 	/**
-	 * Lista todos os usuários do sistema.
-	 * Acesso restrito a administradores.
-	 *
-	 * @return ResponseEntity contendo lista de UserResponseDTO com todos os usuários
+	 * Lista todos os usuários do sistema com paginação.
+	 * Exemplo de uso: /users?page=0&size=10&sort=name,asc
 	 */
 	@GetMapping
 	@PreAuthorize("hasRole('ADMIN')")
-	public ResponseEntity<List<UserResponseDTO>> findAll() {
-		List<User> users = userService.findAll();
-		return ResponseEntity.ok(userMapper.toDtoList(users));
+	public ResponseEntity<Page<UserResponseDTO>> findAll(
+			@PageableDefault(size = 5, sort = "id") Pageable pageable
+	) {
+		// 1. Busca a página de entidades
+		Page<User> usersPage = userService.findAll(pageable);
+
+		// 2. Converte a Page<User> para Page<UserResponseDTO> usando o metodo toDto do mapper
+		Page<UserResponseDTO> dtoPage = usersPage.map(userMapper::toDto);
+
+		return ResponseEntity.ok(dtoPage);
 	}
 
 	/**

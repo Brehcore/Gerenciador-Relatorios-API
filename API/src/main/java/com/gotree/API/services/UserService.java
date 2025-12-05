@@ -8,6 +8,8 @@ import com.gotree.API.repositories.AepReportRepository;
 import com.gotree.API.repositories.OccupationalRiskReportRepository;
 import com.gotree.API.repositories.TechnicalVisitRepository;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -58,6 +60,11 @@ public class UserService implements UserDetailsService {
     public List<User> findAll() {
         return userRepository.findAll();
     }
+
+    public Page<User> findAll(Pageable pageable) {
+        return userRepository.findAll(pageable);
+    }
+
 
     public User findById(Long id) {
         return userRepository.findById(id)
