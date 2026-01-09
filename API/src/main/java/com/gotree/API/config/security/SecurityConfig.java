@@ -59,6 +59,8 @@ public class SecurityConfig {
 				.authorizeHttpRequests(auth -> auth
 						.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Permite requisições de preflight (CORS)
 						.requestMatchers("/auth/login").permitAll()            // Libera o endpoint de login
+						.requestMatchers("/client-portal/login").permitAll() //Login do cliente
+						.requestMatchers("/client-portal/first-access/**").permitAll() //Solicita o código / Cria a senha
 						.anyRequest().authenticated()                             // Exige autenticação para todas as outras requisições
 				)
 				.exceptionHandling(exception -> exception

@@ -364,8 +364,10 @@ public class DocumentAggregationService {
     private void fillCommonFields(DocumentSummaryDTO dto, Company company, LocalDateTime sentAt, String signatureBase64, User technician) {
         if (company != null) {
             dto.setClientName(company.getName());
-            if (company.getClient() != null) {
-                dto.setClientEmail(company.getClient().getEmail());
+            if (company.getClients() != null && !company.getClients().isEmpty()) {
+                String emails = company.getClients().stream()
+                                .map(Client::getEmail).collect(Collectors.joining(", "));
+                dto.setClientEmail(emails);
             } else {
                 dto.setClientEmail(null);
             }

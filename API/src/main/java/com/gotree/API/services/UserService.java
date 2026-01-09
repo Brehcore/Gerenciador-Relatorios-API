@@ -4,7 +4,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import com.gotree.API.config.security.ClientUserDetails;
+import com.gotree.API.entities.Client;
 import com.gotree.API.repositories.AepReportRepository;
+import com.gotree.API.repositories.ClientRepository;
 import com.gotree.API.repositories.OccupationalRiskReportRepository;
 import com.gotree.API.repositories.TechnicalVisitRepository;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -45,16 +48,18 @@ public class UserService implements UserDetailsService {
     private final AepReportRepository aepReportRepository;
     private final OccupationalRiskReportRepository riskReportRepository;
     private final TechnicalVisitRepository technicalVisitRepository;
+    private final ClientRepository clientRepository;
 
     public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, UserMapper userMapper,
                        AepReportRepository aepReportRepository, OccupationalRiskReportRepository riskReportRepository,
-                       TechnicalVisitRepository technicalVisitRepository) {
+                       TechnicalVisitRepository technicalVisitRepository, ClientRepository clientRepository) {
         this.passwordEncoder = passwordEncoder;
         this.userRepository = userRepository;
         this.userMapper = userMapper;
         this.aepReportRepository = aepReportRepository;
         this.riskReportRepository = riskReportRepository;
         this.technicalVisitRepository = technicalVisitRepository;
+        this.clientRepository = clientRepository;
     }
 
     public List<User> findAll() {
@@ -264,20 +269,30 @@ public class UserService implements UserDetailsService {
     }
 
     /**
-     * Carrega os detalhes do usuário para autenticação no Spring Security.
+     * Carrega os detalhes do usuário ou cliente para autenticação no Spring Security.
      * @param email Email do usuário
      * @return Detalhes do usuário para autenticação
      * @throws UsernameNotFoundException se o usuário não for encontrado
      */
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        System.out.println("Buscando usuário por email: " + email);
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new UsernameNotFoundException("Usuário não encontrado"));
+        System.out.println("Tentando autenticar: " + email);
 
-        return new CustomUserDetails(user);
+        // 1. Tenta buscar na tabela de Usuários (Admins/Técnicos)
+        Optional<User> userOpt = userRepository.findByEmail(email);
+        if (userOpt.isPresent()) {
+            return new CustomUserDetails(userOpt.get());
+        }
+
+        // 2. Se não achou, tenta buscar na tabela de Clientes
+        Optional<Client> clientOpt = clientRepository.findByEmail(email);
+        if (clientOpt.isPresent()) {
+            // Retorna o ClientUserDetails que você criou
+            return new ClientUserDetails(clientOpt.get());
+        }
+
+        // 3. Se não achou em lugar nenhum
+        throw new UsernameNotFoundException("Usuário ou Cliente não encontrado com email: " + email);
     }
-
-    // endregion
 
 }

@@ -68,31 +68,24 @@ public class DocumentEmailController {
         User user = ((CustomUserDetails) auth.getPrincipal()).user();
 
         try {
-            // 1. Gera/Carrega os bytes do PDF usando a lógica centralizada
-            // Isso garante que o PDF enviado é o mesmo que o usuário baixa na tela
+            // 1. Gera/Carrega os bytes do PDF
             byte[] pdfBytes = documentService.loadPdfFileByTypeAndId(type, id, user);
 
-            String clientEmail = null;
+            // Variáveis para processamento
+            java.util.Set<com.gotree.API.entities.Client> clients = null;
             String companyName = "";
             String docName = type.toUpperCase() + "_" + id + ".pdf";
             String subjectType = "";
 
             // 2. Lógica de Seleção baseada no Tipo
-            // Busca o relatório, valida se tem cliente e atualiza o status 'sentToClientAt'
-
             if ("risk".equalsIgnoreCase(type)) {
                 OccupationalRiskReport report = riskRepo.findById(id)
                         .orElseThrow(() -> new RuntimeException("Checklist de Risco não encontrado."));
 
-                if (report.getCompany().getClient() == null) {
-                    return ResponseEntity.badRequest().body(Map.of("error", "A empresa deste relatório não possui um Cliente vinculado."));
-                }
-
-                clientEmail = report.getCompany().getClient().getEmail();
+                clients = report.getCompany().getClients(); // ALTERADO: getClients()
                 companyName = report.getCompany().getName();
                 subjectType = "Checklist de Riscos";
 
-                // Marca como enviado (Ícone ficará verde)
                 report.setSentToClientAt(LocalDateTime.now());
                 riskRepo.save(report);
 
@@ -100,11 +93,7 @@ public class DocumentEmailController {
                 TechnicalVisit visit = visitRepo.findById(id)
                         .orElseThrow(() -> new RuntimeException("Relatório de Visita não encontrado."));
 
-                if (visit.getClientCompany().getClient() == null) {
-                    return ResponseEntity.badRequest().body(Map.of("error", "A empresa deste relatório não possui um Cliente vinculado."));
-                }
-
-                clientEmail = visit.getClientCompany().getClient().getEmail();
+                clients = visit.getClientCompany().getClients(); // ALTERADO: getClients()
                 companyName = visit.getClientCompany().getName();
                 subjectType = "Relatório de Visita Técnica";
 
@@ -115,11 +104,7 @@ public class DocumentEmailController {
                 AepReport aep = aepRepo.findById(id)
                         .orElseThrow(() -> new RuntimeException("AEP não encontrada."));
 
-                if (aep.getCompany().getClient() == null) {
-                    return ResponseEntity.badRequest().body(Map.of("error", "A empresa deste relatório não possui um Cliente vinculado."));
-                }
-
-                clientEmail = aep.getCompany().getClient().getEmail();
+                clients = aep.getCompany().getClients(); // ALTERADO: getClients()
                 companyName = aep.getCompany().getName();
                 subjectType = "Avaliação Ergonômica (AEP)";
 
@@ -130,14 +115,23 @@ public class DocumentEmailController {
                 return ResponseEntity.badRequest().body(Map.of("error", "Tipo de documento inválido: " + type));
             }
 
-            // 3. Validação final do e-mail
-            if (clientEmail == null || clientEmail.isBlank()) {
-                return ResponseEntity.badRequest().body(Map.of("error", "O cadastro do cliente não possui um e-mail válido."));
+            // 3. Validação: Verifica se existem clientes e coleta e-mails válidos
+            if (clients == null || clients.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "A empresa deste relatório não possui clientes vinculados."));
             }
 
-            // 4. Construção do E-mail
-            String subject = "Documento Emitido: " + subjectType + " - " + companyName;
+            // Filtra clientes que têm e-mail preenchido
+            java.util.List<String> validEmails = clients.stream()
+                    .map(com.gotree.API.entities.Client::getEmail)
+                    .filter(email -> email != null && !email.isBlank())
+                    .toList();
 
+            if (validEmails.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Os clientes vinculados não possuem e-mail válido para envio."));
+            }
+
+            // 4. Construção do E-mail (Corpo HTML)
+            String subject = "Documento Emitido: " + subjectType + " - " + companyName;
             String body = String.format(
                     "<div style='font-family: \"Segoe UI\", Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;'>" +
                             "  <div style='background-color: #166534; padding: 24px; text-align: center;'>" +
@@ -155,23 +149,32 @@ public class DocumentEmailController {
                             "    <p style='margin-bottom: 0;'>Atenciosamente,<br><strong>Equipe Go-Tree</strong></p>" +
                             "  </div>" +
                             "  <div style='background-color: #f4f4f4; padding: 16px; text-align: center; font-size: 12px; color: #666666; border-top: 1px solid #eeeeee;'>" +
-                            "    <p style='margin: 4px 0;'>© Go-Tree Consultoria em Segurança do Trabalho.</p>" +
+                            "    <p style='margin: 4px 0;'>© Go-Tree Consultoria LTDA.</p>" +
                             "    <p style='margin: 4px 0;'>Este é um envio automático do nosso sistema.</p>" +
                             "  </div>" +
                             "</div>",
                     subjectType, companyName
             );
 
-            // 5. Envio
-            emailService.sendReportWithAttachment(clientEmail, subject, body, pdfBytes, docName);
+            // 5. Envio (Itera sobre a lista de e-mails válidos)
+            for (String email : validEmails) {
+                try {
+                    emailService.sendReportWithAttachment(email, subject, body, pdfBytes, docName);
+                } catch (Exception e) {
+                    System.err.println("Erro ao enviar para: " + email + " - " + e.getMessage());
+                    // Continua tentando enviar para os outros
+                }
+            }
 
+            // Retorna sucesso listando os e-mails processados
+            String allEmails = String.join(", ", validEmails);
             return ResponseEntity.ok().body(Map.of(
-                    "message", "E-mail enviado com sucesso para " + clientEmail,
-                    "email", clientEmail
+                    "message", "Documento enviado com sucesso.",
+                    "emails_enviados", allEmails
             ));
 
         } catch (Exception e) {
-            e.printStackTrace(); // Útil para debug no console
+            e.printStackTrace();
             return ResponseEntity.internalServerError().body(Map.of("error", "Erro ao processar envio: " + e.getMessage()));
         }
     }

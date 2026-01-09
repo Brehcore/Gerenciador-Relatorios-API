@@ -9,6 +9,7 @@ import com.gotree.API.dto.company.UnitDTO;
 import com.gotree.API.entities.Company;
 import com.gotree.API.entities.Sector;
 import com.gotree.API.entities.Unit;
+import com.gotree.API.exceptions.ResourceNotFoundException;
 import com.gotree.API.repositories.AepReportRepository;
 import com.gotree.API.repositories.CompanyRepository;
 import com.gotree.API.repositories.JobRoleRepository;
@@ -105,7 +106,7 @@ public class CompanyService {
      */
     public Company findById(Long id) {
         return companyRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Empresa não encontrada com o ID: " + id)); // Use sua exceção customizada aqui
+                .orElseThrow(() -> new ResourceNotFoundException("Empresa não encontrada com o ID: " + id));
     }
 
     public Optional<Company> findByCnpj(String cnpj) {

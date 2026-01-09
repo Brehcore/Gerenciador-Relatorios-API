@@ -54,17 +54,14 @@ public class AgendaEvent {
     @JoinColumn(name = "user_id")
     private User user;
 
-//    /**
-//     * ID da visita técnica original que gerou este evento.
-//     * Campo único que permite rastrear a origem do evento.
-//     */
-//    @Column(name = "source_visit_id", unique = true, nullable = true)
-//    private Long sourceVisitId;
-
-    // Substitui o antigo 'sourceVisitId' (Long)
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "technical_visit_id", nullable = true)
     private TechnicalVisit technicalVisit;
+
+    // Permite vincular evento à empresa mesmo sem visita
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "company_id")
+    private Company company;
 
     /**
      * Data original da visita técnica.

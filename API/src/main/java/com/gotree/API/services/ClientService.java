@@ -9,6 +9,7 @@ import com.gotree.API.repositories.CompanyRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashSet;
 import java.util.List;
 
 @Service
@@ -28,7 +29,6 @@ public class ClientService {
 
     @Transactional(readOnly = true)
     public List<ClientDTO> findAll() {
-        // Usa o mapper para converter a lista
         return clientMapper.toDtoList(clientRepository.findAll());
     }
 
@@ -36,7 +36,6 @@ public class ClientService {
     public ClientDTO findById(Long id) {
         Client client = clientRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Cliente não encontrado"));
-        // Usa o mapper (atenção ao camelCase 'toDto')
         return clientMapper.toDto(client);
     }
 
@@ -51,26 +50,18 @@ public class ClientService {
         client.setName(dto.getName());
         client.setEmail(dto.getEmail());
 
-        // Lógica de Vínculo: Se vieram IDs de empresas, atualizamos
+        // Lógica de Vínculo N:N
         if (dto.getCompanyIds() != null) {
-            // 1. Limpa vínculos antigos (opcional, depende da regra de negócio)
-            if (client.getCompanies() != null) {
-                for (Company c : client.getCompanies()) {
-                    c.setClient(null); // Desvincula
-                }
-            }
-
-            // 2. Busca as novas empresas e vincula
+            // 1. Busca as empresas pelos IDs enviados
             List<Company> companiesToLink = companyRepository.findAllById(dto.getCompanyIds());
-            for (Company c : companiesToLink) {
-                c.setClient(client); // Vincula ao cliente
-            }
-            client.setCompanies(companiesToLink);
+
+            // 2. Atualiza a coleção do cliente
+            // Como é N:N e o Client é o dono (@JoinTable), basta atualizar a lista dele.
+            // O JPA vai gerenciar a tabela de junção tb_client_company automaticamente.
+            client.setCompanies(new HashSet<>(companiesToLink));
         }
 
         Client saved = clientRepository.save(client);
-
-        // Retorna usando o mapper, que já preenche companyIds e companyNames automaticamente
         return clientMapper.toDto(saved);
     }
 
@@ -79,10 +70,9 @@ public class ClientService {
         Client client = clientRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Cliente não encontrado"));
 
-        // Segurança: Desvincula as empresas antes de deletar o cliente
-        for (Company c : client.getCompanies()) {
-            c.setClient(null);
-        }
+        // Em relacionamentos N:N, ao deletar o Cliente, o JPA remove automaticamente
+        // as entradas na tabela de junção (tb_client_company).
+        // Não é necessário limpar manualmente as empresas.
 
         clientRepository.delete(client);
     }

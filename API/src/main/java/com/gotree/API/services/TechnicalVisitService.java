@@ -194,7 +194,7 @@ public class TechnicalVisitService {
                 // Salva o caminho absoluto do arquivo, que será usado com 'file:///' no template
                 finding.setPhotoPath1(imagePath.toAbsolutePath().toString().replace("\\", "/"));
             } catch (IOException e) {
-                System.err.println("Falha ao salvar a foto 1 do achado: " + e.getMessage());
+                throw new RuntimeException("Erro ao processar a imagem do achado. Verifique se o arquivo é válido.", e);
             }
         }
 
@@ -210,7 +210,7 @@ public class TechnicalVisitService {
                 // Salva o caminho absoluto do arquivo
                 finding.setPhotoPath2(imagePath.toAbsolutePath().toString().replace("\\", "/"));
             } catch (IOException e) {
-                System.err.println("Falha ao salvar a foto 2 do achado: " + e.getMessage());
+                throw new RuntimeException("Erro ao processar a imagem do achado. Verifique se o arquivo é válido.", e);
             }
         }
 
@@ -228,8 +228,7 @@ public class TechnicalVisitService {
             try {
                 finding.setPriority(VisitFinding.Priority.valueOf(dto.getPriority().toUpperCase()));
             } catch (IllegalArgumentException e) {
-                // Se a prioridade for inválida (ex: "qualquercoisa"), ignora e deixa nulo
-                System.err.println("Prioridade inválida recebida: " + dto.getPriority());
+                throw new IllegalArgumentException("Prioridade inválida: " + dto.getPriority() + ". Valores aceitos: BAIXA, MEDIA, ALTA.");
             }
         }
         // Se a prioridade for nula ou em branco, ela simplesmente não será definida, evitando, erros.

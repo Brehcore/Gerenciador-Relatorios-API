@@ -39,4 +39,17 @@ public interface AgendaEventRepository extends JpaRepository<AgendaEvent, Long> 
 
     @Query("SELECT e FROM AgendaEvent e JOIN FETCH e.user WHERE e.user.id = :userId ORDER BY e.eventDate ASC")
     List<AgendaEvent> findByUserIdWithUserOrderByEventDateAsc(@Param("userId") Long userId);
+
+    /**
+     * Busca eventos onde:
+     * 1. A visita técnica pertence a uma das empresas listadas (Eventos automáticos)
+     * OR
+     * 2. O evento foi vinculado diretamente a uma das empresas listadas (Eventos manuais)
+     */
+    @Query("SELECT ae FROM AgendaEvent ae " +
+            "LEFT JOIN ae.technicalVisit tv " +
+            "LEFT JOIN tv.clientCompany cc " +
+            "WHERE (cc.id IN :companyIds) OR (ae.company.id IN :companyIds) " +
+            "ORDER BY ae.eventDate DESC")
+    List<AgendaEvent> findByClientCompanyIds(@Param("companyIds") List<Long> companyIds);
 }
