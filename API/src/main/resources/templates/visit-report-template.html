@@ -14,23 +14,46 @@
         .summary-text { text-align: justify; }
 
         /* Tabela de achados */
-        .findings-table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 8pt; }
+        .findings-table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 8pt; border-spacing: 0; }
         .findings-table th, .findings-table td {
             border: 1px solid #999;
-            padding: 5px;
+            padding: 2px;
             text-align: center; /* MUDEI DE justify PARA center */
             vertical-align: middle; /* Centraliza verticalmente */
         }
         .findings-table th { background-color: #f2f2f2; }
-        .findings-table tr { page-break-inside: avoid; }
+        .findings-table thead { display: table-row-group }
+        .findings-table tr { page-break-inside: avoid; page-break-after: auto; }
         .findings-table td { word-wrap: break-word; overflow-wrap: break-word; hyphens: auto; }
 
         /* Célula da foto */
-        .findings-table .photo-cell { text-align: center; }
-        .findings-table .photo-cell img {
-            display: block; margin: 0 auto 5px auto;
-            max-width: 6.8cm !important; max-height: 5cm !important;
-            width: auto !important; height: auto !important; object-fit: contain;
+        .findings-table .photo-cell { text-align: center; padding: 0;}
+
+        .photo-wrapper {
+            width: 7.0cm;
+            height: 6.2cm;  /* Altura travada */
+            display: block;
+            overflow: hidden;
+            text-align: center;
+            vertical-align: middle;
+            margin: 0 auto;
+            padding: 2px;
+        }
+
+        .img-single {
+            max-height: 6.0cm !important;
+            max-width: 98% !important;
+            width: auto; height: auto;
+            object-fit: contain;
+            display: block; margin: 0 auto;
+        }
+
+        .img-dual {
+            max-height: 2.9cm !important;
+            max-width: 98% !important;
+            width: auto; height: auto;
+            object-fit: contain;
+            display: block; margin: 0 auto 2px auto;
         }
 
         /* --- ESTILO DO CABEÇALHO E GRADES DE DADOS --- */
@@ -351,8 +374,16 @@
         <tbody>
         <tr th:each="finding : ${visit.findings}">
             <td class="photo-cell">
-                <img th:if="${finding.photoPath1}" th:src="'file:///' + ${finding.photoPath1}" />
-                <img th:if="${finding.photoPath2}" th:src="'file:///' + ${finding.photoPath2}" />
+                <div class="photo-wrapper">
+
+                    <img th:if="${finding.photoPath1}"
+                         th:src="'file:///' + ${finding.photoPath1}"
+                         th:class="${finding.photoPath2 != null} ? 'img-dual' : 'img-single'" />
+
+                    <img th:if="${finding.photoPath2}"
+                         th:src="'file:///' + ${finding.photoPath2}"
+                         class="img-dual" />
+                </div>
             </td>
             <td th:text="${finding.description}"></td>
             <td th:text="${finding.consequences}"></td>

@@ -116,7 +116,7 @@ public interface TechnicalVisitRepository extends JpaRepository<TechnicalVisit, 
      */
     boolean existsBySector_Id(Long sectorId);
 
-    @EntityGraph(attributePaths = {"clientCompany", "clientCompany.client"})
+    @EntityGraph(attributePaths = {"clientCompany", "clientCompany.clients"})
     Optional<TechnicalVisit> findById(Long id);
     
     boolean existsByTechnicianAndVisitDateAndStartTimeBetween(
