@@ -44,7 +44,7 @@ public class EmailService {
             helper.setTo(to);
             helper.setSubject(subject);
             helper.setText(htmlBody, true); // true = ativa HTML
-            // helper.setFrom("seu-email@dominio.com"); // Se precisar forçar o remetente
+            helper.setFrom("contato@gotreeconsultoria.com.br"); // Se precisar forçar o remetente
 
             mailSender.send(message);
         } catch (jakarta.mail.MessagingException e) {
