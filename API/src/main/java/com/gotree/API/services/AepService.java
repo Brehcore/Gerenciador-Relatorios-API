@@ -7,6 +7,7 @@ import com.gotree.API.repositories.AepReportRepository;
 import com.gotree.API.repositories.CompanyRepository;
 import com.gotree.API.repositories.PhysiotherapistRepository;
 import com.gotree.API.repositories.SystemInfoRepository;
+import com.gotree.API.utils.XmlSanitizer; // IMPORTANTE: Utilitário de sanitização
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,8 +27,6 @@ import java.util.UUID;
  */
 @Service
 public class AepService {
-
-
 
     // A LISTA MESTRE DE TODOS OS RISCOS
     private static final List<String> MASTER_RISK_LIST = Arrays.asList(
@@ -121,7 +120,11 @@ public class AepService {
         aep.setCompany(company);
         aep.setEvaluator(evaluator);
         aep.setEvaluationDate(dto.getEvaluationDate());
-        aep.setEvaluatedFunction(dto.getEvaluatedFunction());
+
+        // --- SANITIZAÇÃO ANTES DE SALVAR ---
+        // Garante que o banco de dados receba dados limpos
+        aep.setEvaluatedFunction(XmlSanitizer.sanitize(dto.getEvaluatedFunction()));
+
         aep.setSelectedRisks(dto.getSelectedRiskIds());
 
         // Dados da Fisio
@@ -165,6 +168,13 @@ public class AepService {
 
         // Se o PDF não existe (novo ou editado), GERA UM NOVO
         Map<String, Object> templateData = new HashMap<>();
+
+        // --- SANITIZAÇÃO DE SEGURANÇA NO TEMPLATE ---
+        // Protege contra dados sujos que já estavam no banco antes da correção
+        if (aep.getEvaluatedFunction() != null) {
+            aep.setEvaluatedFunction(XmlSanitizer.sanitize(aep.getEvaluatedFunction()));
+        }
+
         templateData.put("aep", aep);
         templateData.put("company", aep.getCompany());
         templateData.put("evaluator", aep.getEvaluator());

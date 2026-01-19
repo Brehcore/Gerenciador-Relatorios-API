@@ -5,6 +5,7 @@ import com.gotree.API.dto.risk.SaveRiskReportRequestDTO;
 import com.gotree.API.entities.*;
 import com.gotree.API.repositories.*;
 import com.gotree.API.utils.RiskCatalog;
+import com.gotree.API.utils.XmlSanitizer; // IMPORTANTE: Utilitário de sanitização
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,7 +24,7 @@ import java.util.stream.Collectors;
  */
 @Service
 public class RiskChecklistService {
-    
+
 
     private final OccupationalRiskReportRepository reportRepository;
     private final CompanyRepository companyRepository;
@@ -74,7 +75,8 @@ public class RiskChecklistService {
         report.setInspectionDate(dto.getInspectionDate());
 
         if (dto.getTitle() != null && !dto.getTitle().isBlank()) {
-            report.setTitle(dto.getTitle());
+            // --- SANITIZAÇÃO ---
+            report.setTitle(XmlSanitizer.sanitize(dto.getTitle()));
         } else {
             // Título padrão caso o front não mande nada
             report.setTitle("Checklist de Riscos - " + java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy").format(dto.getInspectionDate()));
@@ -95,10 +97,7 @@ public class RiskChecklistService {
         return generatePdf(savedReport);
     }
 
-    /**
-     * ATUALIZA UM RELATÓRIO EXISTENTE.
-     * Regra de Ouro: Se já estiver assinado, lança erro e impede edição.
-     */
+
     /**
      * Atualiza um relatório existente e regenera seu PDF.
      *
@@ -130,7 +129,8 @@ public class RiskChecklistService {
         report.setInspectionDate(dto.getInspectionDate());
 
         if (dto.getTitle() != null && !dto.getTitle().isBlank()) {
-            report.setTitle(dto.getTitle());
+            // --- SANITIZAÇÃO ---
+            report.setTitle(XmlSanitizer.sanitize(dto.getTitle()));
         }
 
         if (dto.getUnitId() != null) report.setUnit(unitRepository.findById(dto.getUnitId()).orElse(null));
@@ -237,7 +237,10 @@ public class RiskChecklistService {
         if (functionDtos != null) {
             for (EvaluatedFunctionRequestDTO funcDto : functionDtos) {
                 EvaluatedFunction evalFunc = new EvaluatedFunction();
-                evalFunc.setFunctionName(funcDto.getFunctionName());
+
+                // --- SANITIZAÇÃO NO MAPEAMENTO ---
+                evalFunc.setFunctionName(XmlSanitizer.sanitize(funcDto.getFunctionName()));
+
                 evalFunc.setSelectedRiskCodes(funcDto.getSelectedRiskCodes());
                 evalFunc.setReport(report);
                 report.getEvaluatedFunctions().add(evalFunc);
@@ -254,6 +257,13 @@ public class RiskChecklistService {
      */
     private OccupationalRiskReport generatePdf(OccupationalRiskReport report) {
         Map<String, Object> templateData = new HashMap<>();
+
+        // --- SANITIZAÇÃO DE SEGURANÇA NO TEMPLATE ---
+        // Sanitiza dados que vêm do banco (caso tenham sido salvos antes da correção)
+        if(report.getTitle() != null) {
+            report.setTitle(XmlSanitizer.sanitize(report.getTitle()));
+        }
+
         templateData.put("report", report);
 
         // Busca Dados da Go-Tree (Logo, CNPJ, Nome)
@@ -273,7 +283,9 @@ public class RiskChecklistService {
         List<Map<String, Object>> functionsData = new ArrayList<>();
         for (EvaluatedFunction func : report.getEvaluatedFunctions()) {
             Map<String, Object> funcMap = new HashMap<>();
-            funcMap.put("name", func.getFunctionName());
+
+            // --- SANITIZAÇÃO DE SEGURANÇA NO NOME DA FUNÇÃO ---
+            funcMap.put("name", XmlSanitizer.sanitize(func.getFunctionName()));
 
             List<RiskCatalog.RiskItem> risks = new ArrayList<>();
             if (func.getSelectedRiskCodes() != null) {

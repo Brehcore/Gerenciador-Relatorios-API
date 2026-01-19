@@ -14,6 +14,7 @@ import com.gotree.API.repositories.CompanyRepository;
 import com.gotree.API.repositories.SectorRepository;
 import com.gotree.API.repositories.TechnicalVisitRepository;
 import com.gotree.API.repositories.UnitRepository;
+import com.gotree.API.utils.XmlSanitizer; // IMPORTANTE: Importar o sanitizador
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,7 +38,7 @@ import java.util.UUID;
  */
 @Service
 public class TechnicalVisitService {
-    
+
 
     private final TechnicalVisitRepository technicalVisitRepository;
     private final CompanyRepository companyRepository;
@@ -104,7 +105,13 @@ public class TechnicalVisitService {
 
         // 2. Mapear DTO para a entidade principal
         TechnicalVisit visit = new TechnicalVisit();
-        visit.setTitle(dto.getTitle());
+
+        // --- SANITIZAÇÃO DE DADOS DA VISITA ---
+        visit.setTitle(XmlSanitizer.sanitize(dto.getTitle()));
+        visit.setLocation(XmlSanitizer.sanitize(dto.getLocation()));
+        visit.setSummary(XmlSanitizer.sanitize(dto.getSummary()));
+        // --------------------------------------
+
         visit.setClientCompany(clientCompany);
         visit.setUnit(unit);
         visit.setSector(sector);
@@ -112,8 +119,6 @@ public class TechnicalVisitService {
         visit.setVisitDate(dto.getVisitDate());
         visit.setStartTime(dto.getStartTime());
         visit.setEndTime(LocalTime.now()); // Hora final é a hora da geração
-        visit.setLocation(dto.getLocation());
-        visit.setSummary(dto.getSummary());
 
         // Mapear os dados do agendamento da próxima visita
         visit.setNextVisitDate(dto.getNextVisitDate());
@@ -152,6 +157,12 @@ public class TechnicalVisitService {
 
         // 5. Gerar o PDF
         Map<String, Object> templateData = new HashMap<>();
+
+        // Reforço: Sanitiza novamente antes de passar para o template (garantia extra)
+        if (savedVisit.getTitle() != null) savedVisit.setTitle(XmlSanitizer.sanitize(savedVisit.getTitle()));
+        if (savedVisit.getLocation() != null) savedVisit.setLocation(XmlSanitizer.sanitize(savedVisit.getLocation()));
+        if (savedVisit.getSummary() != null) savedVisit.setSummary(XmlSanitizer.sanitize(savedVisit.getSummary()));
+
         templateData.put("visit", savedVisit);
 //        templateData.put("generatingCompanyName", generatingCompanyName);
 //        templateData.put("generatingCompanyCnpj", generatingCompanyCnpj);
@@ -214,12 +225,14 @@ public class TechnicalVisitService {
             }
         }
 
-        // Mapeia o resto dos campos
-        finding.setDescription(dto.getDescription());
-        finding.setConsequences(dto.getConsequences());
-        finding.setLegalGuidance(dto.getLegalGuidance());
-        finding.setResponsible(dto.getResponsible());
-        finding.setPenalties(dto.getPenalties());
+        // --- SANITIZAÇÃO DOS CAMPOS DOS ACHADOS ---
+        finding.setDescription(XmlSanitizer.sanitize(dto.getDescription()));
+        finding.setConsequences(XmlSanitizer.sanitize(dto.getConsequences()));
+        finding.setLegalGuidance(XmlSanitizer.sanitize(dto.getLegalGuidance()));
+        finding.setResponsible(XmlSanitizer.sanitize(dto.getResponsible()));
+        finding.setPenalties(XmlSanitizer.sanitize(dto.getPenalties()));
+        // ------------------------------------------
+
         finding.setDeadline(dto.getDeadline());
         finding.setRecurrence(dto.isRecurrence());
 

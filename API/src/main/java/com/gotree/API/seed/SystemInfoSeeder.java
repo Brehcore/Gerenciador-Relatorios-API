@@ -22,7 +22,7 @@ public class SystemInfoSeeder implements CommandLineRunner {
     public void run(String... args) throws Exception {
         // 1. Verifica se já existe registro. Se existir, não faz nada.
         if (systemInfoRepository.count() > 0) {
-            System.out.println(">> SystemInfo já existe no banco. Ppulando seed.");
+            System.out.println(">> SystemInfo já existe no banco. Populando seed.");
             return;
         }
 

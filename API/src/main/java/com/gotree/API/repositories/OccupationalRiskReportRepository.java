@@ -29,6 +29,6 @@ public interface OccupationalRiskReportRepository extends JpaRepository<Occupati
     boolean existsByTechnician_Id(Long technicianId);
 
     // Busca o relatório trazendo junto a Empresa e o Cliente
-    @EntityGraph(attributePaths = {"company", "company.client"})
+    @EntityGraph(attributePaths = {"company", "company.clients"})
     Optional<OccupationalRiskReport> findById(Long id);
 }

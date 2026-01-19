@@ -48,6 +48,6 @@ public interface AepReportRepository extends JpaRepository<AepReport, Long> {
 
     boolean existsByEvaluator_Id(Long evaluatorId);
 
-    @EntityGraph(attributePaths = {"company", "company.client"})
+    @EntityGraph(attributePaths = {"company", "company.clients"})
     Optional<AepReport> findById(Long id);
 }

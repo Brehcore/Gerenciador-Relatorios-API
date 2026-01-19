@@ -3,9 +3,11 @@ package com.gotree.API.services;
 import com.gotree.API.dto.client.ClientDTO;
 import com.gotree.API.entities.Client;
 import com.gotree.API.entities.Company;
+import com.gotree.API.exceptions.ResourceNotFoundException;
 import com.gotree.API.mappers.ClientMapper;
 import com.gotree.API.repositories.ClientRepository;
 import com.gotree.API.repositories.CompanyRepository;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -67,13 +69,23 @@ public class ClientService {
 
     @Transactional
     public void delete(Long id) {
-        Client client = clientRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Cliente não encontrado"));
+        // 1. Verifica se existe
+        if (!clientRepository.existsById(id)) {
+            throw new ResourceNotFoundException("Cliente não encontrado com ID: " + id);
+        }
 
-        // Em relacionamentos N:N, ao deletar o Cliente, o JPA remove automaticamente
-        // as entradas na tabela de junção (tb_client_company).
-        // Não é necessário limpar manualmente as empresas.
+        // 2. VERIFICAÇÃO DE INTEGRIDADE (Solução Proativa)
+        // Verifica se existem empresas vinculadas a este cliente antes de tentar deletar
+        if (companyRepository.existsByClientsId(id)) {
+            throw new DataIntegrityViolationException("Não é possível excluir o cliente. Existem empresas vinculadas a ele.");
+        }
 
-        clientRepository.delete(client);
+        // 3. Tenta deletar (Solução Reativa / Fallback)
+        try {
+            clientRepository.deleteById(id);
+        } catch (DataIntegrityViolationException e) {
+            // Caso alguma outra constraint passe despercebida pela verificação acima
+            throw new DataIntegrityViolationException("Erro de integridade: O cliente possui registros dependentes e não pode ser excluído.");
+        }
     }
 }

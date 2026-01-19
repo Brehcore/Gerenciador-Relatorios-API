@@ -1,12 +1,16 @@
 package com.gotree.API.controllers;
 
 import com.gotree.API.dto.client.ClientDTO;
+import com.gotree.API.exceptions.ResourceNotFoundException;
 import com.gotree.API.services.ClientService;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Controller responsável pelo gerenciamento de Clientes.
@@ -71,14 +75,24 @@ public class ClientController {
     }
 
     /**
-     * Remove um cliente do sistema
-     *
-     * @param id ID do cliente a ser removido
-     * @return ResponseEntity sem conteúdo e status 204
+     * Endpoint para deletar cliente com tratamento de erro.
+     * Retorna 409 Conflict se houver empresas vinculadas.
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
-        clientService.delete(id);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<?> delete(@PathVariable Long id) {
+        try {
+            clientService.delete(id);
+            return ResponseEntity.noContent().build();
+
+        } catch (ResourceNotFoundException e) {
+            // Retorna 404 se o cliente não existir
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", "Cliente não encontrado", "message", e.getMessage()));
+
+        } catch (DataIntegrityViolationException e) {
+            // Retorna 409 Conflict se tentar apagar cliente com empresas
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(Map.of("error", "Violação de Integridade", "message", e.getMessage()));
+        }
     }
 }
