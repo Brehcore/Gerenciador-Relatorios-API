@@ -46,6 +46,13 @@ public class User implements Serializable, UserDetails {
     private String conselhoClasse;
     private String especialidade;
 
+    // Assinatura Digital
+    @Column(name = "certificate_path")
+    private String certificatePath;
+
+    @Column(name = "certificate_password")
+    private String certificatePassword;
+
     // Métodos da interface UserDetails (não são gerados pelo Lombok)
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
