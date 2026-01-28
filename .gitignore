@@ -3,9 +3,9 @@
 .env
 
 # Ignora arquivos de properties com senhas locais ou de docker
-# USANDO O CAMINHO CORRETO
 API/src/main/resources/application-local.properties
-API/src/main/resources/application-docker.properties
+API/src/main/resources/application-prod.properties
+API/src/main/resources/application.properties
 
 # === Build Artifacts ===
 # Ignora a pasta target principal do Maven
@@ -27,3 +27,6 @@ API/target/
 HELP.md
 
 local_jwt_secret.txt
+Dockerfile
+docker-compose.yml
+API/src/main/resources/entrypoint.sh
