@@ -29,6 +29,7 @@ public interface TechnicalVisitRepository extends JpaRepository<TechnicalVisit, 
     /**
      * Busca todas as visitas de um técnico, ordenadas por data decrescente.
      */
+    @EntityGraph(attributePaths = {"clientCompany", "technician"})
     List<TechnicalVisit> findByTechnicianOrderByVisitDateDesc(User technician);
 
     /**

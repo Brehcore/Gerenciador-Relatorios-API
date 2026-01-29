@@ -53,6 +53,9 @@ public class User implements Serializable, UserDetails {
     @Column(name = "certificate_password")
     private String certificatePassword;
 
+    @Column(name = "certificate_validity")
+    private LocalDate certificateValidity;
+
     // Métodos da interface UserDetails (não são gerados pelo Lombok)
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

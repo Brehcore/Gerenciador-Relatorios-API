@@ -337,6 +337,9 @@ public class DocumentAggregationService {
         dto.setDocumentType("Relatório de Visita");
         dto.setTitle(visit.getTitle());
         dto.setCreationDate(visit.getVisitDate());
+        dto.setPdfGenerated(visit.getPdfPath() != null && !visit.getPdfPath().isEmpty());
+        dto.setIcpSigned(visit.getIcpSignedAt() != null);
+        dto.setIcpSignedAt(visit.getIcpSignedAt());
         fillCommonFields(dto, visit.getClientCompany(), visit.getSentToClientAt(), visit.getTechnicianSignatureImageBase64(), visit.getTechnician());
         return dto;
     }
@@ -347,6 +350,8 @@ public class DocumentAggregationService {
         dto.setDocumentType("Avaliação Ergonômica Preliminar");
         dto.setTitle(aep.getEvaluatedFunction());
         dto.setCreationDate(aep.getEvaluationDate());
+        dto.setPdfGenerated(aep.getPdfPath() != null && !aep.getPdfPath().isEmpty());
+        dto.setIcpSigned(false);
         fillCommonFields(dto, aep.getCompany(), aep.getSentToClientAt(), null, aep.getEvaluator());
         return dto;
     }
@@ -357,6 +362,9 @@ public class DocumentAggregationService {
         dto.setDocumentType("Checklist de Riscos");
         dto.setTitle(report.getTitle());
         dto.setCreationDate(report.getInspectionDate());
+        dto.setPdfGenerated(report.getPdfPath() != null && !report.getPdfPath().isEmpty());
+        dto.setIcpSigned(report.getIcpSignedAt() != null);
+        dto.setIcpSignedAt(report.getIcpSignedAt());
         fillCommonFields(dto, report.getCompany(), report.getSentToClientAt(), report.getTechnicianSignatureImageBase64(), report.getTechnician());
         return dto;
     }

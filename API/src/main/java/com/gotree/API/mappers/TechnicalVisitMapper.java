@@ -17,6 +17,7 @@ public interface TechnicalVisitMapper {
      */
     @Mapping(source = "clientCompany.name", target = "clientCompanyName")
     @Mapping(source = "id", target = "id") // Mapeamento explícito para o título, se necessário
+    @Mapping(target = "icpSigned", expression = "java(technicalVisit.getIcpSignedAt() != null)")
     TechnicalVisitResponseDTO toDto(TechnicalVisit technicalVisit);
 
     /**

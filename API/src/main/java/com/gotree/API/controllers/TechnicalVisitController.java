@@ -13,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -122,5 +123,22 @@ public class TechnicalVisitController {
         }
 
         return ResponseEntity.ok(Map.of("blocked", false));
+    }
+
+    /**
+     * Endpoint para assinar digitalmente (ICP-Brasil) a Visita Técnica.
+     */
+    @PostMapping("/{id}/sign")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> signVisit(@PathVariable Long id, Authentication authentication) {
+        try {
+            User user = ((CustomUserDetails) authentication.getPrincipal()).user();
+            technicalVisitService.signExistingVisit(id, user);
+            return ResponseEntity.ok(Map.of("message", "Visita Técnica assinada com sucesso via Certificado Digital."));
+        } catch (IllegalStateException | IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of("error", "Erro ao processar assinatura: " + e.getMessage()));
+        }
     }
 }

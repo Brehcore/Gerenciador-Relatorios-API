@@ -30,3 +30,16 @@ local_jwt_secret.txt
 Dockerfile
 docker-compose.yml
 API/src/main/resources/entrypoint.sh
+
+
+# --- Ferramentas de Desenvolvimento Local (Não subir) ---
+# Ignora a classe geradora de certificado
+src/main/java/com/gotree/API/utils/DevCertificateTool.java
+**/DevCertificateTool.java
+
+# Ignora certificados digitais e chaves
+*.pfx
+*.p12
+*.jks
+*.key
+certificates/

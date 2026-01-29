@@ -32,22 +32,22 @@ public class RiskChecklistService {
     private final SectorRepository sectorRepository;
     private final ReportService reportService;
     private final SystemInfoRepository systemInfoRepository; // Para a Logo
+    private final DigitalSignatureService digitalSignatureService;
 
     @Value("${file.storage.path}")
     private String fileStoragePath;
 
-    public RiskChecklistService(OccupationalRiskReportRepository reportRepository,
-                                CompanyRepository companyRepository,
-                                UnitRepository unitRepository,
-                                SectorRepository sectorRepository,
-                                ReportService reportService,
-                                SystemInfoRepository systemInfoRepository) {
+    public RiskChecklistService(OccupationalRiskReportRepository reportRepository, CompanyRepository companyRepository,
+                                UnitRepository unitRepository, SectorRepository sectorRepository,
+                                ReportService reportService, SystemInfoRepository systemInfoRepository,
+                                DigitalSignatureService digitalSignatureService) {
         this.reportRepository = reportRepository;
         this.companyRepository = companyRepository;
         this.unitRepository = unitRepository;
         this.sectorRepository = sectorRepository;
         this.reportService = reportService;
         this.systemInfoRepository = systemInfoRepository;
+        this.digitalSignatureService = digitalSignatureService;
     }
 
     /**
@@ -223,6 +223,35 @@ public class RiskChecklistService {
         dto.setFunctions(functionDtos);
 
         return dto;
+    }
+
+    /**
+     * Assina o PDF existente do checklist com o certificado digital do usuário.
+     */
+    @Transactional
+    public void signExistingReport(Long id, User signer) throws IOException {
+        OccupationalRiskReport report = reportRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Checklist não encontrado"));
+
+        if (!report.getTechnician().getId().equals(signer.getId())) {
+            throw new SecurityException("Apenas o técnico responsável pode assinar digitalmente este documento.");
+        }
+
+        if (report.getPdfPath() == null) {
+            throw new IllegalStateException("O PDF ainda não foi gerado. Salve o relatório antes de assinar.");
+        }
+
+        Path path = Paths.get(report.getPdfPath());
+        if (!Files.exists(path)) {
+            throw new IllegalStateException("Arquivo PDF não encontrado no servidor.");
+        }
+
+        byte[] pdfBytes = Files.readAllBytes(Paths.get(fileStoragePath, report.getPdfPath()));
+        byte[] signedBytes = digitalSignatureService.signPdf(pdfBytes, signer);
+        Files.write(Paths.get(fileStoragePath, report.getPdfPath()), signedBytes);
+
+        report.setIcpSignedAt(LocalDateTime.now());
+        reportRepository.save(report);
     }
 
     // --- MÉTODOS AUXILIARES ---

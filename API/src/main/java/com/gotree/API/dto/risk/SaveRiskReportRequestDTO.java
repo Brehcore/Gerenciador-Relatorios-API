@@ -16,4 +16,5 @@ public class SaveRiskReportRequestDTO {
 
     // Lista de funções avaliadas
     private List<EvaluatedFunctionRequestDTO> functions;
+    private boolean icpSigned;
 }

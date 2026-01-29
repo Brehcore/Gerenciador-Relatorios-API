@@ -2,6 +2,7 @@ package com.gotree.API.controllers;
 
 import com.gotree.API.config.security.CustomUserDetails;
 import com.gotree.API.dto.user.BatchUserInsertResponseDTO;
+import com.gotree.API.dto.user.CertificateUploadDTO;
 import com.gotree.API.dto.user.ChangePasswordRequestDTO;
 import com.gotree.API.dto.user.UserRequestDTO;
 import com.gotree.API.dto.user.UserResponseDTO;
@@ -15,11 +16,13 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -33,9 +36,6 @@ import java.util.Map;
 @RestController
 @RequestMapping(value = "/users")
 public class UserController {
-	
-	
-
 
 	private final UserService userService;
 	private final UserMapper userMapper;
@@ -174,7 +174,6 @@ public class UserController {
 		return ResponseEntity.ok(userDto);
 	}
 
-
 	/**
 	 * Altera a senha do usuário atualmente autenticado.
 	 * Disponível para todos os usuários autenticados.
@@ -193,6 +192,42 @@ public class UserController {
 		userService.changePassword(userEmail, dto.getNewPassword());
 
 		return ResponseEntity.ok(Map.of("message", "Senha alterada com sucesso."));
+	}
+
+	// --- Endpoint com tratamento de erro detalhado ---
+	@PostMapping(value = "/me/certificate", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	@PreAuthorize("isAuthenticated()")
+	public ResponseEntity<?> uploadCertificate(Authentication authentication,
+											   @ModelAttribute @Valid CertificateUploadDTO dto) {
+		String userEmail = authentication.getName();
+		try {
+			userService.uploadCertificate(userEmail, dto);
+			return ResponseEntity.ok(Map.of("message", "Certificado digital configurado com sucesso."));
+		} catch (IllegalArgumentException e) {
+			// Erro de validação (senha errada, arquivo inválido)
+			return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+		} catch (RuntimeException e) {
+			// Erro de IO ou Criptografia
+			e.printStackTrace(); // Imprime o erro no console do backend para você ver
+			return ResponseEntity.internalServerError().body(Map.of("error", "Erro interno: " + e.getMessage()));
+		} catch (Exception e) {
+			// Qualquer outro erro não previsto (ex: erro de banco no commit)
+			e.printStackTrace();
+			return ResponseEntity.internalServerError().body(Map.of("error", "Erro inesperado: " + e.getMessage()));
+		}
+	}
+
+	// --- Remover Certificado ---
+	@DeleteMapping("/me/certificate")
+	@PreAuthorize("isAuthenticated()")
+	public ResponseEntity<?> removeCertificate(Authentication authentication) {
+		String userEmail = authentication.getName();
+		try {
+			userService.removeCertificate(userEmail);
+			return ResponseEntity.ok(Map.of("message", "Certificado removido com sucesso."));
+		} catch (Exception e) {
+			return ResponseEntity.internalServerError().body(Map.of("error", "Erro ao remover certificado: " + e.getMessage()));
+		}
 	}
 
 }

@@ -1,15 +1,30 @@
 package com.gotree.API.services;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.security.KeyStore;
+import java.security.cert.Certificate;
+import java.security.cert.X509Certificate;
+import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Date;
+import java.util.Enumeration;
 import java.util.List;
 import java.util.Optional;
-
+import java.util.UUID;
 import com.gotree.API.config.security.ClientUserDetails;
+import com.gotree.API.config.security.CustomUserDetails;
+import com.gotree.API.dto.user.*;
 import com.gotree.API.entities.Client;
-import com.gotree.API.repositories.AepReportRepository;
-import com.gotree.API.repositories.ClientRepository;
-import com.gotree.API.repositories.OccupationalRiskReportRepository;
-import com.gotree.API.repositories.TechnicalVisitRepository;
+import com.gotree.API.entities.User;
+import com.gotree.API.exceptions.CpfValidationException;
+import com.gotree.API.exceptions.ResourceNotFoundException;
+import com.gotree.API.mappers.UserMapper;
+import com.gotree.API.repositories.*;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -18,30 +33,13 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-
-import com.gotree.API.config.security.CustomUserDetails;
-import com.gotree.API.dto.user.BatchUserInsertResponseDTO;
-import com.gotree.API.dto.user.FailedUserDTO;
-import com.gotree.API.dto.user.UserRequestDTO;
-import com.gotree.API.dto.user.UserResponseDTO;
-import com.gotree.API.dto.user.UserUpdateDTO;
-import com.gotree.API.entities.User;
-import com.gotree.API.exceptions.CpfValidationException;
-import com.gotree.API.exceptions.ResourceNotFoundException;
-import com.gotree.API.mappers.UserMapper;
-import com.gotree.API.repositories.UserRepository;
+import org.springframework.transaction.annotation.Transactional;
 import br.com.caelum.stella.validation.CPFValidator;
 import br.com.caelum.stella.validation.InvalidStateException;
-import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Serviço responsável por gerenciar operações relacionadas a usuários no sistema.
- * Implementa UserDetailsService para integração com Spring Security.
- */
 @Service
 public class UserService implements UserDetailsService {
-    
-    
+
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final UserMapper userMapper;
@@ -49,10 +47,15 @@ public class UserService implements UserDetailsService {
     private final OccupationalRiskReportRepository riskReportRepository;
     private final TechnicalVisitRepository technicalVisitRepository;
     private final ClientRepository clientRepository;
+    private final SymmetricCryptoService cryptoService;
+
+    @Value("${file.storage.path}")
+    private String fileStoragePath;
 
     public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, UserMapper userMapper,
                        AepReportRepository aepReportRepository, OccupationalRiskReportRepository riskReportRepository,
-                       TechnicalVisitRepository technicalVisitRepository, ClientRepository clientRepository) {
+                       TechnicalVisitRepository technicalVisitRepository, ClientRepository clientRepository,
+                       SymmetricCryptoService cryptoService) {
         this.passwordEncoder = passwordEncoder;
         this.userRepository = userRepository;
         this.userMapper = userMapper;
@@ -60,26 +63,18 @@ public class UserService implements UserDetailsService {
         this.riskReportRepository = riskReportRepository;
         this.technicalVisitRepository = technicalVisitRepository;
         this.clientRepository = clientRepository;
+        this.cryptoService = cryptoService;
     }
 
-    public List<User> findAll() {
-        return userRepository.findAll();
-    }
-
-    public Page<User> findAll(Pageable pageable) {
-        return userRepository.findAll(pageable);
-    }
-
+    public List<User> findAll() { return userRepository.findAll(); }
+    public Page<User> findAll(Pageable pageable) { return userRepository.findAll(pageable); }
 
     public User findById(Long id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário com ID " + id + " não encontrado."));
     }
 
-    // Metodo público para encontrar um usuário por email
-    public Optional<User> findByEmail(String email) {
-        return userRepository.findByEmail(email);
-    }
+    public Optional<User> findByEmail(String email) { return userRepository.findByEmail(email); }
 
     public User insertUser(UserRequestDTO dto) {
         validateUser(dto);
@@ -88,211 +83,181 @@ public class UserService implements UserDetailsService {
         return userRepository.save(user);
     }
 
-    /**
-     * Atualiza os dados de um usuário existente.
-     *
-     * @param id  ID do usuário a ser atualizado
-     * @param dto DTO contendo os novos dados
-     * @return Usuário atualizado
-     * @throws ResourceNotFoundException se o usuário não for encontrado
-     * @throws DataIntegrityViolationException se o novo email já estiver em uso
-     * @throws CpfValidationException se o novo CPF for inválido
-     */
     public User updateUser(Long id, UserUpdateDTO dto) {
-        // 1. Busca o usuário existente no banco
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Usuário com ID: " + id + " não encontrado."));
+        User user = findById(id);
+        if (dto.getName() != null) user.setName(dto.getName());
+        if (dto.getPhone() != null) user.setPhone(dto.getPhone());
+        if (dto.getSiglaConselhoClasse() != null) user.setSiglaConselhoClasse(dto.getSiglaConselhoClasse());
+        if (dto.getConselhoClasse() != null) user.setConselhoClasse(dto.getConselhoClasse());
+        if (dto.getEspecialidade() != null) user.setEspecialidade(dto.getEspecialidade());
 
-        // 2. Atualiza os campos simples (se não forem nulos no DTO)
-        if (dto.getName() != null) {
-            user.setName(dto.getName());
-        }
-        if (dto.getPhone() != null) {
-            user.setPhone(dto.getPhone());
-        }
-
-        // 3. Atualiza os campos do conselho (se não forem nulos)
-        if (dto.getSiglaConselhoClasse() != null) {
-            user.setSiglaConselhoClasse(dto.getSiglaConselhoClasse());
-        }
-        if (dto.getConselhoClasse() != null) {
-            user.setConselhoClasse(dto.getConselhoClasse());
-        }
-        if (dto.getEspecialidade() != null) {
-            user.setEspecialidade(dto.getEspecialidade());
-        }
-
-        // 4. Atualiza o EMAIL (com validação de duplicidade)
         if (dto.getEmail() != null && !dto.getEmail().isBlank() && !dto.getEmail().equalsIgnoreCase(user.getEmail())) {
-            // Se o email mudou, verifica se o novo email já está em uso por OUTRO usuário
-            userRepository.findByEmail(dto.getEmail()).ifPresent(existingUser -> {
-                throw new DataIntegrityViolationException("Email já cadastrado: " + existingUser.getEmail());
+            userRepository.findByEmail(dto.getEmail()).ifPresent(u -> {
+                throw new DataIntegrityViolationException("Email já cadastrado: " + u.getEmail());
             });
             user.setEmail(dto.getEmail());
         }
 
-        // 5. Atualiza o CPF (com validação de formato)
         if (dto.getCpf() != null) {
             String cleanCpf = dto.getCpf().replaceAll("[^\\d]", "");
-            CPFValidator cpfValidator = new CPFValidator();
             try {
-                // Valida o formato do CPF
-                cpfValidator.assertValid(cleanCpf);
+                new CPFValidator().assertValid(cleanCpf);
             } catch (InvalidStateException e) {
                 throw new CpfValidationException("CPF inválido: " + dto.getCpf());
             }
-            // Salva o CPF (como está no DTO, mantendo a formatação se houver)
             user.setCpf(dto.getCpf());
         }
-
-        // 6. Salva o usuário atualizado no banco
         return userRepository.save(user);
     }
 
-    /**
-     * Remove um usuário do sistema após verificar dependências.*
-     * @param id ID do usuário a ser removido
-     * @throws ResourceNotFoundException se o usuário não for encontrado
-     * @throws IllegalStateException se o usuário estiver vinculado a relatórios
-     */
     @Transactional
     public void deleteUser(Long id) {
-        // 1. Verifica se o usuário existe
-        if (!userRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Usuário com ID: " + id + " não encontrado");
+        User user = findById(id);
+        if (technicalVisitRepository.existsByTechnician_Id(id) ||
+                riskReportRepository.existsByTechnician_Id(id) ||
+                aepReportRepository.existsByEvaluator_Id(id)) {
+            throw new IllegalStateException("Usuário não pode ser excluído pois possui relatórios vinculados.");
         }
-
-        // 2. APLICA A REGRA DE NEGÓCIO
-        if (technicalVisitRepository.existsByTechnician_Id(id)) {
-            throw new IllegalStateException("Este usuário não pode ser excluído, pois está vinculado a Relatórios de Visita.");
+        // Remove certificado físico se existir
+        if (user.getCertificatePath() != null) {
+            try { Files.deleteIfExists(Paths.get(user.getCertificatePath())); } catch (IOException ignored) {}
         }
-        if (riskReportRepository.existsByTechnician_Id(id)) {
-            throw new IllegalStateException("Este usuário não pode ser excluído, pois está vinculado a Checklists de Risco.");
-        }
-        if (aepReportRepository.existsByEvaluator_Id(id)) {
-            throw new IllegalStateException("Este usuário não pode ser excluído, pois está vinculado a relatórios AEP.");
-        }
-
-        // 3. Se passou, deleta
         userRepository.deleteById(id);
     }
 
-    /**
-     * Redefine a senha do usuário para seu email e marca para alteração obrigatória.
-     *
-     * @param userId ID do usuário
-     * @throws ResourceNotFoundException se o usuário não for encontrado
-     */
-    // Logica pra resetar a senha (fazendo com que o username vire a senha email ==
-    // senha
     public void resetPassword(Long userId) {
         User user = findById(userId);
-
-        String newPassword = user.getEmail();
-        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setPassword(passwordEncoder.encode(user.getEmail()));
         user.setPasswordResetRequired(true);
-
         userRepository.save(user);
     }
 
-    /**
-     * Realiza a inserção em lote de múltiplos usuários.
-     * @param userDTOs Lista de DTOs contendo os dados dos usuários
-     * @return DTO contendo os usuários inseridos com sucesso e os que falharam
-     */
     public BatchUserInsertResponseDTO insertUsers(List<UserRequestDTO> userDTOs) {
-        List<UserResponseDTO> successUsers = new ArrayList<>();
-        List<FailedUserDTO> failedUsers = new ArrayList<>();
-
+        List<UserResponseDTO> success = new ArrayList<>();
+        List<FailedUserDTO> failed = new ArrayList<>();
         for (UserRequestDTO dto : userDTOs) {
             try {
                 validateUser(dto);
                 User user = userMapper.toEntity(dto);
                 user.setPassword(passwordEncoder.encode(user.getPassword()));
-                User saved = userRepository.save(user);
-                successUsers.add(userMapper.toDto(saved));
+                success.add(userMapper.toDto(userRepository.save(user)));
             } catch (Exception e) {
-                failedUsers.add(new FailedUserDTO(dto.getEmail(), e.getMessage()));
+                failed.add(new FailedUserDTO(dto.getEmail(), e.getMessage()));
             }
         }
-
-        return new BatchUserInsertResponseDTO(successUsers, failedUsers);
+        return new BatchUserInsertResponseDTO(success, failed);
     }
 
-    /**
-     * Valida os dados do usuário antes da inserção.
-     * @param userDTO DTO contendo os dados do usuário
-     * @throws DataIntegrityViolationException se o email já estiver cadastrado
-     * @throws CpfValidationException se o CPF for inválido
-     */
     public void validateUser(UserRequestDTO userDTO) {
         userRepository.findByEmail(userDTO.getEmail()).ifPresent(u -> {
-            throw new DataIntegrityViolationException("Email já cadastrado: " + u.getEmail());
+            throw new DataIntegrityViolationException("Email já cadastrado.");
         });
-
         String cleanCpf = userDTO.getCpf().replaceAll("[^\\d]", "");
-        CPFValidator cpfValidator = new CPFValidator();
-
-        try {
-            cpfValidator.assertValid(cleanCpf);
-        } catch (InvalidStateException e) {
-            throw new CpfValidationException("CPF inválido: " + userDTO.getCpf());
-        }
+        try { new CPFValidator().assertValid(cleanCpf); }
+        catch (InvalidStateException e) { throw new CpfValidationException("CPF inválido."); }
     }
 
-    /**
-     * Altera a senha do usuário.
-     * @param userEmail Email do usuário
-     * @param newPassword Nova senha
-     * @throws RuntimeException se o usuário não for encontrado
-     * @throws IllegalStateException se a alteração de senha não for necessária
-     */
     @Transactional
     public void changePassword(String userEmail, String newPassword) {
-        // 1. Busca o utilizador pelo e-mail (que é o identificador do utilizador autenticado)
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new RuntimeException("Utilizador não encontrado."));
-
-        // 2. (Opcional, mas recomendado) Verifica se a flag de reset está ativa
         if (!Boolean.TRUE.equals(user.getPasswordResetRequired())) {
-            throw new IllegalStateException("A alteração de senha não é necessária ou permitida no momento.");
+            throw new IllegalStateException("Alteração de senha não permitida no momento.");
         }
-
-        // 3. Codifica a nova senha antes de salvar
         user.setPassword(passwordEncoder.encode(newPassword));
-
-        // 4. Desativa a flag de reset, permitindo o acesso normal ao sistema
         user.setPasswordResetRequired(false);
-
-        // 5. Salva as alterações no banco de dados
         userRepository.save(user);
     }
 
-    /**
-     * Carrega os detalhes do usuário ou cliente para autenticação no Spring Security.
-     * @param email Email do usuário
-     * @return Detalhes do usuário para autenticação
-     * @throws UsernameNotFoundException se o usuário não for encontrado
-     */
-    @Override
-    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        System.out.println("Tentando autenticar: " + email);
+    // --- LÓGICA DO CERTIFICADO DIGITAL ---
 
-        // 1. Tenta buscar na tabela de Usuários (Admins/Técnicos)
-        Optional<User> userOpt = userRepository.findByEmail(email);
-        if (userOpt.isPresent()) {
-            return new CustomUserDetails(userOpt.get());
+    @Transactional
+    public void uploadCertificate(String userEmail, CertificateUploadDTO dto) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new RuntimeException("Usuário não encontrado."));
+
+        if (dto.getFile() == null || dto.getFile().isEmpty()) {
+            throw new IllegalArgumentException("Arquivo do certificado é obrigatório.");
         }
 
-        // 2. Se não achou, tenta buscar na tabela de Clientes
-        Optional<Client> clientOpt = clientRepository.findByEmail(email);
-        if (clientOpt.isPresent()) {
-            // Retorna o ClientUserDetails que você criou
-            return new ClientUserDetails(clientOpt.get());
+        Date validade = null;
+
+        // 1. Tenta abrir o arquivo PFX, validar senha e extrair data de validade
+        try (InputStream is = dto.getFile().getInputStream()) {
+            KeyStore ks = KeyStore.getInstance("PKCS12");
+            ks.load(is, dto.getPassword().toCharArray());
+
+            // Pega a data do primeiro certificado da cadeia
+            Enumeration<String> aliases = ks.aliases();
+            if (aliases.hasMoreElements()) {
+                String alias = aliases.nextElement();
+                Certificate cert = ks.getCertificate(alias);
+
+                // Verifica se é X509Certificate para pegar a data
+                if (cert instanceof X509Certificate) {
+                    X509Certificate x509Cert = (X509Certificate) cert;
+                    validade = x509Cert.getNotAfter();
+                }
+            }
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Senha incorreta ou arquivo PFX inválido.");
         }
 
-        // 3. Se não achou em lugar nenhum
-        throw new UsernameNotFoundException("Usuário ou Cliente não encontrado com email: " + email);
+        // 2. Limpeza: Remove arquivo antigo se já existir
+        if (user.getCertificatePath() != null) {
+            try { Files.deleteIfExists(Paths.get(user.getCertificatePath())); } catch (IOException ignored) {}
+        }
+
+        // 3. Salva novo arquivo e atualiza dados no banco
+        try {
+            String ext = getFileExtension(dto.getFile().getOriginalFilename());
+            String fileName = "CERT_" + user.getId() + "_" + UUID.randomUUID() + ext;
+            Path targetPath = Paths.get(fileStoragePath, "certificates", fileName);
+            Files.createDirectories(targetPath.getParent());
+            Files.write(targetPath, dto.getFile().getBytes());
+
+            user.setCertificatePath(targetPath.toString());
+            user.setCertificatePassword(cryptoService.encrypt(dto.getPassword()));
+
+            if (validade != null) {
+                // Converte Date legacy para LocalDate
+                user.setCertificateValidity(validade.toInstant().atZone(ZoneId.systemDefault()).toLocalDate());
+            }
+
+            userRepository.save(user);
+        } catch (IOException e) {
+            throw new RuntimeException("Erro ao salvar arquivo no disco.", e);
+        }
     }
 
+    @Transactional
+    public void removeCertificate(String userEmail) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new RuntimeException("Usuário não encontrado."));
+
+        if (user.getCertificatePath() != null) {
+            try { Files.deleteIfExists(Paths.get(user.getCertificatePath())); } catch (IOException ignored) {}
+        }
+
+        // Limpa campos
+        user.setCertificatePath(null);
+        user.setCertificatePassword(null);
+        user.setCertificateValidity(null);
+        userRepository.save(user);
+    }
+
+    private String getFileExtension(String filename) {
+        return filename != null && filename.contains(".") ? filename.substring(filename.lastIndexOf(".")) : ".pfx";
+    }
+
+    @Override
+    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+        Optional<User> user = userRepository.findByEmail(email);
+        if (user.isPresent()) return new CustomUserDetails(user.get());
+
+        Optional<Client> client = clientRepository.findByEmail(email);
+        if (client.isPresent()) return new ClientUserDetails(client.get());
+
+        throw new UsernameNotFoundException("Usuário não encontrado: " + email);
+    }
 }

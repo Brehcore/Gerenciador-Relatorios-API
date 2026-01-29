@@ -11,5 +11,5 @@ public class TechnicalVisitResponseDTO {
     private String clientCompanyName;
     private LocalDate visitDate;
     private String documentType = "Relatório de Visita"; // Campo fixo para identificar o tipo no frontend
-
+    private boolean icpSigned;
 }

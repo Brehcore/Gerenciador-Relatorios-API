@@ -46,6 +46,7 @@ public class TechnicalVisitService {
     private final UnitRepository unitRepository;
     private final SectorRepository sectorRepository;
     private final AgendaEventRepository agendaEventRepository;
+    private final DigitalSignatureService digitalSignatureService;
 
 
     @Value("${file.storage.path}")
@@ -57,19 +58,17 @@ public class TechnicalVisitService {
 //    @Value("${app.generating-company.cnpj}")
 //    private String generatingCompanyCnpj;
 
-    public TechnicalVisitService(TechnicalVisitRepository technicalVisitRepository,
-                                 CompanyRepository companyRepository,
-                                 ReportService reportService,
-                                 UnitRepository unitRepository,
-                                 SectorRepository sectorRepository,
-                                 AgendaEventRepository agendaEventRepository) {
+    public TechnicalVisitService(TechnicalVisitRepository technicalVisitRepository, CompanyRepository companyRepository,
+                                 ReportService reportService, UnitRepository unitRepository,
+                                 SectorRepository sectorRepository, AgendaEventRepository agendaEventRepository,
+                                 DigitalSignatureService digitalSignatureService) {
         this.technicalVisitRepository = technicalVisitRepository;
         this.companyRepository = companyRepository;
         this.reportService = reportService;
         this.unitRepository = unitRepository;
         this.sectorRepository = sectorRepository;
         this.agendaEventRepository = agendaEventRepository;
-
+        this.digitalSignatureService = digitalSignatureService;
     }
 
     /**
@@ -182,6 +181,39 @@ public class TechnicalVisitService {
         } catch (IOException e) {
             throw new RuntimeException("Falha ao salvar a foto 1 do achado: " + e.getMessage(), e);
         }
+    }
+
+    /**
+     * Assina o PDF da visita técnica com o certificado digital do técnico.
+     */
+    @Transactional
+    public void signExistingVisit(Long id, User signer) throws IOException {
+        TechnicalVisit visit = technicalVisitRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Visita Técnica não encontrada"));
+
+        if (!visit.getTechnician().getId().equals(signer.getId())) {
+            throw new SecurityException("Apenas o técnico responsável pode assinar digitalmente este documento.");
+        }
+
+        if (visit.getPdfPath() == null) {
+            throw new IllegalStateException("O PDF ainda não foi gerado.");
+        }
+
+        Path path = Paths.get(fileStoragePath, visit.getPdfPath());
+        if (!Files.exists(path)) {
+            throw new IllegalStateException("Arquivo PDF não encontrado no disco.");
+        }
+
+        byte[] pdfBytes = Files.readAllBytes(path);
+
+        // Aplica a assinatura
+        byte[] signedBytes = digitalSignatureService.signPdf(pdfBytes, signer);
+
+        // Sobrescreve o arquivo no disco
+        Files.write(path, signedBytes);
+
+        visit.setIcpSignedAt(LocalDateTime.now()); // Marca o pdf como assinado digitalmente
+        technicalVisitRepository.save(visit);
     }
 
     /**

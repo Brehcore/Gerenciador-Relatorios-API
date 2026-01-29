@@ -65,4 +65,7 @@ public class TechnicalVisit {
 
     @Column(name = "sent_to_client_at")
     private java.time.LocalDateTime sentToClientAt;
+
+    @Column(name = "icp_signed_at")
+    private LocalDateTime icpSignedAt; // Data da assinatura PFX
 }

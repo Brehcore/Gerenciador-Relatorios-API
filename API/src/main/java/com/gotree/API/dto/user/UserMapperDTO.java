@@ -10,7 +10,6 @@ public class UserMapperDTO {
 
 	/**
 	 * Converte o DTO de requisição em uma Entidade User.
-	 * Assume que os novos campos existem em UserRequestDTO.
 	 */
 	public static User toEntity(UserRequestDTO dto) {
 		User user = new User();
@@ -20,7 +19,14 @@ public class UserMapperDTO {
 		user.setBirthDate(dto.getBirthDate());
 		user.setPhone(dto.getPhone());
 		user.setCpf(dto.getCpf());
-		user.setRole(UserRole.USER); // Define a role padrão para novos usuários
+
+		// Verifica se o DTO trouxe uma role, senão usa padrão
+		if (dto.getRole() != null) {
+			user.setRole(dto.getRole());
+		} else {
+			user.setRole(UserRole.USER);
+		}
+
 		user.setPasswordResetRequired(false);
 
 		// Mapeando os novos campos
@@ -33,7 +39,6 @@ public class UserMapperDTO {
 
 	/**
 	 * Converte uma Entidade User em um DTO de resposta.
-	 * Assume que os novos campos existem em UserResponseDTO.
 	 */
 	public static UserResponseDTO toDto(User user) {
 		UserResponseDTO dto = new UserResponseDTO();
@@ -41,9 +46,18 @@ public class UserMapperDTO {
 		dto.setName(user.getName());
 		dto.setEmail(user.getEmail());
 		dto.setPhone(user.getPhone());
-		dto.setRole(user.getRole().getRoleName());
 
-		// Mapeando os novos campos
+		dto.setRole(user.getRole());
+
+		// Mapeando dados faltantes (CPF, Nascimento, Certificado)
+		dto.setBirthDate(user.getBirthDate());
+		dto.setCpf(user.getCpf());
+
+		// Logica do Certificado Digital (Importante para o frontend)
+		dto.setHasCertificate(user.getCertificatePath() != null && !user.getCertificatePath().isEmpty());
+		dto.setCertificateValidity(user.getCertificateValidity());
+
+		// Mapeando os campos do conselho
 		dto.setSiglaConselhoClasse(user.getSiglaConselhoClasse());
 		dto.setConselhoClasse(user.getConselhoClasse());
 		dto.setEspecialidade(user.getEspecialidade());
@@ -53,7 +67,6 @@ public class UserMapperDTO {
 
 	/**
 	 * Converte uma lista de Entidades User em uma lista de DTOs de resposta.
-	 * Este método não precisa de alteração, pois ele reutiliza o toDto().
 	 */
 	public static List<UserResponseDTO> toDtoList(List<User> users) {
 		return users.stream().map(UserMapperDTO::toDto).collect(Collectors.toList());

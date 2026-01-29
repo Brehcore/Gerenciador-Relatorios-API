@@ -3,6 +3,7 @@ package com.gotree.API.controllers;
 import com.gotree.API.config.security.CustomUserDetails;
 import com.gotree.API.dto.risk.SaveRiskReportRequestDTO;
 import com.gotree.API.entities.OccupationalRiskReport;
+import com.gotree.API.entities.User;
 import com.gotree.API.services.RiskChecklistService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -80,5 +81,22 @@ public class RiskChecklistController {
 
         return ResponseEntity.ok(Map.of("message", "Atualizado com sucesso", "id", report.getId()));
         
+    }
+
+    /**
+     * Endpoint para assinar digitalmente (ICP-Brasil) o checklist já gerado.
+     */
+    @PostMapping("/{id}/sign")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> signReport(@PathVariable Long id, Authentication authentication) {
+        try {
+            User user = ((CustomUserDetails) authentication.getPrincipal()).user();
+            service.signExistingReport(id, user);
+            return ResponseEntity.ok(Map.of("message", "Checklist assinado com sucesso via Certificado Digital."));
+        } catch (IllegalStateException | IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of("error", "Erro ao processar assinatura: " + e.getMessage()));
+        }
     }
 }

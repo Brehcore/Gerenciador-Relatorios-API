@@ -13,6 +13,9 @@ public class DocumentSummaryDTO {
     private String clientName;
     private LocalDate creationDate; // Um campo de data comum para ordenação
     private boolean signed;
+    private boolean icpSigned;
+    private boolean pdfGenerated;
+    private LocalDateTime icpSignedAt;
 
     private boolean emailSent;   // Controla a cor (Verde/Vermelho)
     private String clientEmail;  // Para mostrar no Modal ("Enviado para...")

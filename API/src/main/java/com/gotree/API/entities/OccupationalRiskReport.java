@@ -76,4 +76,7 @@ public class OccupationalRiskReport {
 
     @Column(name = "sent_to_client_at")
     private java.time.LocalDateTime sentToClientAt;
+
+    @Column(name = "icp_signed_at")
+    private LocalDateTime icpSignedAt;
 }
