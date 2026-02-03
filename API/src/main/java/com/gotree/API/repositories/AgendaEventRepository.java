@@ -52,4 +52,12 @@ public interface AgendaEventRepository extends JpaRepository<AgendaEvent, Long> 
             "WHERE (cc.id IN :companyIds) OR (ae.company.id IN :companyIds) " +
             "ORDER BY ae.eventDate DESC")
     List<AgendaEvent> findByClientCompanyIds(@Param("companyIds") List<Long> companyIds);
+
+    // --- AGENDA GLOBAL (Busca eventos manuais de TODOS) ---
+    @Query("SELECT e FROM AgendaEvent e JOIN FETCH e.user WHERE e.eventDate BETWEEN :startDate AND :endDate")
+    List<AgendaEvent> findAllByEventDateBetween(@Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
+
+    // --- CONCORRÊNCIA (Busca eventos de TODOS em data/turno específicos) ---
+    @Query("SELECT e FROM AgendaEvent e JOIN FETCH e.user WHERE e.eventDate = :date AND e.shift = :shift")
+    List<AgendaEvent> findAllByEventDateAndShift(@Param("date") LocalDate date, @Param("shift") Shift shift);
 }

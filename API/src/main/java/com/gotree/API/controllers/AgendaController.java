@@ -9,6 +9,7 @@ import com.gotree.API.entities.AgendaEvent;
 import com.gotree.API.entities.User;
 import com.gotree.API.services.AgendaService;
 import jakarta.validation.Valid;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -210,5 +211,35 @@ public class AgendaController {
 
         User user = ((CustomUserDetails) auth.getPrincipal()).user();
         return ResponseEntity.ok(agendaService.getMonthAvailability(user, year, month));
+    }
+
+    @GetMapping("/global")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<List<AgendaResponseDTO>> getGlobalAgenda(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
+    ) {
+        List<AgendaResponseDTO> globalEvents = agendaService.getGlobalEvents(startDate, endDate);
+        return ResponseEntity.ok(globalEvents);
+    }
+
+    /**
+     * Verifica se há conflito GLOBAL (aviso de outros técnicos).
+     * Retorna 200 OK com mensagem de aviso se houver conflito, ou 200 OK vazio se estiver livre.
+     */
+    @GetMapping("/check-global-conflicts")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Map<String, String>> checkGlobalConflicts(
+            Authentication auth,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam String shift
+    ) {
+        User user = ((CustomUserDetails) auth.getPrincipal()).user();
+        String warningMessage = agendaService.checkGlobalConflicts(date, shift, user);
+
+        if (warningMessage != null) {
+            return ResponseEntity.ok(Map.of("warning", warningMessage));
+        }
+        return ResponseEntity.ok(Map.of());
     }
 }

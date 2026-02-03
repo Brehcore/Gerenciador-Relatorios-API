@@ -46,10 +46,10 @@ public class AgendaService {
      * NOVO MÉTODO: Valida se o relatório pode ser enviado.
      * Bloqueia se houver conflito com visita de outra empresa no mesmo turno.
      *
-     * @param visitId ID da visita técnica que está sendo finalizada
+     * @param visitId    ID da visita técnica que está sendo finalizada
      * @param technician Técnico responsável
-     * @param date Data do relatório/visita
-     * @param shiftStr Turno selecionado
+     * @param date       Data do relatório/visita
+     * @param shiftStr   Turno selecionado
      */
     public void validateReportSubmission(Long visitId, User technician, LocalDate date, String shiftStr) {
         try {
@@ -384,5 +384,60 @@ public class AgendaService {
             dto.setResponsibleName(visit.getTechnician().getName());
         }
         return dto;
+    }
+
+    /**
+     * NOVO: Verifica se há OUTROS técnicos agendados no mesmo horário.
+     * Retorna uma mensagem informativa (não bloqueante) ou null.
+     */
+    @Transactional(readOnly = true)
+    public String checkGlobalConflicts(LocalDate date, String shiftStr, User currentUser) {
+        try {
+            Shift shift = Shift.valueOf(shiftStr.toUpperCase());
+            List<String> busyTechnicians = new ArrayList<>();
+
+            // 1. Verifica Eventos Manuais de outros
+            List<AgendaEvent> events = agendaEventRepository.findAllByEventDateAndShift(date, shift);
+            for (AgendaEvent evt : events) {
+                if (!evt.getUser().getId().equals(currentUser.getId())) {
+                    busyTechnicians.add(evt.getUser().getName());
+                }
+            }
+
+            // 2. Verifica Visitas Técnicas agendadas de outros
+            List<TechnicalVisit> visits = technicalVisitRepository.findAllByNextVisitDateAndNextVisitShift(date, shift);
+            for (TechnicalVisit tv : visits) {
+                if (tv.getTechnician() != null && !tv.getTechnician().getId().equals(currentUser.getId())) {
+                    busyTechnicians.add(tv.getTechnician().getName());
+                }
+            }
+
+            if (!busyTechnicians.isEmpty()) {
+                // Remove duplicatas e formata
+                String names = String.join(", ", busyTechnicians.stream().distinct().toList());
+                return "Atenção: Os seguintes técnicos já possuem agendamento nesta data/turno: " + names;
+            }
+
+            return null; // Sem conflitos
+
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    /**
+     * Retorna a Agenda Global (Eventos de TODOS os técnicos) para um intervalo de datas.
+     * Usado para preencher o calendário global.
+     */
+    @Transactional(readOnly = true)
+    public List<AgendaResponseDTO> getGlobalEvents(LocalDate startDate, LocalDate endDate) {
+        // 1. Busca eventos manuais de todos
+        List<AgendaEvent> allEvents = agendaEventRepository.findAllByEventDateBetween(startDate, endDate);
+
+        // 2. Busca visitas agendadas de todos
+        List<TechnicalVisit> allVisits = technicalVisitRepository.findAllByNextVisitDateBetween(startDate, endDate);
+
+        // 3. Agrega usando a mesma lógica de evitar duplicatas (visitas que viraram eventos)
+        return aggregateAndSortEvents(allEvents, allVisits);
     }
 }
