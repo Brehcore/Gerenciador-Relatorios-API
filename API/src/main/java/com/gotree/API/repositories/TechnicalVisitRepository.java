@@ -142,14 +142,14 @@ public interface TechnicalVisitRepository extends JpaRepository<TechnicalVisit, 
     @Query("SELECT v FROM TechnicalVisit v WHERE v.technician = :technician AND v.nextVisitDate BETWEEN :startDate AND :endDate")
     List<TechnicalVisit> findByTechnicianAndNextVisitDateBetween(@Param("technician") User technician, @Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
 
-    // --- AGENDA GLOBAL (Busca visitas futuras de TODOS os técnicos) ---
+    // AGENDA GLOBAL (Busca visitas futuras de TODOS os técnicos)
     @Query("SELECT v FROM TechnicalVisit v " +
             "JOIN FETCH v.technician " + // Importante trazer o técnico
             "LEFT JOIN FETCH v.clientCompany " +
             "WHERE v.nextVisitDate BETWEEN :startDate AND :endDate")
     List<TechnicalVisit> findAllByNextVisitDateBetween(@Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
 
-    // CONCORRÊNCIA (Busca quem tem visita marcada em Data/Turno específicos) ---
+    // CONCORRÊNCIA (Busca quem tem visita marcada em Data/Turno específicos)
     @Query("SELECT v FROM TechnicalVisit v " +
             "JOIN FETCH v.technician " +
             "WHERE v.nextVisitDate = :date AND v.nextVisitShift = :shift")

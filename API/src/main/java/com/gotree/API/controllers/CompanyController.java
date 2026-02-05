@@ -28,13 +28,10 @@ import java.util.Map;
 @RestController
 @RequestMapping("/companies")
 public class CompanyController {
-    
-    
 
     private final CompanyService companyService;
     private final CompanyMapper companyMapper;
 
-    // Injeção do Service e do Mapper via construtor
     public CompanyController(CompanyService companyService, CompanyMapper companyMapper) {
         this.companyService = companyService;
         this.companyMapper = companyMapper;
@@ -46,29 +43,15 @@ public class CompanyController {
      * @param dto Objeto DTO contendo os dados da empresa a ser criada
      * @return ResponseEntity com o DTO da empresa criada e status HTTP 201 (CREATED)
      * @throws IllegalArgumentException se os dados fornecidos forem inválidos
-     * @secured Requer papel ADMIN
+     * @secured Requer Authentication
      */
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<CompanyResponseDTO> createCompany(@Valid @RequestBody CompanyRequestDTO dto) {
         Company newCompany = companyService.createCompany(dto);
         CompanyResponseDTO responseDto = companyMapper.toDto(newCompany);
         return ResponseEntity.status(HttpStatus.CREATED).body(responseDto);
     }
-
-//    /**
-//     * Lista todas as empresas cadastradas no sistema.
-//     *
-//     * @return ResponseEntity com a lista de DTOs das empresas e status HTTP 200 (OK)
-//     * @secured Requer autenticação
-//     */
-//    @GetMapping
-//    @PreAuthorize("isAuthenticated()")
-//    public ResponseEntity<List<CompanyResponseDTO>> findAll() {
-//        List<Company> companies = companyService.findAll();
-//        List<CompanyResponseDTO> responseDtos = companyMapper.toDtoList(companies);
-//        return ResponseEntity.ok(responseDtos);
-//    }
 
     /**
      * Busca uma empresa específica pelo seu ID.

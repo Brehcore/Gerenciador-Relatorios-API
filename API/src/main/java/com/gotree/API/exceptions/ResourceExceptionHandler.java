@@ -9,6 +9,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -19,6 +20,23 @@ import jakarta.servlet.http.HttpServletRequest;
 
 @RestControllerAdvice
 public class ResourceExceptionHandler {
+
+    // Tratamento para Bloqueio de Agenda e Regras de Negócio
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<StandardError> handleIllegalState(IllegalStateException e, HttpServletRequest request) {
+        // Retorna 409 Conflict em vez de 500
+        HttpStatus status = HttpStatus.CONFLICT;
+        StandardError err = new StandardError(Instant.now(), status.value(), "Conflito de Agenda/Regra", e.getMessage(), request.getRequestURI());
+        return ResponseEntity.status(status).body(err);
+    }
+
+    // Tratamento para Acesso Negado (Erro 403)
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<StandardError> handleAccessDenied(AccessDeniedException e, HttpServletRequest request) {
+        HttpStatus status = HttpStatus.FORBIDDEN;
+        StandardError err = new StandardError(Instant.now(), status.value(), "Acesso Negado", "Você não tem permissão para realizar esta ação.", request.getRequestURI());
+        return ResponseEntity.status(status).body(err);
+    }
 
     // Violação de integridade (Ex.: e-mail duplicado)
     @ExceptionHandler(DataIntegrityViolationException.class)

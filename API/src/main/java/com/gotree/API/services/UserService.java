@@ -158,15 +158,34 @@ public class UserService implements UserDetailsService {
     }
 
     @Transactional
-    public void changePassword(String userEmail, String newPassword) {
+    public void changePassword(String userEmail, String newPassword, String currentPassword) {
         User user = userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new RuntimeException("Utilizador não encontrado."));
-        if (!Boolean.TRUE.equals(user.getPasswordResetRequired())) {
-            throw new IllegalStateException("Alteração de senha não permitida no momento.");
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado."));
+
+        if(!passwordEncoder.matches(currentPassword, user.getPassword())) {
+            throw new IllegalArgumentException("A senha atual informada está incorreta.");
         }
+
         user.setPassword(passwordEncoder.encode(newPassword));
         user.setPasswordResetRequired(false);
         userRepository.save(user);
+    }
+
+    @Transactional
+    public void changeEmail(String currentEmail, String newEmail, String currentPassword) {
+       User user = userRepository.findByEmail(currentEmail).
+               orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado."));
+       if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+           throw new IllegalArgumentException("A senha atual informada está incorreta.");
+       }
+       // Verifica se o novo e-mail já não pertence a outra pessoa
+       Optional<User> userWithEmail = userRepository.findByEmail(newEmail);
+       // Se encontrou alguém e esse alguém não é o mesmo usuário, lança a exceção
+       if(userWithEmail.isPresent()) {
+           throw new DataIntegrityViolationException("Este e-mail já está em uso");
+       }
+       user.setEmail(newEmail);
+       userRepository.save(user);
     }
 
     // --- LÓGICA DO CERTIFICADO DIGITAL ---

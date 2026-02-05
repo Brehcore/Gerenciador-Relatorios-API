@@ -3,6 +3,7 @@ package com.gotree.API.controllers;
 import com.gotree.API.config.security.CustomUserDetails;
 import com.gotree.API.dto.user.BatchUserInsertResponseDTO;
 import com.gotree.API.dto.user.CertificateUploadDTO;
+import com.gotree.API.dto.user.ChangeEmailRequestDTO;
 import com.gotree.API.dto.user.ChangePasswordRequestDTO;
 import com.gotree.API.dto.user.UserRequestDTO;
 import com.gotree.API.dto.user.UserResponseDTO;
@@ -12,6 +13,7 @@ import com.gotree.API.exceptions.ResourceNotFoundException;
 import com.gotree.API.mappers.UserMapper;
 import com.gotree.API.services.UserService;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -189,12 +191,29 @@ public class UserController {
 		// Pega o e-mail do utilizador autenticado de forma segura
 		String userEmail = authentication.getName();
 
-		userService.changePassword(userEmail, dto.getNewPassword());
+		userService.changePassword(userEmail, dto.getNewPassword(), dto.getCurrentPassword());
 
 		return ResponseEntity.ok(Map.of("message", "Senha alterada com sucesso."));
 	}
 
-	// --- Endpoint com tratamento de erro detalhado ---
+	/**
+	 * 	Altera o e-mail atualmente autenticado
+	 * 	Disponível para todos os usuários autenticado
+	 * @param authentication
+	 * @param dto
+	 * @return
+	 */
+	@PutMapping("/me/change-email")
+	@PreAuthorize("isAuthenticated()")
+	public ResponseEntity<Map<String, String>> changeEmail(Authentication authentication,
+										@Valid @RequestBody ChangeEmailRequestDTO dto) {
+		String currentUserEmail = authentication.getName();
+
+		userService.changeEmail(currentUserEmail, dto.getNewEmail(), dto.getCurrentPassword());
+
+		return ResponseEntity.ok(Map.of("message", "E-mail alterado com sucesso."));
+	}
+
 	@PostMapping(value = "/me/certificate", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
 	@PreAuthorize("isAuthenticated()")
 	public ResponseEntity<?> uploadCertificate(Authentication authentication,

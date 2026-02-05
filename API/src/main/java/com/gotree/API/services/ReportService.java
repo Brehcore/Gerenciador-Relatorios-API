@@ -42,7 +42,6 @@ public class ReportService {
         try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
             ITextRenderer renderer = new ITextRenderer();
 
-            // Configuração da Fonte Montserrat (Mantida do seu código)
             try {
                 URL fontUrl = getClass().getResource("/fonts/Montserrat.ttf");
                 if (fontUrl != null) {

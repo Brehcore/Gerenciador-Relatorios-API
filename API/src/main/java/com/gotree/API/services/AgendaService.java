@@ -5,6 +5,7 @@ import com.gotree.API.dto.agenda.CreateEventDTO;
 import com.gotree.API.dto.agenda.MonthlyAvailabilityDTO;
 import com.gotree.API.dto.agenda.RescheduleVisitDTO;
 import com.gotree.API.entities.AgendaEvent;
+import com.gotree.API.entities.Company;
 import com.gotree.API.entities.TechnicalVisit;
 import com.gotree.API.entities.User;
 import com.gotree.API.enums.AgendaEventType;
@@ -43,7 +44,6 @@ public class AgendaService {
     }
 
     /**
-     * NOVO MÉTODO: Valida se o relatório pode ser enviado.
      * Bloqueia se houver conflito com visita de outra empresa no mesmo turno.
      *
      * @param visitId    ID da visita técnica que está sendo finalizada
@@ -51,34 +51,51 @@ public class AgendaService {
      * @param date       Data do relatório/visita
      * @param shiftStr   Turno selecionado
      */
-    public void validateReportSubmission(Long visitId, User technician, LocalDate date, String shiftStr) {
+    public void validateReportSubmission(Long visitId, User technician, LocalDate date, String shiftStr, Company targetCompany) {
         try {
             Shift shift = Shift.valueOf(shiftStr.toUpperCase());
 
-            // Busca todos os eventos agendados para este técnico, nesta data e turno
+            // Busca eventos existentes nesse horário
             List<AgendaEvent> conflictingEvents = agendaEventRepository.findByUserAndEventDateAndShift(technician, date, shift);
 
             for (AgendaEvent event : conflictingEvents) {
-                // Se o evento encontrado for referente à MESMA visita que estamos preenchendo, ignora (não é conflito)
+                // Se for a própria visita (em caso de edição), ignora
                 if (event.getTechnicalVisit() != null && event.getTechnicalVisit().getId().equals(visitId)) {
                     continue;
                 }
 
-                // Se chegou aqui, encontrou um evento DIFERENTE no mesmo horário (outra empresa)
-                String conflictingClient = (event.getClientName() != null) ? event.getClientName() : "Outro Cliente";
+                // Identifica a empresa do evento conflitante
+                Long conflictingCompanyId = null;
+                String conflictingClientName = "Outro Cliente";
+
                 if (event.getTechnicalVisit() != null && event.getTechnicalVisit().getClientCompany() != null) {
-                    conflictingClient = event.getTechnicalVisit().getClientCompany().getName();
+                    conflictingCompanyId = event.getTechnicalVisit().getClientCompany().getId();
+                    conflictingClientName = event.getTechnicalVisit().getClientCompany().getName();
+                } else if (event.getCompany() != null) {
+                    conflictingCompanyId = event.getCompany().getId();
+                    conflictingClientName = event.getCompany().getName();
                 }
 
-                // Lança o bloqueio para o frontend capturar e avisar o usuário
-                throw new IllegalStateException("BLOQUEIO DE AGENDA: Você já possui uma visita marcada na empresa '"
-                        + conflictingClient + "' neste mesmo turno (" + shift + "). "
-                        + "Retorne, altere o turno ou a data da visita atual e tente novamente.");
+                // A LÓGICA MÁGICA:
+                // Se temos uma empresa alvo e ela é IGUAL à empresa do evento existente -> PERMITE
+                if (targetCompany != null && conflictingCompanyId != null && targetCompany.getId().equals(conflictingCompanyId)) {
+                    continue; // Mesma empresa, segue o jogo
+                }
+
+                // Se chegou aqui, é conflito real (empresas diferentes)
+                throw new IllegalStateException("BLOQUEIO DE AGENDA: Você já possui um compromisso na empresa '"
+                        + conflictingClientName + "' neste turno (" + shift + "). "
+                        + "Agendamentos simultâneos só são permitidos na mesma empresa.");
             }
 
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException("Turno inválido fornecido para validação.");
         }
+    }
+
+    // Metodo sobrecarregado para compatibilidade (mas idealmente deve-se usar o acima)
+    public void validateReportSubmission(Long visitId, User technician, LocalDate date, String shiftStr) {
+        validateReportSubmission(visitId, technician, date, shiftStr, null);
     }
 
     /**
