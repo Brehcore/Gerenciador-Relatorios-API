@@ -284,4 +284,16 @@ public class AgendaController {
                 .contentType(MediaType.APPLICATION_PDF)
                 .body(pdfBytes);
     }
+
+    @PutMapping("/visitas/{visitId}/confirmar")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Void> confirmVisit(
+            @PathVariable Long visitId,
+            Authentication authentication) {
+
+        // Precisamos criar esse metodo no Service também
+        agendaService.confirmVisit(visitId);
+
+        return ResponseEntity.ok().build();
+    }
 }

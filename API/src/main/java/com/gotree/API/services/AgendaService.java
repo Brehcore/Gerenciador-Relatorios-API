@@ -513,4 +513,31 @@ public class AgendaService {
         List<TechnicalVisit> allVisits = technicalVisitRepository.findAllByNextVisitDateBetween(startDate, endDate);
         return aggregateAndSortEvents(allEvents, allVisits);
     }
+
+
+    public void confirmVisit(Long visitId) {
+        // 1. Busca a visita técnica
+        TechnicalVisit visit = technicalVisitRepository.findById(visitId)
+                .orElseThrow(() -> new RuntimeException("Visita Técnica não encontrada."));
+
+        // 2. Aqui você decide a regra:
+        // Opção A: Apenas cria um AgendaEvent "Confirmado" vinculado (Recomendado para manter padrão)
+        AgendaEvent confirmacao = agendaEventRepository.findByTechnicalVisit_Id(visitId)
+                .orElse(new AgendaEvent());
+
+        if (confirmacao.getId() == null) {
+            // Se ainda não existe evento manual vinculado, cria um novo
+            confirmacao.setTechnicalVisit(visit);
+            confirmacao.setUser(visit.getTechnician());
+            confirmacao.setEventDate(visit.getNextVisitDate());
+            confirmacao.setShift(visit.getNextVisitShift());
+            confirmacao.setTitle(visit.getTitle());
+            confirmacao.setEventType(AgendaEventType.VISITA_TECNICA);
+        }
+
+        // Atualiza o status para CONFIRMADO
+        confirmacao.setStatus(AgendaStatus.CONFIRMADO);
+
+        agendaEventRepository.save(confirmacao);
+    }
 }
