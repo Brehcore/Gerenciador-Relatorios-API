@@ -8,7 +8,7 @@ import java.time.LocalDate;
 public class RescheduleVisitDTO {
 
     @NotNull(message = "A nova data não pode ser nula.")
-    private LocalDate newDate; // O "Novo agendamento"
+    private LocalDate newDate;
 
-    private String reason; // Opcional, para adicionar ao log/descrição
+    private String reason; // Ex: "Cliente pediu adiamento"
 }

@@ -14,7 +14,7 @@ public class CreateEventDTO {
     private LocalDate eventDate;
 
     @NotBlank(message = "O tipo de evento é obrigatório.")
-    private String eventType;
+    private String eventType; // Espera: "EVENTO", "TREINAMENTO"
 
     @NotNull(message = "O turno é obrigatório.")
     private String shift; // "MANHA" ou "TARDE"

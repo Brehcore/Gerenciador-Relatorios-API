@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <style>
+        @page { size: A4; margin: 15mm; }
+        body { font-family: Helvetica, Arial, sans-serif; font-size: 10pt; }
+
+        .header { width: 100%; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 10px; }
+        .header-logo { width: 150px; vertical-align: middle; }
+        .header-title { text-align: center; font-weight: bold; font-size: 14pt; text-transform: uppercase; vertical-align: middle; }
+
+        table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        th, td { border: 1px solid #000; padding: 5px; text-align: center; vertical-align: middle; word-wrap: break-word; }
+        th { background-color: #A9A9A9; color: black; font-weight: bold; font-size: 9pt; }
+        td { font-size: 9pt; }
+
+        /* Coluna Cliente mais larga para caber Empresa/Unidade/Setor */
+        .col-data { width: 12%; }
+        .col-dia { width: 12%; }
+        .col-cliente { width: 28%; }
+        .col-turno { width: 12%; }
+        .col-colab { width: 20%; }
+        .col-situacao { width: 16%; }
+
+        .footer { position: fixed; bottom: 0; width: 100%; font-size: 8pt; text-align: center; color: #555; }
+    </style>
+</head>
+<body>
+
+<table class="header" style="border: none;">
+    <tr style="border: none;">
+        <td style="border: none; text-align: left; width: 20%;">
+            <img th:if="${generatingCompanyLogo != null}"
+                 th:src="'data:image/png;base64,' + ${generatingCompanyLogo}"
+                 class="header-logo" />
+        </td>
+        <td class="header-title" style="border: none;">
+            AGENDA VISITAS TÉCNICAS<br/>
+            <span th:text="${periodo}" style="font-size: 12pt;"></span>
+        </td>
+        <td style="border: none; width: 20%;"></td>
+    </tr>
+</table>
+
+<table>
+    <thead>
+    <tr>
+        <th class="col-data">Data</th>
+        <th class="col-dia">Dia</th>
+        <th class="col-cliente">Cliente</th>
+        <th class="col-turno">Turno</th>
+        <th class="col-colab">Colaborador(a)</th>
+        <th class="col-situacao">Situação</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="item : ${itens}">
+        <td th:text="${#temporals.format(item.date, 'dd/MM/yyyy')}"></td>
+        <td th:text="${#strings.capitalize(#temporals.dayOfWeekName(item.date))}"></td>
+
+        <td>
+            <span th:text="${item.clientName}">Empresa</span>
+            <span th:if="${item.unitName != null}" th:text="' - ' + ${item.unitName}"></span>
+            <span th:if="${item.sectorName != null}" th:text="' - ' + ${item.sectorName}"></span>
+        </td>
+
+        <td th:text="${item.shift}"></td>
+        <td th:text="${item.responsibleName}"></td>
+        <td th:text="${item.statusDescricao}"></td>
+    </tr>
+    <tr th:if="${#lists.isEmpty(itens)}">
+        <td colspan="6">Nenhum agendamento encontrado.</td>
+    </tr>
+    </tbody>
+</table>
+
+<div class="footer">
+    Gerado por: <span th:text="${generatingCompanyName}"></span> |
+    CNPJ: <span th:text="${generatingCompanyCnpj}"></span>
+</div>
+</body>
+</html>

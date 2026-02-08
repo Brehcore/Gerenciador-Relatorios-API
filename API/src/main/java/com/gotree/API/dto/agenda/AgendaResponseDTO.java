@@ -6,17 +6,23 @@ import java.time.LocalDate;
 @Data
 public class AgendaResponseDTO {
     private String title;
-    private LocalDate date; // Esta será a "Nova Data" (eventDate)
-    private String type; // "EVENTO" ou "VISITA"
-    private String description; // "Essa visita foi reagendado..."
+    private LocalDate date;
+    private String type; // "VISITA_TECNICA", "EVENTO", etc.
+    private String description;
     private String shift; // "MANHA" ou "TARDE"
-    private Long referenceId; // O ID do AgendaEvent ou do TechnicalVisit
+
+    // --- NOVOS CAMPOS PARA O RELATÓRIO E FRONTEND ---
+    private String status; // O enum cru: "REAGENDADO", "CONFIRMADO"
+    private String statusDescricao; // O texto formatado: "Reagendado p/ 15/02"
+    // -----------------------------------------------
+
+    private Long referenceId; // ID do AgendaEvent ou TechnicalVisit
     private String unitName;
     private String sectorName;
     private String clientName;
 
-    private LocalDate originalVisitDate; // A "Data original"
-    private Long sourceVisitId; // O ID do relatório de visita original
+    private LocalDate originalVisitDate;
+    private Long sourceVisitId;
 
     private String responsibleName;
 }

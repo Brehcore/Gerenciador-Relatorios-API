@@ -1,6 +1,7 @@
 package com.gotree.API.entities;
 
 import com.gotree.API.enums.AgendaEventType;
+import com.gotree.API.enums.AgendaStatus;
 import com.gotree.API.enums.Shift;
 import jakarta.persistence.*;
 import lombok.Data;
@@ -77,6 +78,15 @@ public class AgendaEvent {
     @Enumerated(EnumType.STRING)
     @Column(name = "event_type")
     private AgendaEventType eventType;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private AgendaStatus status = AgendaStatus.A_CONFIRMAR; // Padrão
+
+    // Para onde esse evento foi jogado?
+    // Só será preenchido se status == REAGENDADO
+    @Column(name = "rescheduled_to_date")
+    private LocalDate rescheduledToDate;
 
     // Serão usados quando o técnico marcar "REUNIAO" ou "OUTROS"
     private String clientName;

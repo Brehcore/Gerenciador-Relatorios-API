@@ -8,15 +8,20 @@ import com.gotree.API.dto.agenda.RescheduleVisitDTO;
 import com.gotree.API.entities.AgendaEvent;
 import com.gotree.API.entities.User;
 import com.gotree.API.services.AgendaService;
+import com.gotree.API.services.ReportService;
 import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -25,9 +30,11 @@ import java.util.Map;
 public class AgendaController {
 
     private final AgendaService agendaService;
+    private final ReportService reportService;
 
-    public AgendaController(AgendaService agendaService) {
+    public AgendaController(AgendaService agendaService, ReportService reportService) {
         this.agendaService = agendaService;
+        this.reportService = reportService;
     }
 
     /**
@@ -119,14 +126,17 @@ public class AgendaController {
      */
     @PutMapping("/visitas/{visitId}/reagendar")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<AgendaResponseDTO> rescheduleVisit(
+    public ResponseEntity<Void> rescheduleVisit(
             @PathVariable Long visitId,
             @RequestBody @Valid RescheduleVisitDTO dto,
             Authentication authentication) {
 
         User currentUser = ((CustomUserDetails) authentication.getPrincipal()).user();
-        AgendaEvent rescheduledEvent = agendaService.rescheduleVisit(visitId, dto, currentUser);
-        return ResponseEntity.ok(agendaService.mapToDto(rescheduledEvent));
+
+        // [3] O Service agora retorna void (pois cria histórico + move visita)
+        agendaService.rescheduleVisit(visitId, dto, currentUser);
+
+        return ResponseEntity.ok().build();
     }
 
     /**
@@ -241,5 +251,37 @@ public class AgendaController {
             return ResponseEntity.ok(Map.of("warning", warningMessage));
         }
         return ResponseEntity.ok(Map.of());
+    }
+
+    @GetMapping("/export/pdf")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<byte[]> exportAgendaPdf(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+
+        // 1. Busca os dados
+        List<AgendaResponseDTO> listaEventos = agendaService.getReportData(startDate, endDate);
+
+        // 2. Prepara os dados para o ReportService
+        Map<String, Object> data = new HashMap<>();
+
+        // Dados principais
+        data.put("itens", listaEventos);
+
+        // Formata o período para exibir no título
+        String periodoTexto = startDate.format(DateTimeFormatter.ofPattern("MM/yyyy")) +
+                " a " + endDate.format(DateTimeFormatter.ofPattern("MM/yyyy"));
+        data.put("periodo", periodoTexto);
+
+        // O ReportService vai injetar automaticamente:
+        // generatingCompanyName, generatingCompanyCnpj e generatingCompanyLogo (Base64)
+
+        // 3. Gera o PDF usando o template "relatorio-agenda"
+        byte[] pdfBytes = reportService.generatePdfFromHtml("relatorio-agenda", data);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=agenda_visitas.pdf")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdfBytes);
     }
 }
