@@ -4,7 +4,7 @@ import com.gotree.API.enums.UserRole;
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
 
-@Converter(autoApply = true)
+@Converter
 public class UserRoleConverter implements AttributeConverter<UserRole, String> {
 
     @Override
