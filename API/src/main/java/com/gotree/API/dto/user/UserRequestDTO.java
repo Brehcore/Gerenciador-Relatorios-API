@@ -1,6 +1,8 @@
 package com.gotree.API.dto.user;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.gotree.API.config.UserRoleDeserializer;
 import com.gotree.API.enums.UserRole;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -35,6 +37,7 @@ public class UserRequestDTO {
 	@NotBlank
 	private String cpf;
 
+	@JsonDeserialize(using = UserRoleDeserializer.class)
 	private UserRole role;
 
 	private String siglaConselhoClasse;

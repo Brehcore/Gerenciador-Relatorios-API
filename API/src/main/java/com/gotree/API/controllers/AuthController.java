@@ -67,7 +67,7 @@ public class AuthController {
 		return ResponseEntity.ok(Map.of(
 				"token", jwt,
 				"passwordResetRequired", user.getPasswordResetRequired(),
-				"role", user.getRole()
+				"role", user.getRole().name()
 		));
 	}
 
