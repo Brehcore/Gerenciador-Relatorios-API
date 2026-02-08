@@ -57,11 +57,18 @@ public class User implements Serializable, UserDetails {
     @Column(name = "certificate_validity")
     private LocalDate certificateValidity;
 
-    // Métodos da interface UserDetails (não são gerados pelo Lombok)
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        // Correto: Usa apenas o valor do Enum que já é "ROLE_ADMIN"
-        return List.of(new SimpleGrantedAuthority(role.getRoleName()));
+        // Pega o nome da role (ex: "ADMIN" ou "ROLE_ADMIN")
+        String roleName = role.getRoleName();
+
+        // Garante que tenha o prefixo ROLE_ para o Spring Security reconhecer
+        if (!roleName.startsWith("ROLE_")) {
+            roleName = "ROLE_" + roleName;
+        }
+
+        return List.of(new SimpleGrantedAuthority(roleName));
     }
 
     @Override
