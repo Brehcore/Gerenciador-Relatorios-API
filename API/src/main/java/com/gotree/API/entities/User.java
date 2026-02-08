@@ -59,7 +59,7 @@ public class User implements Serializable, UserDetails {
     // Métodos da interface UserDetails (não são gerados pelo Lombok)
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        // role.getRoleName() já retorna "ROLE_ADMIN" ou "ROLE_USER"
+        // Correto: Usa apenas o valor do Enum que já é "ROLE_ADMIN"
         return List.of(new SimpleGrantedAuthority(role.getRoleName()));
     }
 
