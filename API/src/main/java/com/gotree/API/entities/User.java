@@ -1,5 +1,6 @@
 package com.gotree.API.entities;
 
+import com.gotree.API.config.UserRoleConverter;
 import com.gotree.API.enums.UserRole;
 import jakarta.persistence.*;
 import lombok.*;
@@ -35,8 +36,8 @@ public class User implements Serializable, UserDetails {
     private String phone;
     private String cpf;
 
-    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
+    @Convert(converter = UserRoleConverter.class)
     private UserRole role = UserRole.USER;
 
     @Column(name = "password_reset_required")
