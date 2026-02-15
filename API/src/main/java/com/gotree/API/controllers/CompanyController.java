@@ -74,6 +74,7 @@ public class CompanyController {
      * Exemplo de chamada: GET /companies?page=0&size=10&sort=name,asc
      */
     @GetMapping
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Page<CompanyResponseDTO>> getAll(
                                                             @PageableDefault(page = 0, size = 10, sort = "name", direction = Sort.Direction.ASC) Pageable pageable
     ) {
@@ -93,7 +94,7 @@ public class CompanyController {
      * @secured Requer papel ADMIN
      */
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("isAuthenticated")
     public ResponseEntity<CompanyResponseDTO> updateCompany(@PathVariable Long id, @Valid @RequestBody CompanyRequestDTO dto) {
         Company updatedCompany = companyService.updateCompany(id, dto);
         CompanyResponseDTO responseDto = companyMapper.toDto(updatedCompany);
