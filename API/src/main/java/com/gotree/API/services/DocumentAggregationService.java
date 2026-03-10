@@ -4,6 +4,7 @@ import com.gotree.API.dto.document.DocumentSummaryDTO;
 import com.gotree.API.dto.document.FileDownloadDTO;
 import com.gotree.API.entities.*;
 import com.gotree.API.repositories.*;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -24,6 +25,8 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 @Service
 public class DocumentAggregationService {
@@ -394,5 +397,68 @@ public class DocumentAggregationService {
 
         dto.setEmailSent(sentAt != null);
         dto.setSigned(signatureBase64 != null && !signatureBase64.isBlank());
+    }
+
+    /**
+     * Exporta os documentos filtrados por data em um arquivo ZIP.
+     * Escreve diretamente no fluxo de saída da resposta HTTP.
+     */
+    @Transactional(readOnly = true)
+    public void exportDocumentsToZip(LocalDate startDate, LocalDate endDate, HttpServletResponse response) throws IOException {
+
+        // 1. Configura os Headers da resposta para o download do ZIP
+        response.setContentType("application/zip");
+        String zipFilename = "backup_documentos_" + LocalDate.now() + ".zip";
+        response.setHeader("Content-Disposition", "attachment; filename=\"" + zipFilename + "\"");
+
+        // 2. Busca todos os documentos globais (usando seu método existente)
+        List<DocumentSummaryDTO> allDocs = fetchRawDocumentsGlobal();
+
+        // 3. Aplica o filtro de data
+        List<DocumentSummaryDTO> filteredDocs = allDocs.stream()
+                .filter(doc -> {
+                    if (doc.getCreationDate() == null) return false;
+                    boolean afterStart = (startDate == null) || !doc.getCreationDate().isBefore(startDate);
+                    boolean beforeEnd = (endDate == null) || !doc.getCreationDate().isAfter(endDate);
+                    return afterStart && beforeEnd;
+                })
+                .toList();
+
+        // 4. Cria o ZipOutputStream apontando direto para a saída da requisição HTTP
+        try (ZipOutputStream zos = new ZipOutputStream(response.getOutputStream())) {
+
+            for (DocumentSummaryDTO doc : filteredDocs) {
+                try {
+                    // Mapeia o nome descritivo do tipo para a chave interna (visit, aep, risk)
+                    String typeKey = mapDocumentTypeToKey(doc.getDocumentType());
+
+                    // Reutiliza sua lógica maravilhosa de download para pegar bytes e nome sanitizado
+                    // Nota: Passando null no usuário, pois assumimos permissão Admin neste endpoint
+                    FileDownloadDTO fileInfo = downloadDocument(typeKey, doc.getId(), null);
+
+                    // Cria a entrada no arquivo ZIP com o nome amigável gerado pelo seu serviço
+                    ZipEntry zipEntry = new ZipEntry(fileInfo.getFilename());
+                    zos.putNextEntry(zipEntry);
+
+                    // Escreve os bytes do PDF no ZIP
+                    zos.write(fileInfo.getData());
+                    zos.closeEntry();
+
+                } catch (Exception e) {
+                    // Se um arquivo der erro (ex: PDF não gerado), loga e continua com os próximos
+                    System.err.println("Erro ao adicionar documento ID " + doc.getId() + " ao ZIP: " + e.getMessage());
+                }
+            }
+            // Finaliza o processo de zipagem
+            zos.finish();
+        }
+    }
+
+    // Helper para converter a string de exibição de volta para o padrão que o downloadDocument aceita
+    private String mapDocumentTypeToKey(String documentType) {
+        if ("Relatório de Visita".equalsIgnoreCase(documentType)) return "visit";
+        if ("Avaliação Ergonômica Preliminar".equalsIgnoreCase(documentType)) return "aep";
+        if ("Checklist de Riscos".equalsIgnoreCase(documentType)) return "risk";
+        throw new IllegalArgumentException("Tipo de documento desconhecido para exportação: " + documentType);
     }
 }

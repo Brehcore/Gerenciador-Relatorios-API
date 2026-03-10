@@ -5,6 +5,8 @@ import com.gotree.API.dto.document.DocumentSummaryDTO;
 import com.gotree.API.dto.document.FileDownloadDTO;
 import com.gotree.API.entities.User;
 import com.gotree.API.services.DocumentAggregationService;
+import io.swagger.v3.oas.annotations.Operation;
+import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
@@ -160,7 +162,7 @@ public class DocumentController {
     }
 
     /**
-     * Endpoint ADMIN: Lista todos os documentos do sistema.
+     *  Lista todos os documentos do sistema.
      */
     @GetMapping("/admin/all")
     @PreAuthorize("hasRole('ADMIN')")
@@ -175,5 +177,16 @@ public class DocumentController {
                 type, clientName, startDate, endDate, pageable
         );
         return ResponseEntity.ok(documentsPage);
+    }
+
+    @Operation(summary = "Exportar Documentos (ZIP)", description = "Baixa todos os documentos do sistema em um arquivo .zip, podendo filtrar por intervalo de datas.")
+    @GetMapping("/export/zip")
+    public void exportDocumentsAsZip(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            HttpServletResponse response) throws IOException {
+
+        // O serviço escreve direto no HttpServletResponse
+        documentAggregationService.exportDocumentsToZip(startDate, endDate, response);
     }
 }
