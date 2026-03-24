@@ -24,7 +24,9 @@ import java.util.Optional;
  * - Geração de relatórios e KPIs
  */
 public interface TechnicalVisitRepository extends JpaRepository<TechnicalVisit, Long> {
-    
+
+    // Para buscar visitas antigas num dia específico (usado para gerar os warnings)
+    List<TechnicalVisit> findAllByNextVisitDate(LocalDate nextVisitDate);
 
     /**
      * Busca todas as visitas de um técnico, ordenadas por data decrescente.

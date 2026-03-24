@@ -6,18 +6,15 @@ import java.time.LocalDate;
 
 /**
  * Representa um achado/constatação registrada durante uma visita técnica.
- * 
  * Esta entidade persiste informações de evidência (caminhos de fotos),
  * contexto e análise (descrição, consequências e orientação legal),
  * além de dados operacionais (responsável, penalidades, prioridade,
  * prazo e recorrência). Cada achado pertence a uma {@link TechnicalVisit}.
- *
  * Mapeamento:
  * - Tabela: tb_visit_finding
  * - Relacionamento: ManyToOne (LAZY) com TechnicalVisit
  * - Campos de texto extensos: description, consequences e legalGuidance (@Lob)
  * - Prioridade: enum armazenado como STRING (BAIXA, MEDIA, ALTA)
- *
  * Uso típico:
  * - Listar e detalhar constatações de uma visita técnica
  * - Apoiar a geração de relatórios, planos de ação e acompanhamento de prazos

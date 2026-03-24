@@ -6,6 +6,8 @@ import com.gotree.API.dto.aep.AepRequestDTO;
 import com.gotree.API.entities.AepReport;
 import com.gotree.API.entities.User;
 import com.gotree.API.services.AepService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,14 +18,13 @@ import org.springframework.web.bind.annotation.*; // Importe o PathVariable
 import java.util.Map;
 
 /**
- * Controlador REST responsável por gerenciar operações relacionadas a Avaliações de Eficácia Profissional (AEPs).
+ * Controlador REST responsável por gerenciar operações relacionadas a Avaliação Ergonômica Preliminar (AEPs).
  * Fornece endpoints para criar, atualizar e recuperar informações de AEPs.
  */
+@Tag(name = "Análise Preliminar de Eficiência", description = "Criação de documentos que avaliam a eficácia profissional no ambiente de trabalho.")
 @RestController
 @RequestMapping("/aep-reports")
 public class AepController {
-    
-    
 
     private final AepService aepService;
 
@@ -32,12 +33,13 @@ public class AepController {
     }
 
     /**
-     * Cria uma nova Avaliação de Eficácia Profissional (AEP).
+     * Cria uma nova Avaliação Ergonômica Preliminar (AEP).
      *
-     * @param dto            - Objeto DTO contendo os dados da AEP a ser criada
-     * @param authentication - Objeto de autenticação do usuário atual
-     * @return ResponseEntity contendo mensagem de sucesso e ID da AEP criada
+     * @param dto            - Objeto contendo os dados necessários para criar uma nova Avaliação Ergonômica Preliminar
+     * @param authentication - Objeto de autenticação para identificar o usuário que está criando a AEP
+     * @return ResponseEntity contendo a mensagem de sucesso e o ID da Avaliação criada
      */
+    @Operation(summary = "Cria uma AEP", description = "Utiliza autenticação para identificar qual usuário está criando a AEP")
     @PostMapping
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> createAepReport(@RequestBody @Valid AepRequestDTO dto, Authentication authentication) {
@@ -56,13 +58,14 @@ public class AepController {
     }
 
     /**
-     * Atualiza uma Avaliação de Eficácia Profissional (AEP) existente.
+     * Atualiza uma Avaliação Ergonômica Preliminar (AEP) existente.
      *
-     * @param id             - ID da AEP a ser atualizada
-     * @param dto            - Objeto DTO contendo os novos dados da AEP
-     * @param authentication - Objeto de autenticação do usuário atual
-     * @return ResponseEntity contendo mensagem de sucesso e ID da AEP atualizada
+     * @param id             - ID da Avaliação que deve ser atualizada
+     * @param dto            - Dados atualizados para a Avaliação Ergonômica Preliminar
+     * @param authentication - Objeto de autenticação para identificar o usuário atual
+     * @return ResponseEntity contendo a mensagem de sucesso e o ID da Avaliação atualizada
      */
+    @Operation(summary = "Atualiza uma AEP", description = "Utiliza autenticação do usuário e ID da AEP existente para atualização.")
     @PutMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> updateAepReport(@PathVariable Long id, @RequestBody @Valid AepRequestDTO dto, Authentication authentication) {
@@ -81,12 +84,13 @@ public class AepController {
     }
 
     /**
-     * Recupera os detalhes de uma Avaliação de Eficácia Profissional (AEP) específica.
+     * Recupera os detalhes de uma Avaliação Ergonômica Preliminar (AEP) específica.
      *
-     * @param id             - ID da AEP a ser consultada
-     * @param authentication - Objeto de autenticação do usuário atual
-     * @return ResponseEntity contendo os detalhes da AEP solicitada
+     * @param id             - ID da Avaliação a ser consultada
+     * @param authentication - Objeto de autenticação que identifica o usuário solicitante
+     * @return ResponseEntity contendo os detalhes da Avaliação solicitada
      */
+    @Operation(summary = "Recupera os detalhes de uma AEP", description = "Utiliza autenticação do usuário e ID da AEP existente pegando os detalhes que estavam previamente selecionados.")
     @GetMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<AepDetailDTO> getAepReportDetails(@PathVariable Long id, Authentication authentication) {

@@ -2,6 +2,7 @@ package com.gotree.API.services;
 
 import com.gotree.API.dto.visit.CreateTechnicalVisitRequestDTO;
 import com.gotree.API.dto.visit.VisitFindingDTO;
+import com.gotree.API.entities.AgendaEvent;
 import com.gotree.API.entities.Company;
 import com.gotree.API.entities.Sector;
 import com.gotree.API.entities.TechnicalVisit;
@@ -26,6 +27,7 @@ import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
@@ -51,12 +53,6 @@ public class TechnicalVisitService {
 
     @Value("${file.storage.path}")
     private String fileStoragePath;
-
-//    @Value("${app.generating-company.name}")
-//    private String generatingCompanyName;
-//
-//    @Value("${app.generating-company.cnpj}")
-//    private String generatingCompanyCnpj;
 
     public TechnicalVisitService(TechnicalVisitRepository technicalVisitRepository, CompanyRepository companyRepository,
                                  ReportService reportService, UnitRepository unitRepository,
@@ -85,17 +81,11 @@ public class TechnicalVisitService {
         Company clientCompany = companyRepository.findById(dto.getClientCompanyId())
                 .orElseThrow(() -> new RuntimeException("Empresa cliente com ID " + dto.getClientCompanyId() + " não encontrada."));
 
+        // SUBSTITUÍDO: Agora usa a validação nova para proteger o backend
         if (dto.getNextVisitDate() != null && dto.getNextVisitShift() != null) {
-
-            boolean busy = checkNextVisitAvailability(
-                    dto.getNextVisitDate(),
-                    dto.getNextVisitShift(),
-                    technician
-            );
-
-            if (busy) {
-                throw new IllegalStateException("BLOQUEIO DE AGENDA: Você já possui um compromisso agendado para o dia "
-                        + dto.getNextVisitDate() + " no turno da " + dto.getNextVisitShift() + ".");
+            Map<String, Object> validation = validateNextVisitSchedule(dto.getNextVisitDate(), dto.getNextVisitShift(), technician);
+            if ((Boolean) validation.get("blocked")) {
+                throw new IllegalStateException("BLOQUEIO DE AGENDA: " + validation.get("blockMessage"));
             }
         }
 
@@ -117,18 +107,14 @@ public class TechnicalVisitService {
         visit.setTechnician(technician);
         visit.setVisitDate(dto.getVisitDate());
         visit.setStartTime(dto.getStartTime());
-        visit.setEndTime(LocalTime.now()); // Hora final é a hora da geração
+        visit.setEndTime(LocalTime.now());
 
-        // Mapear os dados do agendamento da próxima visita
         visit.setNextVisitDate(dto.getNextVisitDate());
 
         if (dto.getNextVisitShift() != null && !dto.getNextVisitShift().isBlank()) {
             try {
-                // Converte String "MANHA" -> Enum Shift.MANHA
                 visit.setNextVisitShift(Shift.valueOf(dto.getNextVisitShift().toUpperCase()));
             } catch (IllegalArgumentException e) {
-                // Se vier algo inválido, você pode ignorar ou lançar erro.
-                // Aqui estou logando e ignorando para não quebrar o fluxo.
                 System.err.println("Turno inválido recebido: " + dto.getNextVisitShift());
             }
         }
@@ -146,7 +132,7 @@ public class TechnicalVisitService {
         if (dto.getFindings() != null) {
             dto.getFindings().forEach(findingDto -> {
                 VisitFinding finding = mapFindingDtoToEntity(findingDto);
-                finding.setTechnicalVisit(visit); // Associa o "achado" à visita
+                finding.setTechnicalVisit(visit);
                 visit.getFindings().add(finding);
             });
         }
@@ -154,17 +140,32 @@ public class TechnicalVisitService {
         // 4. Salvar tudo no banco de dados pela primeira vez para gerar os IDs
         TechnicalVisit savedVisit = technicalVisitRepository.save(visit);
 
+        // ====================================================================
+        // NOVA LÓGICA: Cria o evento na Agenda automaticamente
+        // ====================================================================
+        if (savedVisit.getNextVisitDate() != null && savedVisit.getNextVisitShift() != null) {
+            AgendaEvent futureEvent = new AgendaEvent();
+            futureEvent.setEventDate(savedVisit.getNextVisitDate());
+            futureEvent.setShift(savedVisit.getNextVisitShift());
+            futureEvent.setUser(technician);
+            futureEvent.setCompany(clientCompany);
+            futureEvent.setTitle("Próxima Visita: " + clientCompany.getName());
+            futureEvent.setEventType(com.gotree.API.enums.AgendaEventType.VISITA_TECNICA);
+            futureEvent.setStatus(com.gotree.API.enums.AgendaStatus.A_CONFIRMAR);
+            futureEvent.setOriginTechnicalVisitId(savedVisit.getId()); // Vínculo Exato
+
+            agendaEventRepository.save(futureEvent);
+        }
+        // ====================================================================
+
         // 5. Gerar o PDF
         Map<String, Object> templateData = new HashMap<>();
 
-        // Reforço: Sanitiza novamente antes de passar para o template (garantia extra)
         if (savedVisit.getTitle() != null) savedVisit.setTitle(XmlSanitizer.sanitize(savedVisit.getTitle()));
         if (savedVisit.getLocation() != null) savedVisit.setLocation(XmlSanitizer.sanitize(savedVisit.getLocation()));
         if (savedVisit.getSummary() != null) savedVisit.setSummary(XmlSanitizer.sanitize(savedVisit.getSummary()));
 
         templateData.put("visit", savedVisit);
-//        templateData.put("generatingCompanyName", generatingCompanyName);
-//        templateData.put("generatingCompanyCnpj", generatingCompanyCnpj);
 
         byte[] pdfBytes = reportService.generatePdfFromHtml("visit-report-template", templateData);
 
@@ -174,9 +175,8 @@ public class TechnicalVisitService {
             Files.createDirectories(path.getParent());
             Files.write(path, pdfBytes);
 
-            // ALTERAÇÃO: Salve apenas o nome do arquivo.
             savedVisit.setPdfPath(fileName);
-            return technicalVisitRepository.save(savedVisit); // Salva novamente com o caminho do PDF
+            return technicalVisitRepository.save(savedVisit);
 
         } catch (IOException e) {
             throw new RuntimeException("Falha ao salvar a foto 1 do achado: " + e.getMessage(), e);
@@ -339,34 +339,66 @@ public class TechnicalVisitService {
     }
 
     /**
-     * Verifica se a DATA DA PRÓXIMA VISITA (Agendamento) está livre.
+     * Valida a disponibilidade da agenda (Bloqueios e Avisos).
      */
     @Transactional(readOnly = true)
-    public boolean checkNextVisitAvailability(LocalDate nextDate, String nextShiftStr, User technician) {
-        if (nextDate == null || nextShiftStr == null) return false; // Se não escolheu data, não tem conflito
+    public Map<String, Object> validateNextVisitSchedule(LocalDate nextDate, String nextShiftStr, User currentUser) {
+        Map<String, Object> response = new HashMap<>();
+        List<String> warnings = new ArrayList<>();
+
+        response.put("blocked", false);
+        response.put("blockMessage", null);
+        response.put("warnings", warnings);
+
+        if (nextDate == null || nextShiftStr == null || nextShiftStr.isBlank()) {
+            return response;
+        }
 
         try {
             Shift shift = Shift.valueOf(nextShiftStr.toUpperCase());
 
-            // 1. Verifica se já existe OUTRA visita agendada para essa data/turno
-            boolean visitConflict = technicalVisitRepository.existsByTechnicianAndNextVisitDateAndNextVisitShift(
-                    technician,
-                    nextDate,
-                    shift
-            );
+            // 1. BLOQUEIO (Eu já tenho algo neste dia e turno?)
+            boolean visitConflict = technicalVisitRepository.existsByTechnicianAndNextVisitDateAndNextVisitShift(currentUser, nextDate, shift);
+            long eventConflict = agendaEventRepository.countByUserAndEventDateAndShift(currentUser, nextDate, shift);
 
-            // 2. Verifica se existe um Evento Manual (ex: Folga, Reunião) nessa data/turno
-            long eventConflict = agendaEventRepository.countByUserAndEventDateAndShift(
-                    technician,
-                    nextDate,
-                    shift
-            );
+            if (visitConflict || eventConflict > 0) {
+                response.put("blocked", true);
+                response.put("blockMessage", "Você já possui um compromisso no dia " +
+                        nextDate.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")) +
+                        " no turno da " + shift.name() + ". Escolha outro turno ou data.");
+                return response;
+            }
 
-            // Se qualquer um dos dois for verdadeiro, a agenda está ocupada
-            return visitConflict || (eventConflict > 0);
+            // 2. AVISOS (Outros técnicos estão ocupados neste dia?)
+            // A. Busca na Agenda (Eventos Manuais ou Refatorados)
+            List<AgendaEvent> otherEvents = agendaEventRepository.findAllByEventDate(nextDate).stream()
+                    .filter(event -> event.getStatus() != com.gotree.API.enums.AgendaStatus.CANCELADO)
+                    .filter(event -> !event.getUser().getId().equals(currentUser.getId()))
+                    .toList();
+
+            for (AgendaEvent event : otherEvents) {
+                warnings.add(event.getUser().getName() + " marcou visita neste dia (" + event.getShift().name() + ").");
+            }
+
+            // B. Busca nas Visitas Antigas (Para não perder avisos do passado)
+            List<TechnicalVisit> otherVisits = technicalVisitRepository.findAllByNextVisitDate(nextDate).stream()
+                    .filter(v -> v.getTechnician() != null && !v.getTechnician().getId().equals(currentUser.getId()))
+                    .toList();
+
+            for (TechnicalVisit tv : otherVisits) {
+                String msg = tv.getTechnician().getName() + " marcou visita neste dia (" + tv.getNextVisitShift().name() + ").";
+                if (!warnings.contains(msg)) {
+                    warnings.add(msg);
+                }
+            }
+
+            response.put("warnings", warnings);
+            return response;
 
         } catch (IllegalArgumentException e) {
-            return false; // Turno inválido
+            response.put("blocked", true);
+            response.put("blockMessage", "Turno inválido fornecido.");
+            return response;
         }
     }
 }

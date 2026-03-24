@@ -291,8 +291,11 @@ public class AgendaController {
             @PathVariable Long visitId,
             Authentication authentication) {
 
-        // Precisamos criar esse metodo no Service também
-        agendaService.confirmVisit(visitId);
+        // Extrai o utilizador atual do token de autenticação
+        User currentUser = ((CustomUserDetails) authentication.getPrincipal()).user();
+
+        // Passa o utilizador para o serviço validar
+        agendaService.confirmVisit(visitId, currentUser);
 
         return ResponseEntity.ok().build();
     }

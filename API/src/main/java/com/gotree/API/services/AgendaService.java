@@ -13,16 +13,13 @@ import com.gotree.API.enums.AgendaStatus;
 import com.gotree.API.enums.Shift;
 import com.gotree.API.repositories.AgendaEventRepository;
 import com.gotree.API.repositories.TechnicalVisitRepository;
-import com.gotree.API.repositories.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
-import java.util.Set;
 
 /**
  * Serviço responsável pelo gerenciamento de eventos de agenda e visitas técnicas.
@@ -34,14 +31,11 @@ public class AgendaService {
 
     private final AgendaEventRepository agendaEventRepository;
     private final TechnicalVisitRepository technicalVisitRepository;
-    private final UserRepository userRepository;
 
     public AgendaService(AgendaEventRepository agendaEventRepository,
-                         TechnicalVisitRepository technicalVisitRepository,
-                         UserRepository userRepository) {
+                         TechnicalVisitRepository technicalVisitRepository) {
         this.agendaEventRepository = agendaEventRepository;
         this.technicalVisitRepository = technicalVisitRepository;
-        this.userRepository = userRepository;
     }
 
     /**
@@ -85,7 +79,7 @@ public class AgendaService {
 
                 // A LÓGICA MÁGICA:
                 // Se temos uma empresa alvo e ela é IGUAL à empresa do evento existente -> PERMITE
-                if (targetCompany != null && conflictingCompanyId != null && targetCompany.getId().equals(conflictingCompanyId)) {
+                if (targetCompany != null && targetCompany.getId().equals(conflictingCompanyId)) {
                     continue; // Mesma empresa, segue o jogo
                 }
 
@@ -100,7 +94,7 @@ public class AgendaService {
         }
     }
 
-    // Metodo sobrecarregado para compatibilidade
+    // Sobrecarregado para compatibilidade
     public void validateReportSubmission(Long visitId, User technician, LocalDate date, String shiftStr) {
         validateReportSubmission(visitId, technician, date, shiftStr, null);
     }
@@ -202,20 +196,20 @@ public class AgendaService {
         LocalDate dataNova = dto.getNewDate();
 
         // 2. Cria o "Fantasma" do passado (Rastro para o relatório)
-        AgendaEvent historicoEvent = new AgendaEvent();
-        historicoEvent.setUser(currentUser);
-        historicoEvent.setEventType(AgendaEventType.VISITA_TECNICA);
-        historicoEvent.setStatus(AgendaStatus.REAGENDADO); // Define status Reagendado
+        AgendaEvent historicalEvent = new AgendaEvent();
+        historicalEvent.setUser(currentUser);
+        historicalEvent.setEventType(AgendaEventType.VISITA_TECNICA);
+        historicalEvent.setStatus(AgendaStatus.REAGENDADO); // Define status Reagendado
 
         // Título explicativo e vínculo
-        historicoEvent.setTitle("Visita: " + (visit.getClientCompany() != null ? visit.getClientCompany().getName() : "N/A"));
-        historicoEvent.setRescheduledToDate(dataNova); // Campo crucial para o PDF ("Reagendado p/...")
+        historicalEvent.setTitle("Visita: " + (visit.getClientCompany() != null ? visit.getClientCompany().getName() : "N/A"));
+        historicalEvent.setRescheduledToDate(dataNova); // Campo crucial para o PDF ("Reagendado p/...")
 
-        historicoEvent.setEventDate(dataAntiga); // Fica preso na data ANTIGA
-        historicoEvent.setShift(visit.getNextVisitShift()); // Turno original
-        historicoEvent.setTechnicalVisit(visit); // Vincula para referência
+        historicalEvent.setEventDate(dataAntiga); // Fica preso na data ANTIGA
+        historicalEvent.setShift(visit.getNextVisitShift()); // Turno original
+        historicalEvent.setTechnicalVisit(visit); // Vincula para referência
 
-        agendaEventRepository.save(historicoEvent);
+        agendaEventRepository.save(historicalEvent);
 
         // 3. Atualiza a Visita Técnica real para o futuro
         visit.setNextVisitDate(dataNova);
@@ -246,9 +240,11 @@ public class AgendaService {
      */
     @Transactional(readOnly = true)
     public List<AgendaResponseDTO> findAllEventsForUser(User user) {
-        List<AgendaEvent> persistentEvents = agendaEventRepository.findAllWithUserByOrderByEventDateAsc();
-        List<TechnicalVisit> scheduledVisits = technicalVisitRepository.findAllScheduledWithCompanyByTechnician(user);
-        return aggregateAndSortEvents(persistentEvents, scheduledVisits);
+        // Simples e direto! Busca apenas na tabela de eventos e converte para DTO
+        return agendaEventRepository.findByUserOrderByEventDateAsc(user)
+                .stream()
+                .map(this::mapToDto)
+                .toList();
     }
 
     /**
@@ -257,22 +253,19 @@ public class AgendaService {
     @Transactional(readOnly = true)
     public List<AgendaResponseDTO> findAllEventsForAdmin(Long userId) {
         List<AgendaEvent> persistentEvents;
-        List<TechnicalVisit> scheduledVisits;
 
         if (userId != null) {
-            User filterUser = userRepository.findById(userId).orElseThrow();
             persistentEvents = agendaEventRepository.findByUserIdWithUserOrderByEventDateAsc(userId);
-            scheduledVisits = technicalVisitRepository.findAllScheduledWithCompanyByTechnician(filterUser);
         } else {
-            persistentEvents = agendaEventRepository.findAllWithUserByOrderByEventDateAsc();
-            scheduledVisits = technicalVisitRepository.findAllScheduledWithCompany();
+            // Se já atualizou a query para não puxar lixo:
+            persistentEvents = agendaEventRepository.findAllByOrderByEventDateAsc();
         }
 
-        return aggregateAndSortEvents(persistentEvents, scheduledVisits);
+        return persistentEvents.stream().map(this::mapToDto).toList();
     }
 
     /**
-     * Método específico para gerar os dados do relatório PDF (12 meses, etc).
+     * Específico para gerar os dados do relatório PDF (12 meses, etc).
      */
     @Transactional(readOnly = true)
     public List<AgendaResponseDTO> getReportData(LocalDate start, LocalDate end) {
@@ -301,13 +294,12 @@ public class AgendaService {
         List<MonthlyAvailabilityDTO> availability = new ArrayList<>();
 
         for (LocalDate date = start; !date.isAfter(end); date = date.plusDays(1)) {
-            LocalDate currentDate = date;
             boolean morningBusy = false;
             boolean afternoonBusy = false;
 
             // --- A. Checa Visitas REALIZADAS ---
             for (TechnicalVisit v : visitsRealized) {
-                if (v.getVisitDate().equals(currentDate)) {
+                if (v.getVisitDate().equals(date)) {
                     if (v.getStartTime().getHour() < 12) morningBusy = true;
                     else afternoonBusy = true;
                 }
@@ -315,7 +307,7 @@ public class AgendaService {
 
             // --- B. Checa Visitas AGENDADAS ---
             for (TechnicalVisit v : visitsScheduled) {
-                if (v.getNextVisitDate().equals(currentDate)) {
+                if (v.getNextVisitDate().equals(date)) {
                     if (v.getNextVisitShift() == Shift.MANHA) morningBusy = true;
                     else if (v.getNextVisitShift() == Shift.TARDE) afternoonBusy = true;
                 }
@@ -323,7 +315,7 @@ public class AgendaService {
 
             // --- C. Checa Eventos Manuais ---
             for (AgendaEvent e : manualEvents) {
-                if (e.getEventDate().equals(currentDate)) {
+                if (e.getEventDate().equals(date)) {
                     // Ignora cancelados
                     if (e.getStatus() == AgendaStatus.CANCELADO) continue;
                     // Evita duplicidade
@@ -344,49 +336,6 @@ public class AgendaService {
             }
         }
         return availability;
-    }
-
-    /**
-     * Unifica eventos manuais (persistidos) e visitas técnicas (virtuais) em uma lista única ordenada.
-     */
-    private List<AgendaResponseDTO> aggregateAndSortEvents(List<AgendaEvent> persistentEvents, List<TechnicalVisit> scheduledVisits) {
-        List<AgendaResponseDTO> allEvents = new ArrayList<>();
-        Set<String> addedVirtualVisits = new java.util.HashSet<>();
-
-        // 1. Adiciona TODOS os eventos manuais (incluindo os "rastros" de reagendamento)
-        for (AgendaEvent event : persistentEvents) {
-            allEvents.add(mapToDto(event));
-
-            // Se esse evento está vinculado a uma visita, marcamos a visita como "processada"
-            // para não adicioná-la duplicada (como visita virtual) nesta mesma data.
-            if (event.getTechnicalVisit() != null) {
-                // OBS: O rastro de reagendamento está na data antiga.
-                // A visita virtual (data futura) ainda deve aparecer.
-                // Portanto, só marcamos como processada se as datas baterem.
-                if (event.getEventDate().equals(event.getTechnicalVisit().getNextVisitDate())) {
-                    String shiftKey = (event.getShift() != null) ? event.getShift().name() : "N/A";
-                    String clientKey = (event.getCompany() != null) ? event.getCompany().getId().toString() :
-                            (event.getTechnicalVisit().getClientCompany() != null ? event.getTechnicalVisit().getClientCompany().getId().toString() : "0");
-                    String uniqueKey = event.getEventDate().toString() + "_" + shiftKey + "_" + clientKey;
-                    addedVirtualVisits.add(uniqueKey);
-                }
-            }
-        }
-
-        // 2. Adiciona as visitas técnicas futuras (que ainda não viraram eventos manuais/reagendados NESTA data)
-        for (TechnicalVisit visit : scheduledVisits) {
-            String shiftKey = (visit.getNextVisitShift() != null) ? visit.getNextVisitShift().name() : "N/A";
-            String clientKey = (visit.getClientCompany() != null) ? visit.getClientCompany().getId().toString() : "0";
-            String uniqueKey = visit.getNextVisitDate().toString() + "_" + shiftKey + "_" + clientKey;
-
-            if (!addedVirtualVisits.contains(uniqueKey)) {
-                allEvents.add(mapVisitToDto(visit));
-                addedVirtualVisits.add(uniqueKey);
-            }
-        }
-
-        allEvents.sort(Comparator.comparing(AgendaResponseDTO::getDate));
-        return allEvents;
     }
 
     /**
@@ -435,42 +384,6 @@ public class AgendaService {
         return dto;
     }
 
-    /**
-     * Converte uma Visita Técnica (virtual, sem ID em agenda_event) para DTO.
-     */
-    private AgendaResponseDTO mapVisitToDto(TechnicalVisit visit) {
-        AgendaResponseDTO dto = new AgendaResponseDTO();
-        String companyName = (visit.getClientCompany() != null) ? visit.getClientCompany().getName() : "Empresa N/A";
-        String unitName = (visit.getUnit() != null) ? visit.getUnit().getName() : null;
-        String sectorName = (visit.getSector() != null) ? visit.getSector().getName() : null;
-
-        StringBuilder titleBuilder = new StringBuilder("Próxima Visita: " + companyName);
-        if (unitName != null) titleBuilder.append(" (").append(unitName).append(")");
-
-        dto.setTitle(titleBuilder.toString());
-        dto.setDate(visit.getNextVisitDate());
-        dto.setType(AgendaEventType.VISITA_TECNICA.name()); // Tipo padronizado
-        dto.setReferenceId(visit.getId());
-
-        if (visit.getNextVisitShift() != null) {
-            dto.setShift(visit.getNextVisitShift().name());
-        }
-
-        dto.setClientName(companyName);
-        dto.setUnitName(unitName);
-        dto.setSectorName(sectorName);
-
-        if (visit.getTechnician() != null) {
-            dto.setResponsibleName(visit.getTechnician().getName());
-        }
-
-        // Visitas automáticas nascem "À Confirmar" até que alguém interaja
-        dto.setStatus(AgendaStatus.A_CONFIRMAR.name());
-        dto.setStatusDescricao(AgendaStatus.A_CONFIRMAR.getDescricao());
-
-        return dto;
-    }
-
     @Transactional(readOnly = true)
     public String checkGlobalConflicts(LocalDate date, String shiftStr, User currentUser) {
         try {
@@ -509,35 +422,38 @@ public class AgendaService {
      */
     @Transactional(readOnly = true)
     public List<AgendaResponseDTO> getGlobalEvents(LocalDate startDate, LocalDate endDate) {
-        List<AgendaEvent> allEvents = agendaEventRepository.findAllByEventDateBetween(startDate, endDate);
-        List<TechnicalVisit> allVisits = technicalVisitRepository.findAllByNextVisitDateBetween(startDate, endDate);
-        return aggregateAndSortEvents(allEvents, allVisits);
+        return agendaEventRepository.findAllByEventDateBetween(startDate, endDate)
+                .stream()
+                .map(this::mapToDto)
+                .toList();
     }
 
-
-    public void confirmVisit(Long visitId) {
-        // 1. Busca a visita técnica
+    public void confirmVisit(Long visitId, User currentUser) {
+        // Busca a visita técnica
         TechnicalVisit visit = technicalVisitRepository.findById(visitId)
                 .orElseThrow(() -> new RuntimeException("Visita Técnica não encontrada."));
 
-        // 2. Aqui você decide a regra:
+        if (!visit.getTechnician().getId().equals(currentUser.getId())) {
+            throw new SecurityException("Sem permissão para confirmar a visita de outro técnico.");
+        }
+
         // Opção A: Apenas cria um AgendaEvent "Confirmado" vinculado (Recomendado para manter padrão)
-        AgendaEvent confirmacao = agendaEventRepository.findByTechnicalVisit_Id(visitId)
+        AgendaEvent confirmation = agendaEventRepository.findByTechnicalVisit_Id(visitId)
                 .orElse(new AgendaEvent());
 
-        if (confirmacao.getId() == null) {
+        if (confirmation.getId() == null) {
             // Se ainda não existe evento manual vinculado, cria um novo
-            confirmacao.setTechnicalVisit(visit);
-            confirmacao.setUser(visit.getTechnician());
-            confirmacao.setEventDate(visit.getNextVisitDate());
-            confirmacao.setShift(visit.getNextVisitShift());
-            confirmacao.setTitle(visit.getTitle());
-            confirmacao.setEventType(AgendaEventType.VISITA_TECNICA);
+            confirmation.setTechnicalVisit(visit);
+            confirmation.setUser(visit.getTechnician());
+            confirmation.setEventDate(visit.getNextVisitDate());
+            confirmation.setShift(visit.getNextVisitShift());
+            confirmation.setTitle(visit.getTitle());
+            confirmation.setEventType(AgendaEventType.VISITA_TECNICA);
         }
 
         // Atualiza o status para CONFIRMADO
-        confirmacao.setStatus(AgendaStatus.CONFIRMADO);
+        confirmation.setStatus(AgendaStatus.CONFIRMADO);
 
-        agendaEventRepository.save(confirmacao);
+        agendaEventRepository.save(confirmation);
     }
 }

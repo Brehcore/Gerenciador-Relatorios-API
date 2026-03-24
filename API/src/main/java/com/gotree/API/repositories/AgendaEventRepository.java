@@ -60,4 +60,10 @@ public interface AgendaEventRepository extends JpaRepository<AgendaEvent, Long> 
     // --- CONCORRÊNCIA (Busca eventos de TODOS em data/turno específicos) ---
     @Query("SELECT e FROM AgendaEvent e JOIN FETCH e.user WHERE e.eventDate = :date AND e.shift = :shift")
     List<AgendaEvent> findAllByEventDateAndShift(@Param("date") LocalDate date, @Param("shift") Shift shift);
+
+    // Para a agenda pessoal (resolve o bug de ver eventos dos outros)
+    List<AgendaEvent> findByUserOrderByEventDateAsc(User user);
+
+    // Para buscar eventos de TODOS num dia específico (usado para gerar os warnings)
+    List<AgendaEvent> findAllByEventDate(LocalDate date);
 }

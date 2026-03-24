@@ -8,7 +8,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -193,8 +192,7 @@ public class DocumentAggregationService {
         }
 
         // 4. Coleta e Ordena
-        List<DocumentSummaryDTO> filteredList = stream.collect(Collectors.toList());
-        filteredList.sort(Comparator.comparing(DocumentSummaryDTO::getCreationDate, Comparator.nullsLast(Comparator.reverseOrder())));
+        List<DocumentSummaryDTO> filteredList = stream.sorted(Comparator.comparing(DocumentSummaryDTO::getCreationDate, Comparator.nullsLast(Comparator.reverseOrder()))).collect(Collectors.toList());
 
         // 5. Paginação Manual
         long totalElements = filteredList.size();
@@ -327,7 +325,7 @@ public class DocumentAggregationService {
     private String sanitizeFilename(String input) {
         if (input == null) return "SemNome";
         // Mantém apenas letras, números, espaços, traços e underscores
-        return input.replaceAll("[^a-zA-Z0-9 \\-_\\.]", "").trim();
+        return input.replaceAll("[^a-zA-Z0-9 \\-_.]", "").trim();
     }
 
     // ===================================================================================

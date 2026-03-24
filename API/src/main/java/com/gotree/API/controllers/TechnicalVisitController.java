@@ -7,6 +7,7 @@ import com.gotree.API.entities.TechnicalVisit;
 import com.gotree.API.entities.User;
 import com.gotree.API.mappers.TechnicalVisitMapper;
 import com.gotree.API.services.TechnicalVisitService;
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -102,27 +103,23 @@ public class TechnicalVisitController {
      * @param shift Turno proposto para a próxima visita (MORNING, AFTERNOON)
      * @return ResponseEntity com status 200 (OK) se disponível ou 409 (CONFLICT) se ocupado
      */
+    @Operation(summary = "Verificar Disponibilidade", description = "Verifica se o técnico tem a agenda livre e retorna avisos de outros técnicos no mesmo dia.")
     @GetMapping("/check-availability")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<?> checkNextVisitAvailability(
+    public ResponseEntity<Map<String, Object>> checkNextVisitAvailability(
             Authentication auth,
-            @RequestParam LocalDate date,  // Essa será a nextVisitDate
-            @RequestParam String shift     // Esse será o nextVisitShift
+            @RequestParam LocalDate date,
+            @RequestParam String shift
     ) {
-        User technician = ((CustomUserDetails) auth.getPrincipal()).user();
+        User currentUser = ((CustomUserDetails) auth.getPrincipal()).user();
 
-        // Chama o metodo novo que olha o NEXT_VISIT_DATE
-        boolean isBusy = technicalVisitService.checkNextVisitAvailability(date, shift, technician);
+        Map<String, Object> validationResult = technicalVisitService.validateNextVisitSchedule(date, shift, currentUser);
 
-        if (isBusy) {
-            return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body(Map.of(
-                            "blocked", true,
-                            "message", "A agenda já está ocupada nesta data e turno."
-                    ));
+        if ((Boolean) validationResult.get("blocked")) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(validationResult);
         }
 
-        return ResponseEntity.ok(Map.of("blocked", false));
+        return ResponseEntity.ok(validationResult);
     }
 
     /**

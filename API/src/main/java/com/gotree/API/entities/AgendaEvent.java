@@ -17,7 +17,6 @@ import java.time.LocalDate;
 @Data
 public class AgendaEvent {
 
-
     /**
      * Identificador único do evento de agenda.
      */
@@ -46,6 +45,12 @@ public class AgendaEvent {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Shift shift; // Turno Obrigatório
+
+    /**
+     * Guarda o ID da Visita Técnica que GEROU este agendamento.
+     */
+    @Column(name = "origin_technical_visit_id", nullable = true)
+    private Long originTechnicalVisitId;
 
     /**
      * Usuário associado ao evento.
