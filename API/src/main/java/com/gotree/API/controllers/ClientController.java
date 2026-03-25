@@ -1,9 +1,10 @@
 package com.gotree.API.controllers;
 
 import com.gotree.API.dto.client.ClientDTO;
-import com.gotree.API.dto.company.CompanyResponseDTO;
 import com.gotree.API.exceptions.ResourceNotFoundException;
 import com.gotree.API.services.ClientService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -14,15 +15,14 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.Map;
 
 /**
- * Controller responsável pelo gerenciamento de Clientes.
- * Fornece endpoints para operações CRUD (Criar, Ler, Atualizar, Deletar) de clientes.
- * Implementa paginação para listagem de clientes e tratamento de erros para deleção.
- * Todos os endpoints requerem autenticação. Algumas operações requerem papel ADMIN.
+ * Controlador responsável por gerenciar operações relacionadas a clientes.
+ * Fornece endpoints para buscar, listar, criar, atualizar e deletar recursos de clientes.
+ * Aplica restrições de segurança utilizando anotações de autorização.
  */
+@Tag(name = "Clientes", description = "Gerenciamento de clientes")
 @RestController
 @RequestMapping("/clients")
 @PreAuthorize("isAuthenticated()")
@@ -40,25 +40,23 @@ public class ClientController {
      * @param id ID do cliente a ser buscado
      * @return ResponseEntity contendo o ClientDTO se encontrado
      */
+    @Operation(summary = "Busca um cliente pelo ID", description = "Retorna os detalhes de um cliente específico baseado no seu identificador único.")
     @GetMapping("/{id}")
     public ResponseEntity<ClientDTO> getById(@PathVariable Long id) {
         return ResponseEntity.ok(clientService.findById(id));
     }
 
     /**
-     * Retorna a lista paginada de clientes cadastrados.
+     * Retrieves a paginated list of clients.
      *
-     * @param pageable Objeto de paginação com parâmetros:
-     *                 page (página atual, default 0)
-     *                 size (itens por página, default 10)
-     *                 sort (campo para ordenação, default "name")
-     *                 direction (direção da ordenação, default ASC)
-     * @return ResponseEntity com Page contendo os ClientDTOs
+     * @param pageable the pagination and sorting information
+     * @return ResponseEntity containing a page of ClientDTO objects
      */
+    @Operation(summary = "Lista todos os clientes paginados", description = "Recupera uma lista paginada de todos os clientes cadastrados no sistema.")
     @GetMapping
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Page<ClientDTO>> getAll(
-            @PageableDefault(page = 0, size = 10, sort = "name", direction = Sort.Direction.ASC) Pageable pageable
+            @PageableDefault(sort = "name", direction = Sort.Direction.ASC) Pageable pageable
     ) {
         Page<ClientDTO> clients = clientService.findAllPaginated(pageable);
 
@@ -66,23 +64,25 @@ public class ClientController {
     }
 
     /**
-     * Cria um novo cliente
+     * Creates a new client and saves it to the database.
      *
-     * @param dto Dados do cliente a ser criado
-     * @return ResponseEntity contendo o ClientDTO criado
+     * @param dto the data transfer object containing the client information to be created
+     * @return ResponseEntity containing the saved ClientDTO
      */
+    @Operation(summary = "Cria um novo cliente", description = "Cria um novo cliente no sistema e persiste as informações no banco de dados.")
     @PostMapping
     public ResponseEntity<ClientDTO> create(@RequestBody ClientDTO dto) {
         return ResponseEntity.ok(clientService.save(dto));
     }
 
     /**
-     * Atualiza um cliente existente
+     * Atualiza as informações de um cliente existente.
      *
-     * @param id  ID do cliente a ser atualizado
-     * @param dto Novos dados do cliente
+     * @param id ID do cliente a ser atualizado
+     * @param dto Dados do cliente a serem atualizados
      * @return ResponseEntity contendo o ClientDTO atualizado
      */
+    @Operation(summary = "Atualiza um cliente existente", description = "Atualiza as informações de um cliente cadastrado com base no seu ID.")
     @PutMapping("/{id}")
     public ResponseEntity<ClientDTO> update(@PathVariable Long id, @RequestBody ClientDTO dto) {
         dto.setId(id);
@@ -90,9 +90,16 @@ public class ClientController {
     }
 
     /**
-     * Endpoint para deletar cliente com tratamento de erro.
-     * Retorna 409 Conflict se houver empresas vinculadas.
+     * Exclui um cliente pelo ID.
+     * Apenas usuários com a role de ADMIN têm permissão para realizar esta operação.
+     *
+     * @param id ID do cliente a ser excluído
+     * @return ResponseEntity contendo:
+     *         - status 204 (No Content) se a exclusão for bem-sucedida
+     *         - status 404 (Not Found) se o cliente não for encontrado
+     *         - status 409 (Conflict) em caso de violação de integridade referencial
      */
+    @Operation(summary = "Exclui um cliente", description = "Remove permanentemente um cliente do sistema pelo seu ID. Requer permissão de ADMIN.")
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> delete(@PathVariable Long id) {

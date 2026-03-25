@@ -6,6 +6,7 @@ import com.gotree.API.dto.document.FileDownloadDTO;
 import com.gotree.API.entities.User;
 import com.gotree.API.services.DocumentAggregationService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,15 +31,14 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * Controlador REST responsável por gerenciar documentos relacionados a visitas técnicas.
- * Fornece endpoints para listar, baixar e excluir documentos gerados durante as visitas.
+ * Controlador REST responsável por gerenciar documentos.
+ * Fornece endpoints para listar, baixar e excluir documentos gerados.
  * Todos os endpoints requerem autenticação do usuário.
  */
+@Tag(name = "Gerenciar Documentos", description = "Responsável por gerenciar documentos")
 @RestController
 @RequestMapping("/documents")
 public class DocumentController {
-
-
 
     private final DocumentAggregationService documentAggregationService;
     private static final Logger logger = LoggerFactory.getLogger(DocumentController.class);
@@ -58,6 +58,7 @@ public class DocumentController {
      * @param pageable Objeto do Spring que contém a página (page=) e o tamanho (size=)
      * @return ResponseEntity com uma Página (Page) de DocumentSummaryDTO
      */
+    @Operation(summary = "Retorna todos os documentos", description = "Retorna todos os documentos associados ao usuário autenticado, com filtro e paginação")
     @GetMapping
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Page<DocumentSummaryDTO>> getAllMyDocuments(
@@ -66,7 +67,7 @@ public class DocumentController {
             @RequestParam(required = false) String clientName,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
-            Pageable pageable // O Spring monta isso automaticamente
+            Pageable pageable
     ) {
         CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
         User technician = userDetails.user();
@@ -87,6 +88,7 @@ public class DocumentController {
      * @param authentication Objeto de autenticação do Spring Security contendo os detalhes do usuário
      * @return ResponseEntity com uma lista limitada de DocumentSummaryDTO
      */
+    @Operation(summary = "Retorna documentos mais recentes", description = "Retorna os documentos mais recentes do usuário autenticado.")
     @GetMapping("/latest")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<DocumentSummaryDTO>> getMyLatestDocuments(Authentication authentication) {
@@ -108,6 +110,7 @@ public class DocumentController {
      * @param authentication Objeto de autenticação do Spring Security
      * @return ResponseEntity contendo o arquivo PDF ou status de erro apropriado
      */
+    @Operation(summary = "Download ou visualização do documento", description = "Permite o download ou visualização de um documento PDF específico.")
     @GetMapping("/{type}/{id}/pdf")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<byte[]> downloadDocumentPdf(@PathVariable String type, @PathVariable Long id, Authentication authentication) {
@@ -141,6 +144,7 @@ public class DocumentController {
      * @param authentication Objeto de autenticação do Spring Security contendo os detalhes do usuário
      * @return ResponseEntity sem conteúdo (HTTP 204) indicando sucesso na exclusão
      */
+    @Operation(summary = "Exclui um documento", description = "Exclui um documento específico com base no tipo e ID fornecidos.")
     @DeleteMapping("/{type}/{id}") // Ex: DELETE /documents/visit/45
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> deleteDocument(@PathVariable String type, @PathVariable Long id, Authentication authentication) {
@@ -154,6 +158,15 @@ public class DocumentController {
         return ResponseEntity.noContent().build(); // Retorna 204 No Content (sucesso)
     }
 
+    /**
+     * Retorna os documentos mais recentes de todos os usuários do sistema (Acesso Administrativo).
+     * Este endpoint é restrito a usuários com perfil ADMIN e retorna um histórico resumido
+     * dos últimos documentos gerados no sistema, independente do técnico responsável.
+     * A quantidade de documentos retornados é limitada aos mais recentes.
+     *
+     * @return ResponseEntity com uma lista limitada de DocumentSummaryDTO contendo os documentos mais recentes do sistema
+     */
+    @Operation(summary = "Retorna os documentos mais recentes", description = "Retorna os documentos mais recentes de todos os usuários do sistema (Acesso Administrativo).")
     @GetMapping("/latest/all")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<DocumentSummaryDTO>> getLatestDocumentsForAdmin() {
@@ -162,8 +175,19 @@ public class DocumentController {
     }
 
     /**
-     *  Lista todos os documentos do sistema.
+     * Lista todos os documentos do sistema com filtros e paginação (Acesso Administrativo).
+     * Este endpoint é restrito a usuários com perfil ADMIN e permite visualizar
+     * todos os documentos registrados no sistema, independente do técnico responsável.
+     * Suporta filtragem por tipo de documento, nome do cliente e intervalo de datas.
+     *
+     * @param type Filtro opcional por tipo de documento (visit, aep, risk)
+     * @param clientName Filtro opcional por nome do cliente
+     * @param startDate Filtro opcional de data inicial (formato AAAA-MM-DD)
+     * @param endDate Filtro opcional de data final (formato AAAA-MM-DD)
+     * @param pageable Objeto do Spring que contém informações de paginação (page= e size=)
+     * @return ResponseEntity com uma Página (Page) de DocumentSummaryDTO contendo todos os documentos do sistema
      */
+    @Operation(summary = "Lista todos os documentos", description = "Lista todos os documentos do sistema com filtros e paginação (Acesso Administrativo).")
     @GetMapping("/admin/all")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Page<DocumentSummaryDTO>> getAllDocumentsAdmin(
@@ -179,7 +203,14 @@ public class DocumentController {
         return ResponseEntity.ok(documentsPage);
     }
 
-    @Operation(summary = "Exportar Documentos (ZIP)", description = "Baixa todos os documentos do sistema em um arquivo .zip, podendo filtrar por intervalo de datas.")
+    /**
+     * Exporta todos os documentos do sistema em um arquivo ZIP.
+     * @param startDate
+     * @param endDate
+     * @param response
+     * @throws IOException
+     */
+    @Operation(summary = "Exportar documentos (ZIP)", description = "Baixa todos os documentos do sistema em um arquivo .zip, podendo filtrar por intervalo de datas.")
     @GetMapping("/export/zip")
     public void exportDocumentsAsZip(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,

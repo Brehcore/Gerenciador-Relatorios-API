@@ -3,7 +3,6 @@ package com.gotree.API.config.security;
 import com.gotree.API.config.security.jwt.JwtAccessDeniedHandler;
 import com.gotree.API.config.security.jwt.JwtAuthenticationEntryPoint;
 import com.gotree.API.config.security.jwt.JwtAuthenticationFilter;
-import com.gotree.API.services.UserService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -12,6 +11,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -30,16 +30,12 @@ public class SecurityConfig {
 	@Value("${cors.allowed-origins}")
 	private String[] allowedOrigins;
 
-	@SuppressWarnings("unused")
-	private final UserService userService;
-
 	private final JwtAuthenticationFilter jwtAuthFilter;
 	private final JwtAccessDeniedHandler jwtAccessDeniedHandler;
 	private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
 
-	public SecurityConfig(UserService userService, JwtAuthenticationFilter jwtAuthenticationFilter,
+	public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter,
 						  JwtAccessDeniedHandler jwtAccessDeniedHandler, JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint) {
-		this.userService = userService;
 		this.jwtAuthFilter = jwtAuthenticationFilter;
 		this.jwtAccessDeniedHandler = jwtAccessDeniedHandler;
 		this.jwtAuthenticationEntryPoint = jwtAuthenticationEntryPoint;
@@ -54,10 +50,11 @@ public class SecurityConfig {
 	public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 		http
 				.cors(cors -> cors.configurationSource(corsConfigurationSource()))
-				.csrf(csrf -> csrf.disable())
+				.csrf(AbstractHttpConfigurer::disable)
 				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 				.authorizeHttpRequests(auth -> auth
 						.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Permite requisições de preflight (CORS)
+						.requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
 						.requestMatchers("/auth/login").permitAll()            // Libera o endpoint de login
 						.requestMatchers("/client-portal/login").permitAll() //Login do cliente
 						.requestMatchers("/client-portal/first-access/**").permitAll() //Solicita o código / Cria a senha

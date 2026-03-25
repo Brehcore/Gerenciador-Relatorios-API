@@ -35,16 +35,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        String path = request.getServletPath();
-        if (path.equals("/auth/login")) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-
         final String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            throw new BadCredentialsException("Token ausente ou mal formado");
+            filterChain.doFilter(request, response);
+            return;
         }
 
         final String jwt = authHeader.substring(7);
@@ -58,13 +53,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             var user = userRepository.findByEmail(username).orElse(null);
 
             if (user == null || !jwtService.isTokenValid(jwt, user)) {
-                throw new BadCredentialsException("Token inválido");
+                throw new BadCredentialsException("Token inválido ou expirado");
             }
 
-            // Cria o CustomUserDetails a partir do User encontrado
             CustomUserDetails userDetails = new CustomUserDetails(user);
 
-            // Usa o userDetails (e não o 'user') como o principal da autenticação
             var authToken = new UsernamePasswordAuthenticationToken(
                     userDetails,
                     null,

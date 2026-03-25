@@ -4,6 +4,8 @@ import com.gotree.API.config.security.CustomUserDetails;
 import com.gotree.API.dto.LoginRequestDTO;
 import com.gotree.API.entities.User;
 import com.gotree.API.services.JwtService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -18,23 +20,16 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.Map;
 
 /**
- * Controlador responsável por gerenciar as operações de autenticação.
- * Fornece endpoints para login e geração de tokens JWT.
+ * Controlador responsável por gerenciar as operações relacionadas à autenticação de usuários.
+ * Disponibiliza endpoints para login e geração de tokens JWT.
  */
+@Tag(name = "Autenticação", description = "Operações relacionadas à autenticação e geração de tokens JWT.")
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor
 public class AuthController {
-
-
-	/**
-	 * Gerenciador de autenticação do Spring Security
-	 */
+	
 	private final AuthenticationManager authenticationManager;
-
-	/**
-	 * Serviço responsável pela geração e validação de tokens JWT
-	 */
 	private final JwtService jwtService;
 
 	/**
@@ -44,6 +39,7 @@ public class AuthController {
 	 * @return ResponseEntity contendo o token JWT, flag de reset de senha e role do usuário
 	 * @throws org.springframework.security.core.AuthenticationException se as credenciais forem inválidas
 	 */
+	@Operation(summary = "Realiza login", description = "Autentica o usuário com email e senha, retornando o token JWT e informações de perfil.")
 	@PostMapping("/login")
 	public ResponseEntity<?> login(@RequestBody @Valid LoginRequestDTO request) {
 

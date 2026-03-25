@@ -6,6 +6,8 @@ import com.gotree.API.entities.Company;
 import com.gotree.API.exceptions.ResourceNotFoundException;
 import com.gotree.API.mappers.CompanyMapper;
 import com.gotree.API.services.CompanyService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -22,9 +24,9 @@ import java.util.Map;
 /**
  * Controlador REST responsável pelo gerenciamento de empresas.
  * Fornece endpoints para operações CRUD em empresas.
- * <p>
  * Base URL: /companies
  */
+@Tag(name = "Empresas", description = "Gerenciamento de empresas")
 @RestController
 @RequestMapping("/companies")
 public class CompanyController {
@@ -43,8 +45,9 @@ public class CompanyController {
      * @param dto Objeto DTO contendo os dados da empresa a ser criada
      * @return ResponseEntity com o DTO da empresa criada e status HTTP 201 (CREATED)
      * @throws IllegalArgumentException se os dados fornecidos forem inválidos
-     * @secured Requer Authentication
+     * @secured Requer autenticação
      */
+    @Operation(summary = "Cria uma empresa", description = "Cria uma empresa no sistema")
     @PostMapping
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<CompanyResponseDTO> createCompany(@Valid @RequestBody CompanyRequestDTO dto) {
@@ -61,6 +64,7 @@ public class CompanyController {
      * @throws ResourceNotFoundException se a empresa não for encontrada
      * @secured Requer autenticação
      */
+    @Operation(summary = "Busca uma empresa pelo ID", description = "Busca uma empresa pelo seu ID")
     @GetMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<CompanyResponseDTO> findById(@PathVariable Long id) {
@@ -72,7 +76,12 @@ public class CompanyController {
     /**
      * Lista todas as empresas com paginação.
      * Exemplo de chamada: GET /companies?page=0&size=10&sort=name,asc
+     *
+     * @param pageable Objeto de paginação com página, tamanho e ordenação (padrão: página 0, tamanho 10, ordenado por nome ascendente)
+     * @return ResponseEntity com página de DTOs das empresas e status HTTP 200 (OK)
+     * @secured Requer autenticação
      */
+    @Operation(summary = "Listagem de empresas", description = "Lista todas as empresas com paginação.")
     @GetMapping
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Page<CompanyResponseDTO>> getAll(
@@ -91,10 +100,11 @@ public class CompanyController {
      * @return ResponseEntity com o DTO da empresa atualizada e status HTTP 200 (OK)
      * @throws ResourceNotFoundException se a empresa não for encontrada
      * @throws IllegalArgumentException  se os dados fornecidos forem inválidos
-     * @secured Requer papel ADMIN
+     * @secured Requer autenticação
      */
+    @Operation(summary = "Atualiza os dados de uma empresa", description = "Atualiza os dados de uma empresa existente")
     @PutMapping("/{id}")
-    @PreAuthorize("isAuthenticated")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<CompanyResponseDTO> updateCompany(@PathVariable Long id, @Valid @RequestBody CompanyRequestDTO dto) {
         Company updatedCompany = companyService.updateCompany(id, dto);
         CompanyResponseDTO responseDto = companyMapper.toDto(updatedCompany);
@@ -105,9 +115,10 @@ public class CompanyController {
      * Remove uma empresa do sistema.
      *
      * @param id ID da empresa a ser removida
-     * @return ResponseEntity com status HTTP 204 (NO_CONTENT) ou um erro 404/409
+     * @return ResponseEntity com status HTTP 204 (NO_CONTENT) em caso de sucesso, 409 (CONFLICT) se houver restrições ou 404 (NOT_FOUND) se a empresa não existir
      * @secured Requer papel ADMIN
      */
+    @Operation(summary = "Remove uma empresa", description = "Remove uma empresa do sistema")
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> deleteCompany(@PathVariable Long id) {

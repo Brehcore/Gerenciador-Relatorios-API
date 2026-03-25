@@ -9,6 +9,8 @@ import com.gotree.API.entities.AgendaEvent;
 import com.gotree.API.entities.User;
 import com.gotree.API.services.AgendaService;
 import com.gotree.API.services.ReportService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
@@ -25,10 +27,16 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Controlador responsável pelo gerenciamento do calendário dos técnicos e agendamento de visitas.
+ * Este controlador oferece recursos para verificar disponibilidade,
+ * criar, atualizar e remover eventos, reagendar visitas e consultar relatórios.
+ */
+@Tag(name = "Agenda e Visitas", description = "Gerenciamento do calendário dos técnicos e agendamento de visitas.")
 @RestController
 @RequestMapping("/api/agenda")
 public class AgendaController {
-
+    
     private final AgendaService agendaService;
     private final ReportService reportService;
 
@@ -45,6 +53,7 @@ public class AgendaController {
      * @param shift Turno (MANHA ou TARDE)
      * @return 200 OK se disponível, 409 Conflict se indisponível
      */
+    @Operation(summary = "Verifica disponibilidade", description = "Verifica se uma determinada data e turno estão disponíveis na agenda do usuário autenticado.")
     @GetMapping("/check-availability")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> checkAvailability(
@@ -71,6 +80,7 @@ public class AgendaController {
      * @param authentication Dados do usuário autenticado
      * @return Dados do evento criado
      */
+    @Operation(summary = "Cria um novo evento", description = "Cria um novo evento ou agendamento de visita na agenda do usuário autenticado.")
     @PostMapping("/eventos")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<AgendaResponseDTO> createEvent(
@@ -88,6 +98,7 @@ public class AgendaController {
      * @param authentication Dados do usuário autenticado
      * @return Lista de eventos do usuário
      */
+    @Operation(summary = "Lista todos os eventos do usuário", description = "Retorna todos os eventos e visitas agendadas para o usuário autenticado.")
     @GetMapping("/eventos")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<AgendaResponseDTO>> getAllEvents(Authentication authentication) {
@@ -104,6 +115,7 @@ public class AgendaController {
      * @param authentication Dados do usuário autenticado
      * @return Dados do evento atualizado
      */
+    @Operation(summary = "Atualiza um evento", description = "Atualiza os dados de um evento existente na agenda do usuário autenticado.")
     @PutMapping("/eventos/{id}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<AgendaResponseDTO> updateEvent(
@@ -124,6 +136,7 @@ public class AgendaController {
      * @param authentication Dados do usuário autenticado
      * @return Dados da visita reagendada
      */
+    @Operation(summary = "Reagenda uma visita", description = "Altera a data e/ou o turno de uma visita técnica agendada.")
     @PutMapping("/visitas/{visitId}/reagendar")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> rescheduleVisit(
@@ -146,6 +159,7 @@ public class AgendaController {
      * @param authentication Dados do usuário autenticado
      * @return 204 No Content
      */
+    @Operation(summary = "Remove um evento", description = "Exclui permanentemente um evento da agenda do usuário.")
     @DeleteMapping("/eventos/{id}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> deleteEvent(
@@ -164,6 +178,7 @@ public class AgendaController {
      * @param userId ID do usuário para filtrar (opcional)
      * @return Lista de todos os eventos
      */
+    @Operation(summary = "Lista todos os eventos (Admin)", description = "Retorna todos os eventos cadastrados no sistema, permitindo filtrar por usuário.")
     @GetMapping("/eventos/all")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<AgendaResponseDTO>> getAllEventsForAdmin(
@@ -177,6 +192,7 @@ public class AgendaController {
      * Endpoint específico para validar se o relatório pode ser enviado.
      * Deve ser chamado pelo Frontend ANTES de abrir a tela de assinatura ou enviar os dados.
      */
+    @Operation(summary = "Valida submissão de relatório", description = "Verifica se o relatório de uma visita pode ser enviado com base na data e turno.")
     @GetMapping("/validate-report")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> validateReportSubmission(
@@ -213,6 +229,7 @@ public class AgendaController {
      * @param month Mês para consulta da disponibilidade (1-12)
      * @return Lista de disponibilidade diária contendo informações sobre os horários livres e ocupados
      */
+    @Operation(summary = "Consulta disponibilidade mensal", description = "Retorna a disponibilidade diária (livre/ocupado) de um usuário para um mês específico.")
     @GetMapping("/availability")
     public ResponseEntity<List<MonthlyAvailabilityDTO>> getAvailability(
             Authentication auth,
@@ -223,6 +240,7 @@ public class AgendaController {
         return ResponseEntity.ok(agendaService.getMonthAvailability(user, year, month));
     }
 
+    @Operation(summary = "Consulta agenda global", description = "Retorna todos os eventos de todos os técnicos em um período determinado.")
     @GetMapping("/global")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<AgendaResponseDTO>> getGlobalAgenda(
@@ -237,6 +255,7 @@ public class AgendaController {
      * Verifica se há conflito GLOBAL (aviso de outros técnicos).
      * Retorna 200 OK com mensagem de aviso se houver conflito, ou 200 OK vazio se estiver livre.
      */
+    @Operation(summary = "Verifica conflitos globais", description = "Verifica se há outros técnicos agendados para a mesma data e turno para evitar conflitos.")
     @GetMapping("/check-global-conflicts")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Map<String, String>> checkGlobalConflicts(
@@ -253,6 +272,15 @@ public class AgendaController {
         return ResponseEntity.ok(Map.of());
     }
 
+    /**
+     * Exporta um documento PDF contendo os detalhes da agenda para um intervalo de datas especificado.
+     *
+     * @param startDate a data inicial do período da agenda, formatada como data ISO
+     * @param endDate a data final do período da agenda, formatada como data ISO
+     * @return um ResponseEntity contendo o PDF gerado como um array de bytes,
+     *         com o tipo de conteúdo e os cabeçalhos adequados para download do arquivo
+     */
+    @Operation(summary = "Exporta agenda em PDF", description = "Gera um documento PDF com os eventos da agenda em um intervalo de datas.")
     @GetMapping("/export/pdf")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<byte[]> exportAgendaPdf(
@@ -285,6 +313,15 @@ public class AgendaController {
                 .body(pdfBytes);
     }
 
+    /**
+     * Confirma uma visita agendada para o ID de visita fornecido.
+     * Garante que o usuário atualmente autenticado esteja autorizado a confirmar a visita.
+     *
+     * @param visitId o ID da visita a ser confirmada
+     * @param authentication o token de autenticação que representa o usuário atualmente autenticado
+     * @return um ResponseEntity com status HTTP 200 (OK) se a visita for confirmada com sucesso
+     */
+    @Operation(summary = "Confirma uma visita", description = "Marca uma visita agendada como confirmada pelo técnico responsável.")
     @PutMapping("/visitas/{visitId}/confirmar")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> confirmVisit(

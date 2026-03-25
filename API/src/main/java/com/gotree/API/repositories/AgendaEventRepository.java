@@ -13,17 +13,10 @@ import java.util.Optional;
 
 public interface AgendaEventRepository extends JpaRepository<AgendaEvent, Long> {
 
-    @Query("SELECT e FROM AgendaEvent e JOIN FETCH e.user ORDER BY e.eventDate ASC")
-    List<AgendaEvent> findAllWithUserByOrderByEventDateAsc();
-
     List<AgendaEvent> findAllByOrderByEventDateAsc();
 
     // Busca pelo relacionamento com TechnicalVisit
     Optional<AgendaEvent> findByTechnicalVisit_Id(Long technicalVisitId);
-
-    List<AgendaEvent> findByUserAndEventTypeIn(User user, List<String> types);
-
-    // --- QUERIES DE VALIDAÇÃO DE CONFLITO ---
 
     // 1. Conta eventos (existente - usado para verificar disponibilidade geral)
     long countByUserAndEventDate(User user, LocalDate date);

@@ -21,7 +21,7 @@ import java.util.Map;
  * Controlador REST responsável por gerenciar operações relacionadas a Avaliação Ergonômica Preliminar (AEPs).
  * Fornece endpoints para criar, atualizar e recuperar informações de AEPs.
  */
-@Tag(name = "Análise Preliminar de Eficiência", description = "Criação de documentos que avaliam a eficácia profissional no ambiente de trabalho.")
+@Tag(name = "Avaliação Ergonômica Preliminar", description = "Criação de documentos que avaliam a eficácia profissional no ambiente de trabalho.")
 @RestController
 @RequestMapping("/aep-reports")
 public class AepController {

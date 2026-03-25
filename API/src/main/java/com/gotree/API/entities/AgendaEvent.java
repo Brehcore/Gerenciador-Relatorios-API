@@ -61,7 +61,7 @@ public class AgendaEvent {
     private User user;
 
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "technical_visit_id", nullable = true)
+    @JoinColumn(name = "technical_visit_id")
     private TechnicalVisit technicalVisit;
 
     // Permite vincular evento à empresa mesmo sem visita
