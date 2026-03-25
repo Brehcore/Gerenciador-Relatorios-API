@@ -205,10 +205,6 @@ public class DocumentController {
 
     /**
      * Exporta todos os documentos do sistema em um arquivo ZIP.
-     * @param startDate
-     * @param endDate
-     * @param response
-     * @throws IOException
      */
     @Operation(summary = "Exportar documentos (ZIP)", description = "Baixa todos os documentos do sistema em um arquivo .zip, podendo filtrar por intervalo de datas.")
     @GetMapping("/export/zip")
