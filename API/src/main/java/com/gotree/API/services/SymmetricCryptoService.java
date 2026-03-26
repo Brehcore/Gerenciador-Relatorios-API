@@ -1,5 +1,6 @@
 package com.gotree.API.services;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.Cipher;
@@ -15,16 +16,17 @@ import java.util.Base64;
 @Service
 public class SymmetricCryptoService {
 
-    // Em produção, esta chave deve vir do application.properties (@Value)
-    // Deve ter exatos 16, 24 ou 32 caracteres para AES
-    private static final String SECRET_KEY = "GoTreeSecretKey!";
+    // O Spring injeta o valor lido do application.properties automaticamente aqui
+    @Value("${crypto.secret.key}")
+    private String secretKey;
+
     private static final String ALGORITHM = "AES";
 
     public String encrypt(String data) {
         try {
-            SecretKeySpec secretKey = new SecretKeySpec(SECRET_KEY.getBytes(StandardCharsets.UTF_8), ALGORITHM);
+            SecretKeySpec keySpec = new SecretKeySpec(secretKey.getBytes(StandardCharsets.UTF_8), ALGORITHM);
             Cipher cipher = Cipher.getInstance(ALGORITHM);
-            cipher.init(Cipher.ENCRYPT_MODE, secretKey);
+            cipher.init(Cipher.ENCRYPT_MODE, keySpec);
             byte[] encryptedBytes = cipher.doFinal(data.getBytes());
             return Base64.getEncoder().encodeToString(encryptedBytes);
         } catch (Exception e) {
@@ -34,9 +36,9 @@ public class SymmetricCryptoService {
 
     public String decrypt(String encryptedData) {
         try {
-            SecretKeySpec secretKey = new SecretKeySpec(SECRET_KEY.getBytes(StandardCharsets.UTF_8), ALGORITHM);
+            SecretKeySpec keySpec = new SecretKeySpec(secretKey.getBytes(StandardCharsets.UTF_8), ALGORITHM);
             Cipher cipher = Cipher.getInstance(ALGORITHM);
-            cipher.init(Cipher.DECRYPT_MODE, secretKey);
+            cipher.init(Cipher.DECRYPT_MODE, keySpec);
             byte[] decodedBytes = Base64.getDecoder().decode(encryptedData);
             return new String(cipher.doFinal(decodedBytes));
         } catch (Exception e) {

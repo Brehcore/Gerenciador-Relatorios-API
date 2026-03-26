@@ -169,7 +169,6 @@ public class AepService {
         // Se o PDF não existe (novo ou editado), GERA UM NOVO
         Map<String, Object> templateData = new HashMap<>();
 
-        // --- SANITIZAÇÃO DE SEGURANÇA NO TEMPLATE ---
         // Protege contra dados sujos que já estavam no banco antes da correção
         if (aep.getEvaluatedFunction() != null) {
             aep.setEvaluatedFunction(XmlSanitizer.sanitize(aep.getEvaluatedFunction()));

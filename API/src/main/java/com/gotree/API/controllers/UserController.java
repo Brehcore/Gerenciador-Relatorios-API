@@ -1,7 +1,6 @@
 package com.gotree.API.controllers;
 
 import com.gotree.API.config.security.CustomUserDetails;
-import com.gotree.API.dto.user.BatchUserInsertResponseDTO;
 import com.gotree.API.dto.user.CertificateUploadDTO;
 import com.gotree.API.dto.user.ChangeEmailRequestDTO;
 import com.gotree.API.dto.user.ChangePasswordRequestDTO;
@@ -34,8 +33,8 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.util.HtmlUtils;
 
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -106,23 +105,6 @@ public class UserController {
 	public ResponseEntity<UserResponseDTO> insertUser(@RequestBody @Valid UserRequestDTO dto) {
 		User createdUser = userService.insertUser(dto);
 		return ResponseEntity.ok(userMapper.toDto(createdUser));
-	}
-
-	/**
-	 * Cria múltiplos usuários em lote.
-	 * Apenas administradores têm acesso a este endpoint.
-	 *
-	 * @param userDTOs Lista com os dados dos usuários a serem criados
-	 * @return Resultado da operação em lote incluindo sucessos e falhas
-	 */
-	@Operation(summary = "Criação de múltiplos usuários", description = "Cria múltiplos usuários em lote no sistema.")
-	@PostMapping("/batch")
-	@PreAuthorize("hasRole('ADMIN')")
-	public ResponseEntity<BatchUserInsertResponseDTO> insertMultiplerUsers(
-			@RequestBody List<UserRequestDTO> userDTOs) {
-
-		BatchUserInsertResponseDTO result = userService.insertUsers(userDTOs);
-		return ResponseEntity.status(HttpStatus.MULTI_STATUS).body(result);
 	}
 
 	/**
@@ -259,13 +241,21 @@ public class UserController {
 
 		String userEmail = authentication.getName();
 
+		CertificateUploadDTO cleanDto = new CertificateUploadDTO();
+
+		cleanDto.setPassword(dto.getPassword());
+
+		cleanDto.setFile(dto.getFile());
+
 		try {
-			userService.uploadCertificate(userEmail, dto);
+			userService.uploadCertificate(userEmail, cleanDto);
 			return ResponseEntity.ok(Map.of("message", "Certificado digital configurado com sucesso."));
 
 		} catch (IllegalArgumentException e) {
 			log.warn("Falha de validação no certificado do usuário {}: {}", userEmail, e.getMessage());
-			return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+
+			String safeMessage = e.getMessage() != null ? HtmlUtils.htmlEscape(e.getMessage()) : "Erro na validação";
+			return ResponseEntity.badRequest().body(Map.of("error", safeMessage));
 
 		} catch (Exception e) {
 			log.error("Erro interno ao processar certificado do usuário {}", userEmail, e);

@@ -8,6 +8,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.time.LocalDate;
 import java.time.Period;
@@ -23,6 +24,7 @@ import java.util.List;
 @EqualsAndHashCode(of = "id")
 public class User implements Serializable, UserDetails {
 
+    @Serial
     private static final long serialVersionUID = 1L;
 
     @Id

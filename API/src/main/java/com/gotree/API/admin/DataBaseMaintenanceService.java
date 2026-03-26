@@ -22,14 +22,14 @@ public class DataBaseMaintenanceService {
 	}
 
 	public void deleteAllUser(String token) {
-		if (!token.equals(token)) {
+		if (!token.equals(this.token)) {
 			throw new SecurityException("Token inválido");
 		}
 
 		String dataBaseName = getDatabaseName();
 
-		if (!"docgenTest".equalsIgnoreCase(dataBaseName)) {
-			throw new SecurityException("Limpeza permitida apenas no banco docgenTest. Banco atual: " + dataBaseName);
+		if (!"relatoriosTest".equalsIgnoreCase(dataBaseName)) {
+			throw new SecurityException("Limpeza permitida apenas no banco relatoriosTest. Banco atual: " + dataBaseName);
 		}
 
 		userRepository.deleteAll();

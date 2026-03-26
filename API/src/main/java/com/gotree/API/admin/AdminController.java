@@ -19,7 +19,6 @@ public class AdminController {
 
 	}
 
-	// http://localhost:8080/admin/dev-tools/users?token=DELETE_TEST_DATA
 	@DeleteMapping("/users")
 	public ResponseEntity<String> deleteAllUsers(@RequestParam String token) {
 		maintenanceService.deleteAllUser(token);

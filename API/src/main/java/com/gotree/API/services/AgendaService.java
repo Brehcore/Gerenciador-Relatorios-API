@@ -94,7 +94,6 @@ public class AgendaService {
         }
     }
 
-    // Sobrecarregado para compatibilidade
     public void validateReportSubmission(Long visitId, User technician, LocalDate date, String shiftStr) {
         validateReportSubmission(visitId, technician, date, shiftStr, null);
     }
@@ -138,11 +137,8 @@ public class AgendaService {
         event.setEventDate(dto.getEventDate());
         event.setUser(user);
 
-        // Eventos criados manualmente nascem como "À Confirmar" ou "Confirmado" dependendo da regra de negócio.
-        // Assumindo padrão "Confirmado" para manuais (ex: Reunião Interna) ou "À Confirmar"
         event.setStatus(AgendaStatus.CONFIRMADO); // Ajuste conforme sua necessidade
 
-        // Salva os campos manuais
         event.setClientName(dto.getClientName());
         event.setManualObservation(dto.getManualObservation());
 
@@ -150,7 +146,6 @@ public class AgendaService {
             event.setShift(Shift.valueOf(dto.getShift().toUpperCase()));
             AgendaEventType type = AgendaEventType.valueOf(dto.getEventType().toUpperCase());
 
-            // Se tentar criar VISITA_TECNICA manualmente, garantimos que não é um hack de reagendamento
             event.setEventType(type);
 
         } catch (IllegalArgumentException e) {
@@ -199,15 +194,15 @@ public class AgendaService {
         AgendaEvent historicalEvent = new AgendaEvent();
         historicalEvent.setUser(currentUser);
         historicalEvent.setEventType(AgendaEventType.VISITA_TECNICA);
-        historicalEvent.setStatus(AgendaStatus.REAGENDADO); // Define status Reagendado
+        historicalEvent.setStatus(AgendaStatus.REAGENDADO);
 
         // Título explicativo e vínculo
         historicalEvent.setTitle("Visita: " + (visit.getClientCompany() != null ? visit.getClientCompany().getName() : "N/A"));
-        historicalEvent.setRescheduledToDate(dataNova); // Campo crucial para o PDF ("Reagendado p/...")
+        historicalEvent.setRescheduledToDate(dataNova);
 
-        historicalEvent.setEventDate(dataAntiga); // Fica preso na data ANTIGA
-        historicalEvent.setShift(visit.getNextVisitShift()); // Turno original
-        historicalEvent.setTechnicalVisit(visit); // Vincula para referência
+        historicalEvent.setEventDate(dataAntiga);
+        historicalEvent.setShift(visit.getNextVisitShift());
+        historicalEvent.setTechnicalVisit(visit);
 
         agendaEventRepository.save(historicalEvent);
 
@@ -215,7 +210,7 @@ public class AgendaService {
         visit.setNextVisitDate(dataNova);
 
         // Opcional: Se reagendou, precisa confirmar novamente?
-        // Se TechnicalVisit não tiver campo status, o status será inferido como "À Confirmar"
+        // Se TechnicalVisit não tiver campo status, o status será inferido como "A Confirmar"
         // no mapVisitToDto na próxima vez que essa visita for listada na data nova.
 
         technicalVisitRepository.save(visit);
@@ -297,7 +292,6 @@ public class AgendaService {
             boolean morningBusy = false;
             boolean afternoonBusy = false;
 
-            // --- A. Checa Visitas REALIZADAS ---
             for (TechnicalVisit v : visitsRealized) {
                 if (v.getVisitDate().equals(date)) {
                     if (v.getStartTime().getHour() < 12) morningBusy = true;
@@ -305,7 +299,6 @@ public class AgendaService {
                 }
             }
 
-            // --- B. Checa Visitas AGENDADAS ---
             for (TechnicalVisit v : visitsScheduled) {
                 if (v.getNextVisitDate().equals(date)) {
                     if (v.getNextVisitShift() == Shift.MANHA) morningBusy = true;
@@ -351,7 +344,6 @@ public class AgendaService {
         if (event.getShift() != null) dto.setShift(event.getShift().name());
         if (event.getUser() != null) dto.setResponsibleName(event.getUser().getName());
 
-        // Mapeia Status e Descrição
         if (event.getStatus() != null) {
             dto.setStatus(event.getStatus().name());
 

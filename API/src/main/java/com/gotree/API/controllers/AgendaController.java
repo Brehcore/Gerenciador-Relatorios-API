@@ -20,6 +20,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.util.HtmlUtils;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -50,7 +51,7 @@ public class AgendaController {
      *
      * @param auth  Dados de autenticação do usuário
      * @param date  Data para verificação
-     * @param shift Turno (MANHA ou TARDE)
+     * @param shift Turno (MANHÃ ou TARDE)
      * @return 200 OK se disponível, 409 Conflict se indisponível
      */
     @Operation(summary = "Verifica disponibilidade", description = "Verifica se uma determinada data e turno estão disponíveis na agenda do usuário autenticado.")
@@ -67,7 +68,7 @@ public class AgendaController {
 
         if (warning != null) {
             // 409 Conflict: Informa o frontend que a agenda está cheia
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message", warning));
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message", HtmlUtils.htmlEscape(warning)));
         }
 
         return ResponseEntity.ok().build();
@@ -88,7 +89,32 @@ public class AgendaController {
             Authentication authentication
     ) {
         User currentUser = ((CustomUserDetails) authentication.getPrincipal()).user();
-        AgendaEvent newEvent = agendaService.createEvent(dto, currentUser);
+
+        CreateEventDTO cleanDto = new CreateEventDTO();
+
+        if (dto.getTitle() != null) {
+            cleanDto.setTitle(HtmlUtils.htmlEscape(dto.getTitle()));
+        }
+        if (dto.getDescription() != null) {
+            cleanDto.setDescription(HtmlUtils.htmlEscape(dto.getDescription()));
+        }
+        if (dto.getEventType() != null) {
+            cleanDto.setEventType(HtmlUtils.htmlEscape(dto.getEventType()));
+        }
+        if (dto.getShift() != null) {
+            cleanDto.setShift(HtmlUtils.htmlEscape(dto.getShift()));
+        }
+        if (dto.getClientName() != null) {
+            cleanDto.setClientName(HtmlUtils.htmlEscape(dto.getClientName()));
+        }
+        if (dto.getManualObservation() != null) {
+            cleanDto.setManualObservation(HtmlUtils.htmlEscape(dto.getManualObservation()));
+        }
+
+        cleanDto.setEventDate(dto.getEventDate());
+
+        AgendaEvent newEvent = agendaService.createEvent(cleanDto, currentUser);
+
         return ResponseEntity.status(HttpStatus.CREATED).body(agendaService.mapToDto(newEvent));
     }
 
@@ -212,10 +238,10 @@ public class AgendaController {
 
         } catch (IllegalStateException e) {
             // Se houver conflito (bloqueio), retorna 409 Conflict com a mensagem do Service
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message", e.getMessage()));
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message", HtmlUtils.htmlEscape(e.getMessage())));
         } catch (IllegalArgumentException e) {
             // Erro de dados (ex: turno inválido)
-            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+            return ResponseEntity.badRequest().body(Map.of("message", HtmlUtils.htmlEscape(e.getMessage())));
         }
     }
 
@@ -267,7 +293,7 @@ public class AgendaController {
         String warningMessage = agendaService.checkGlobalConflicts(date, shift, user);
 
         if (warningMessage != null) {
-            return ResponseEntity.ok(Map.of("warning", warningMessage));
+            return ResponseEntity.ok(Map.of("warning", HtmlUtils.htmlEscape(warningMessage)));
         }
         return ResponseEntity.ok(Map.of());
     }

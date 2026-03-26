@@ -5,6 +5,8 @@ import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -13,6 +15,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.util.HtmlUtils;
 
 import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 
@@ -21,10 +24,12 @@ import jakarta.servlet.http.HttpServletRequest;
 @RestControllerAdvice
 public class ResourceExceptionHandler {
 
+    // Adicionado Logger para registar erros críticos internamente
+    private static final Logger log = LoggerFactory.getLogger(ResourceExceptionHandler.class);
+
     // Tratamento para Bloqueio de Agenda e Regras de Negócio
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<StandardError> handleIllegalState(IllegalStateException e, HttpServletRequest request) {
-        // Retorna 409 Conflict em vez de 500
         HttpStatus status = HttpStatus.CONFLICT;
         StandardError err = new StandardError(Instant.now(), status.value(), "Conflito de Agenda/Regra", e.getMessage(), request.getRequestURI());
         return ResponseEntity.status(status).body(err);
@@ -32,7 +37,7 @@ public class ResourceExceptionHandler {
 
     // Tratamento para Acesso Negado (Erro 403)
     @ExceptionHandler(AccessDeniedException.class)
-    public ResponseEntity<StandardError> handleAccessDenied(AccessDeniedException e, HttpServletRequest request) {
+    public ResponseEntity<StandardError> handleAccessDenied(HttpServletRequest request) {
         HttpStatus status = HttpStatus.FORBIDDEN;
         StandardError err = new StandardError(Instant.now(), status.value(), "Acesso Negado", "Você não tem permissão para realizar esta ação.", request.getRequestURI());
         return ResponseEntity.status(status).body(err);
@@ -80,8 +85,13 @@ public class ResourceExceptionHandler {
     // Exceções não tratadas (Erro inesperado no sistema)
     @ExceptionHandler(Exception.class)
     public ResponseEntity<StandardError> handleGlobalException(Exception e, HttpServletRequest request) {
+        // Imprime o erro real no console/logs para o programador ver
+        log.error("Erro interno não tratado:", e);
+
         HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
-        StandardError err = new StandardError(Instant.now(), status.value(), "Erro interno no servidor", e.getMessage(),
+        // Retorna uma mensagem genérica para o frontend, escondendo o e.getMessage()
+        StandardError err = new StandardError(Instant.now(), status.value(), "Erro interno no servidor",
+                "Ocorreu um erro inesperado. A nossa equipa técnica já foi notificada.",
                 request.getRequestURI());
         return ResponseEntity.status(status).body(err);
     }
@@ -108,16 +118,15 @@ public class ResourceExceptionHandler {
 
     // Verifica exceção em cpf
     @ExceptionHandler(CpfValidationException.class)
-    public ResponseEntity<Object> handleCpfValidationException(CpfValidationException ex) {
+    public ResponseEntity<Object> handleCpfValidationException(CpfValidationException ex, HttpServletRequest request) {
         Map<String, Object> body = new HashMap<>();
         body.put("timestamp", Instant.now());
         body.put("status", HttpStatus.BAD_REQUEST.value());
         body.put("error", "Validação de CPF");
-        body.put("message", ex.getMessage());
-        body.put("path", "/users");
+        // Sanitiza os campos manuais usando HtmlUtils
+        body.put("message", ex.getMessage() != null ? HtmlUtils.htmlEscape(ex.getMessage()) : null);
+        body.put("path", request.getRequestURI() != null ? HtmlUtils.htmlEscape(request.getRequestURI()) : null);
 
         return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
     }
-
 }
-

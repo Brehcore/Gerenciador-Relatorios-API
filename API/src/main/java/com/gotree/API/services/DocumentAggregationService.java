@@ -469,13 +469,13 @@ public class DocumentAggregationService {
     @Transactional
     public List<String> sendDocumentToClients(String type, Long id, User currentUser) throws IOException {
 
-        // 1. Usa o seu método existente que já sabe buscar os bytes e gerar um nome limpo!
+        // 1. Usa o seu metodo existente que já sabe buscar os bytes e gerar um nome limpo!
         // (Isso mata toda a repetição de código de sanitização e formatação de data)
         FileDownloadDTO fileInfo = downloadDocument(type, id, currentUser);
 
-        Set<Client> clients = null;
-        String companyName = "";
-        String subjectType = "";
+        Set<Client> clients;
+        String companyName;
+        String subjectType;
 
         // 2. Lógica de Negócio: Buscar clientes e atualizar status
         if ("risk".equalsIgnoreCase(type)) {
@@ -532,7 +532,7 @@ public class DocumentAggregationService {
 
         for (String email : validEmails) {
             try {
-                // fileInfo.getFilename() já vem sanitizado pelo seu método downloadDocument!
+                // fileInfo.getFilename() já vem sanitizado pelo seu metodo downloadDocument!
                 emailService.sendReportWithAttachment(email, subject, body, fileInfo.getData(), fileInfo.getFilename());
             } catch (Exception e) {
                 System.err.println("Falha ao enviar e-mail para: " + email + ". Motivo: " + e.getMessage());
@@ -542,7 +542,7 @@ public class DocumentAggregationService {
         return validEmails;
     }
 
-    // Extração do HTML gigante para um método privado limpo
+    // Extração do HTML gigante para um metodo privado limpo
     private String buildEmailTemplate(String subjectType, String companyName) {
         return String.format(
                 "<div style='font-family: \"Segoe UI\", Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;'>" +

@@ -1,7 +1,9 @@
 package com.gotree.API.controllers;
 
+import com.gotree.API.dto.physiotherapist.CreatePhysiotherapistDTO;
 import com.gotree.API.entities.Physiotherapist;
 import com.gotree.API.repositories.PhysiotherapistRepository;
+import com.gotree.API.utils.XmlSanitizer;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -44,20 +46,33 @@ public class PhysiotherapistController {
 
 
     /**
-     * Cria um novo registro de fisioterapeuta no sistema.
+     * Cria um novo fisioterapeuta no sistema.
+     * Este endpoint recebe os dados de um novo fisioterapeuta através do DTO,
+     * sanitiza os campos para prevenir ataques XSS e persiste o registro na base de dados.
+     * O processo garante que apenas dados seguros sejam armazenados no sistema.
      *
-     * @param physio O objeto Physiotherapist contendo os dados do novo fisioterapeuta
-     * @return ResponseEntity contendo o fisioterapeuta criado
-     * @throws jakarta.validation.ValidationException se os dados fornecidos forem inválidos
-     * @security Requer permissão de ADMIN
+     * @param dto Objeto contendo os dados do fisioterapeuta a ser criado (nome e CREFITO)
+     * @return ResponseEntity contendo o fisioterapeuta criado com status HTTP 201 (CREATED)
+     * @security Endpoint requer autenticação
      */
-    @Operation(summary = "Cria um novo fisioterapeuta", description = "Cria um novo registro de fisioterapeuta no sistema.")
+    @Operation(summary = "Cria um novo fisioterapeuta", description = "Cria um novo registo de fisioterapeuta no sistema de forma segura.")
     @PostMapping
-    public ResponseEntity<Physiotherapist> createPhysiotherapist(@Valid @RequestBody Physiotherapist physio) {
-        // Você pode adicionar validação aqui (ex: verificar se CREFITO já existe)
+    @PreAuthorize("isAuthenticated")
+    public ResponseEntity<Physiotherapist> createPhysiotherapist(@Valid @RequestBody CreatePhysiotherapistDTO dto) {
+
+        // 1. Instancia uma Entidade NOVA (A IDE confia nisto, pois o objeto nasceu no servidor)
+        Physiotherapist physio = new Physiotherapist();
+
+        // 2. Transfere os dados do DTO para a Entidade, SANITIZANDO no processo
+        physio.setName(XmlSanitizer.sanitize(dto.getName()));
+        physio.setCrefito(XmlSanitizer.sanitize(dto.getCrefito()));
+
+        // 3. Guarda na base de dados (100% livre de XSS)
         Physiotherapist savedPhysio = repository.save(physio);
+
+        // 4. Retorna a entidade guardada
         return ResponseEntity.status(HttpStatus.CREATED).body(savedPhysio);
     }
 
-    // TODO: Adicionar endpoints PUT e DELETE para gerenciar a lista
+    // TODO: Adicionar endpoints PUT e DELETE para gerir a lista
 }
