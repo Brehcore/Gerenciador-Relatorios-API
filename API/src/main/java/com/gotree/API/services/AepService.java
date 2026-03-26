@@ -7,7 +7,7 @@ import com.gotree.API.repositories.AepReportRepository;
 import com.gotree.API.repositories.CompanyRepository;
 import com.gotree.API.repositories.PhysiotherapistRepository;
 import com.gotree.API.repositories.SystemInfoRepository;
-import com.gotree.API.utils.XmlSanitizer; // IMPORTANTE: Utilitário de sanitização
+import com.gotree.API.utils.XmlSanitizer;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

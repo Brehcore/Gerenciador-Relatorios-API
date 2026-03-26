@@ -1,14 +1,18 @@
 package com.gotree.API.dto.agenda;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import java.time.LocalDate;
 
 @Data
+@Schema(description = "DTO para reagendamento de visita técnica")
 public class RescheduleVisitDTO {
 
     @NotNull(message = "A nova data não pode ser nula.")
+    @Schema(description = "Nova data da visita", example = "2024-04-10")
     private LocalDate newDate;
 
-    private String reason; // Ex: "Cliente pediu adiamento"
+    @Schema(description = "Motivo do reagendamento", example = "Cliente pediu adiamento")
+    private String reason;
 }

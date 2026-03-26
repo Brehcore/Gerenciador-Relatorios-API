@@ -8,6 +8,7 @@ import com.gotree.API.entities.User;
 import com.gotree.API.mappers.TechnicalVisitMapper;
 import com.gotree.API.services.TechnicalVisitService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -28,16 +29,15 @@ import java.util.Map;
 /**
  * Controller responsável por gerenciar as operações relacionadas às visitas técnicas.
  * Fornece endpoints para:
- * - Criar novas visitas técnicas e gerar relatórios em PDF
+ * - Criar novas visitas técnicas
  * - Listar visitas técnicas do técnico autenticado
- * <p>
- * Base URL: /technical-visits
+ * - Verificar disponibilidade de agenda para próximas visitas
+ * - Assinar digitalmente visitas técnicas via certificado ICP-Brasil
  */
+@Tag(name = "Visitas Técnicas", description = "Controller responsável por gerenciar as operações relacionadas às visitas técnicas")
 @RestController
 @RequestMapping("/technical-visits")
 public class TechnicalVisitController {
-    
-    
 
     private final TechnicalVisitService technicalVisitService;
     private final TechnicalVisitMapper technicalVisitMapper;
@@ -48,12 +48,12 @@ public class TechnicalVisitController {
     }
 
     /**
-     * Cria uma nova visita técnica e gera o relatório em PDF.
-     *
-     * @param dto            Dados da visita técnica a ser criada
-     * @param authentication Dados do usuário autenticado
-     * @return ResponseEntity com mensagem de sucesso e ID da visita criada
+     * Cria uma nova visita técnica.
+     * @param dto            Objeto contendo os dados necessários para criação da visita técnica
+     * @param authentication Informações de autenticação do técnico que está criando a visita
+     * @return ResponseEntity com status 201 (CREATED) contendo mensagem de sucesso e o ID da visita criada
      */
+    @Operation(summary = "Cria uma visita", description = "Criação de uma nova visita técnica.")
     @PostMapping
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> createVisit(@RequestBody @Valid CreateTechnicalVisitRequestDTO dto, Authentication authentication) {
@@ -75,9 +75,8 @@ public class TechnicalVisitController {
 
     /**
      * Retorna todas as visitas técnicas realizadas pelo técnico autenticado.
-     *
-     * @param authentication Dados do usuário autenticado
-     * @return Lista de visitas técnicas do técnico
+     * @param authentication Informações de autenticação do técnico logado
+     * @return ResponseEntity com status 200 (OK) contendo a lista de DTOs das visitas técnicas do técnico
      */
     @GetMapping
     @PreAuthorize("isAuthenticated()")
@@ -92,16 +91,16 @@ public class TechnicalVisitController {
         return ResponseEntity.ok(responseDtos);
     }
 
-
     /**
      * Verifica a disponibilidade do técnico para uma próxima visita em uma data e turno específicos.
-     * Este endpoint é usado para validar se já existe alguma visita técnica agendada
-     * para a data e turno informados antes de permitir um novo agendamento.
-     *
-     * @param auth  Dados do usuário autenticado
-     * @param date  Data proposta para a próxima visita
-     * @param shift Turno proposto para a próxima visita (MORNING, AFTERNOON)
-     * @return ResponseEntity com status 200 (OK) se disponível ou 409 (CONFLICT) se ocupado
+     * Este endpoint valida se já existe alguma visita técnica agendada para a data e turno informados
+     * antes de permitir um novo agendamento. Também retorna avisos sobre outros técnicos agendados
+     * no mesmo dia e turno.
+     * @param auth  Informações de autenticação do técnico que está verificando disponibilidade
+     * @param date  Data proposta para a próxima visita (formato: yyyy-MM-dd)
+     * @param shift Turno proposto para a próxima visita (valores aceitos: MORNING, AFTERNOON)
+     * @return ResponseEntity com status 200 (OK) contendo informações de disponibilidade se livre,
+     *         ou status 409 (CONFLICT) contendo detalhes do bloqueio se já houver agendamento
      */
     @Operation(summary = "Verificar Disponibilidade", description = "Verifica se o técnico tem a agenda livre e retorna avisos de outros técnicos no mesmo dia.")
     @GetMapping("/check-availability")
@@ -123,8 +122,16 @@ public class TechnicalVisitController {
     }
 
     /**
-     * Endpoint para assinar digitalmente (ICP-Brasil) a Visita Técnica.
+     * Assina digitalmente uma visita técnica existente utilizando certificado digital ICP-Brasil.
+     * Este endpoint permite que o técnico autenticado assine digitalmente uma visita técnica previamente criada,
+     * garantindo a autenticidade e integridade do documento mediante certificação digital.
+     * @param id             Identificador único da visita técnica a ser assinada
+     * @param authentication Informações de autenticação do técnico que está assinando a visita
+     * @return ResponseEntity com status 200 (OK) e mensagem de sucesso se a assinatura for bem-sucedida,
+     *         status 400 (BAD REQUEST) se houver erro de validação ou estado inválido,
+     *         ou status 500 (INTERNAL SERVER ERROR) se houver erro no processamento da assinatura
      */
+    @Operation(summary = "Assinatura digital em um relatório", description = "Assina digitalmente um relatório de risco utilizando certificado digital padrão ICP-Brasil")
     @PostMapping("/{id}/sign")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> signVisit(@PathVariable Long id, Authentication authentication) {

@@ -6,6 +6,8 @@ import com.gotree.API.entities.Company;
 import com.gotree.API.entities.JobRole;
 import com.gotree.API.repositories.CompanyRepository;
 import com.gotree.API.repositories.JobRoleRepository;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -16,6 +18,7 @@ import java.util.List;
  * Controller responsável por gerenciar operações relacionadas aos cargos (JobRole).
  * Fornece endpoints para criação e consulta de cargos por empresa.
  */
+@Tag(name = "Cargos", description = "Gerenciamento de cargos")
 @RestController
 @RequestMapping("/job-roles")
 public class JobRoleController {
@@ -35,6 +38,7 @@ public class JobRoleController {
      * @return ResponseEntity contendo a lista de cargos da empresa
      * @throws java.util.NoSuchElementException se a empresa não for encontrada
      */
+    @Operation(summary = "Recupera todos os cargos", description = "Recupera todos os cargos de uma empresa específica, ordenados por nome e em ordem alfabética.")
     @GetMapping("/company/{companyId}")
     public ResponseEntity<List<JobRoleResponseDTO>> getByCompany(@PathVariable Long companyId) {
         // 1. Busca a empresa
@@ -65,6 +69,7 @@ public class JobRoleController {
      * @return ResponseEntity contendo o cargo criado
      * @throws java.util.NoSuchElementException                 se a empresa não for encontrada
      */
+    @Operation(summary = "Criação de cargo", description = "Cria um novo cargo para uma empresa específica.")
     @PostMapping
     public ResponseEntity<JobRoleResponseDTO> create(@RequestBody @Valid JobRoleDTO dto) { // <-- Mude o retorno
         Company company = companyRepository.findById(dto.getCompanyId()).orElseThrow();

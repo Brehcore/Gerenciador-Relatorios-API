@@ -2,6 +2,8 @@ package com.gotree.API.controllers;
 
 import com.gotree.API.entities.Physiotherapist;
 import com.gotree.API.repositories.PhysiotherapistRepository;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -15,11 +17,10 @@ import java.util.List;
  * Fornece endpoints para listar e cadastrar fisioterapeutas no sistema.
  * A rota base para todos os endpoints é "/physiotherapists".
  */
+@Tag(name = "Fisioterapeutas", description = "Gerenciamento de fisioterapeutas")
 @RestController
 @RequestMapping("/physiotherapists")
 public class PhysiotherapistController {
-    
-    
 
     private final PhysiotherapistRepository repository;
 
@@ -34,6 +35,7 @@ public class PhysiotherapistController {
      * @return ResponseEntity contendo a lista de todos os fisioterapeutas
      * @security Requer que o usuário esteja autenticado
      */
+    @Operation(summary = "Lista todos os fisioterapeutas", description = "Retorna a lista de todos os fisioterapeutas cadastrados no sistema.")
     @GetMapping
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<Physiotherapist>> getAllPhysiotherapists() {
@@ -49,6 +51,7 @@ public class PhysiotherapistController {
      * @throws jakarta.validation.ValidationException se os dados fornecidos forem inválidos
      * @security Requer permissão de ADMIN
      */
+    @Operation(summary = "Cria um novo fisioterapeuta", description = "Cria um novo registro de fisioterapeuta no sistema.")
     @PostMapping
     public ResponseEntity<Physiotherapist> createPhysiotherapist(@Valid @RequestBody Physiotherapist physio) {
         // Você pode adicionar validação aqui (ex: verificar se CREFITO já existe)

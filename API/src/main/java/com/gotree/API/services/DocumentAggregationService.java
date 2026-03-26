@@ -22,6 +22,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
@@ -33,6 +34,7 @@ public class DocumentAggregationService {
     private final TechnicalVisitRepository technicalVisitRepository;
     private final TechnicalVisitService technicalVisitService;
     private final AepService aepService;
+    private final EmailService emailService;
     private final AepReportRepository aepReportRepository;
     private final RiskChecklistService riskChecklistService;
     private final OccupationalRiskReportRepository riskReportRepository;
@@ -42,11 +44,12 @@ public class DocumentAggregationService {
 
     public DocumentAggregationService(TechnicalVisitRepository technicalVisitRepository,
                                       TechnicalVisitService technicalVisitService,
-                                      AepService aepService, AepReportRepository aepReportRepository,
+                                      AepService aepService, EmailService emailService, AepReportRepository aepReportRepository,
                                       RiskChecklistService riskChecklistService, OccupationalRiskReportRepository riskReportRepository) {
         this.technicalVisitRepository = technicalVisitRepository;
         this.technicalVisitService = technicalVisitService;
         this.aepService = aepService;
+        this.emailService = emailService;
         this.aepReportRepository = aepReportRepository;
         this.riskChecklistService = riskChecklistService;
         this.riskReportRepository = riskReportRepository;
@@ -458,5 +461,111 @@ public class DocumentAggregationService {
         if ("Avaliação Ergonômica Preliminar".equalsIgnoreCase(documentType)) return "aep";
         if ("Checklist de Riscos".equalsIgnoreCase(documentType)) return "risk";
         throw new IllegalArgumentException("Tipo de documento desconhecido para exportação: " + documentType);
+    }
+
+    /**
+     * Lógica centralizada para envio de qualquer documento por e-mail aos clientes vinculados.
+     */
+    @Transactional
+    public List<String> sendDocumentToClients(String type, Long id, User currentUser) throws IOException {
+
+        // 1. Usa o seu método existente que já sabe buscar os bytes e gerar um nome limpo!
+        // (Isso mata toda a repetição de código de sanitização e formatação de data)
+        FileDownloadDTO fileInfo = downloadDocument(type, id, currentUser);
+
+        Set<Client> clients = null;
+        String companyName = "";
+        String subjectType = "";
+
+        // 2. Lógica de Negócio: Buscar clientes e atualizar status
+        if ("risk".equalsIgnoreCase(type)) {
+            OccupationalRiskReport report = riskReportRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Checklist não encontrado."));
+            clients = report.getCompany().getClients();
+            companyName = report.getCompany().getName();
+            subjectType = "Checklist de Riscos";
+
+            report.setSentToClientAt(LocalDateTime.now());
+            riskReportRepository.save(report);
+
+        } else if ("visit".equalsIgnoreCase(type)) {
+            TechnicalVisit visit = technicalVisitRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Visita não encontrada."));
+            clients = visit.getClientCompany().getClients();
+            companyName = visit.getClientCompany().getName();
+            subjectType = "Relatório de Visita Técnica";
+
+            visit.setSentToClientAt(LocalDateTime.now());
+            technicalVisitRepository.save(visit);
+
+        } else if ("aep".equalsIgnoreCase(type)) {
+            AepReport aep = aepReportRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("AEP não encontrada."));
+            clients = aep.getCompany().getClients();
+            companyName = aep.getCompany().getName();
+            subjectType = "Avaliação Ergonômica (AEP)";
+
+            aep.setSentToClientAt(LocalDateTime.now());
+            aepReportRepository.save(aep);
+
+        } else {
+            throw new IllegalArgumentException("Tipo de documento inválido: " + type);
+        }
+
+        // 3. Validações de Negócio
+        if (clients == null || clients.isEmpty()) {
+            throw new IllegalStateException("A empresa deste relatório não possui clientes vinculados.");
+        }
+
+        List<String> validEmails = clients.stream()
+                .map(Client::getEmail)
+                .filter(email -> email != null && !email.isBlank())
+                .toList();
+
+        if (validEmails.isEmpty()) {
+            throw new IllegalStateException("Os clientes vinculados não possuem e-mail válido.");
+        }
+
+        // 4. Montagem e Envio do E-mail
+        String subject = "Documento Emitido: " + subjectType + " - " + companyName;
+        String body = buildEmailTemplate(subjectType, companyName);
+
+        for (String email : validEmails) {
+            try {
+                // fileInfo.getFilename() já vem sanitizado pelo seu método downloadDocument!
+                emailService.sendReportWithAttachment(email, subject, body, fileInfo.getData(), fileInfo.getFilename());
+            } catch (Exception e) {
+                System.err.println("Falha ao enviar e-mail para: " + email + ". Motivo: " + e.getMessage());
+            }
+        }
+
+        return validEmails;
+    }
+
+    // Extração do HTML gigante para um método privado limpo
+    private String buildEmailTemplate(String subjectType, String companyName) {
+        return String.format(
+                "<div style='font-family: \"Segoe UI\", Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;'>" +
+                        "  <div style='background-color: #166534; padding: 24px; text-align: center;'>" +
+                        "    <h2 style='color: #ffffff; margin: 0; font-weight: 600; font-size: 24px;'>Go-Tree Consultoria</h2>" +
+                        "  </div>" +
+                        "  <div style='padding: 32px 24px; color: #333333; line-height: 1.6;'>" +
+                        "    <p style='font-size: 16px; margin-top: 0;'>Olá,</p>" +
+                        "    <p style='font-size: 16px;'>Informamos que um novo documento técnico foi emitido e está disponível para sua análise.</p>" +
+                        "    <div style='background-color: #f8f9fa; border-left: 4px solid #166534; padding: 16px; margin: 24px 0; border-radius: 4px;'>" +
+                        "      <p style='margin: 4px 0;'><strong>📄 Documento:</strong> %s</p>" +
+                        "      <p style='margin: 4px 0;'><strong>🏢 Empresa:</strong> %s</p>" +
+                        "    </div>" +
+                        "    <p style='font-size: 16px;'>O arquivo completo encontra-se em <strong>anexo (PDF)</strong> neste e-mail.</p>" +
+                        "    <p style='margin-top: 32px;'>Estamos à disposição para quaisquer dúvidas.</p>" +
+                        "    <p style='margin-bottom: 0;'>Atenciosamente,<br><strong>Equipe Go-Tree</strong></p>" +
+                        "  </div>" +
+                        "  <div style='background-color: #f4f4f4; padding: 16px; text-align: center; font-size: 12px; color: #666666; border-top: 1px solid #eeeeee;'>" +
+                        "    <p style='margin: 4px 0;'>© Go-Tree Consultoria.</p>" +
+                        "    <p style='margin: 4px 0;'>Este é um envio automático do nosso sistema.</p>" +
+                        "  </div>" +
+                        "</div>",
+                subjectType, companyName
+        );
     }
 }
