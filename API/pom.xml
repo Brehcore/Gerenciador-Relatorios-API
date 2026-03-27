@@ -8,7 +8,7 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>3.5.3</version>
+		<version>3.5.12</version>
 		<relativePath/>
 	</parent>
 
@@ -20,11 +20,27 @@
 
 	<properties>
 		<java.version>21</java.version>
-		<jjwt.version>0.11.5</jjwt.version>
+		<jjwt.version>0.12.6</jjwt.version>
 		<mapstruct.version>1.5.5.Final</mapstruct.version>
 		<lombok.version>1.18.38</lombok.version>
 		<itext.version>7.2.5</itext.version>
 	</properties>
+
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>com.fasterxml.jackson.core</groupId>
+				<artifactId>jackson-core</artifactId>
+				<version>2.21.2</version>
+			</dependency>
+
+			<dependency>
+				<groupId>org.apache.commons</groupId>
+				<artifactId>commons-lang3</artifactId>
+				<version>3.18.0</version>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
 
 	<dependencies>
 		<!-- SPRING -->
@@ -52,7 +68,7 @@
 		<dependency>
 			<groupId>org.apache.poi</groupId>
 			<artifactId>poi-ooxml</artifactId>
-			<version>5.2.5</version>
+			<version>5.4.1</version>
 		</dependency>
 
 		<!-- Validação de CPF -->
@@ -80,6 +96,7 @@
 			<artifactId>jjwt-impl</artifactId>
 			<version>${jjwt.version}</version>
 		</dependency>
+
 		<dependency>
 			<groupId>io.jsonwebtoken</groupId>
 			<artifactId>jjwt-jackson</artifactId>
@@ -116,7 +133,7 @@
 		<dependency>
 			<groupId>org.xhtmlrenderer</groupId>
 			<artifactId>flying-saucer-pdf</artifactId>
-			<version>9.1.22</version>
+			<version>9.4.0</version>
 		</dependency>
 
 		<dependency>
@@ -138,7 +155,7 @@
 		<dependency>
 			<groupId>org.springdoc</groupId>
 			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-			<version>2.8.4</version>
+			<version>2.8.8</version>
 		</dependency>
 
 		<!-- TESTES -->

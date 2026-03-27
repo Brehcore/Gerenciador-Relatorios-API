@@ -98,7 +98,7 @@ public class User implements Serializable, UserDetails {
         return true;
     }
 
-    // Método com lógica customizada (não é um getter simples, por isso é mantido)
+    // Metodo com lógica customizada (não é um getter simples, por isso é mantido)
     public int getAge() {
         return Period.between(this.birthDate, LocalDate.now()).getYears();
     }

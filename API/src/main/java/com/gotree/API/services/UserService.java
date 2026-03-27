@@ -184,8 +184,6 @@ public class UserService implements UserDetailsService {
         try (java.io.InputStream is = dto.getFile().getInputStream()) {
             java.security.KeyStore ks = java.security.KeyStore.getInstance("PKCS12");
 
-            // Usamos a variável validada em vez de dto.getPassword()
-            //noinspection JvmTaintAnalysis
             ks.load(is, rawPassword.toCharArray());
 
             // Pega a data do primeiro certificado da cadeia
