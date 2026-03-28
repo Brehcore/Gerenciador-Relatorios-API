@@ -15,7 +15,6 @@ import com.gotree.API.repositories.CompanyRepository;
 import com.gotree.API.repositories.SectorRepository;
 import com.gotree.API.repositories.TechnicalVisitRepository;
 import com.gotree.API.repositories.UnitRepository;
-import com.gotree.API.utils.XmlSanitizer; // IMPORTANTE: Importar o sanitizador
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

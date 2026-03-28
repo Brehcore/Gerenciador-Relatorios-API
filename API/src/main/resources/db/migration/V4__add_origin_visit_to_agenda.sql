@@ -8,7 +8,7 @@ INSERT INTO tb_agenda_event (title, event_date, shift, user_id, company_id, even
 SELECT
     CONCAT('Próxima Visita: ', c.name),
     tv.next_visit_date,
-    tv.next_visit_shift,
+    COALESCE(tv.next_visit_shift, 'MANHA'), -- A MÁGICA ACONTECE AQUI!
     tv.technician_id,
     tv.client_company_id,
     'VISITA_TECNICA',
