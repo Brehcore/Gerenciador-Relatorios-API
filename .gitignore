@@ -4,7 +4,6 @@
 
 # Ignora arquivos de properties com senhas locais ou de docker
 API/src/main/resources/application-local.properties
-API/src/main/resources/application-prod.properties
 API/src/main/resources/application.properties
 
 # === Build Artifacts ===
