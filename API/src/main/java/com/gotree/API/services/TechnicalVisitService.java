@@ -95,10 +95,10 @@ public class TechnicalVisitService {
         // 2. Mapear DTO para a entidade principal
         TechnicalVisit visit = new TechnicalVisit();
 
-        // --- SANITIZAÇÃO DE DADOS DA VISITA ---
-        visit.setTitle(XmlSanitizer.sanitize(dto.getTitle()));
-        visit.setLocation(XmlSanitizer.sanitize(dto.getLocation()));
-        visit.setSummary(XmlSanitizer.sanitize(dto.getSummary()));
+        // --- ATRIBUIÇÃO DIRETA DOS DADOS DA VISITA ---
+        visit.setTitle(dto.getTitle());
+        visit.setLocation(dto.getLocation());
+        visit.setSummary(dto.getSummary());
         // --------------------------------------
 
         visit.setClientCompany(clientCompany);
@@ -152,7 +152,7 @@ public class TechnicalVisitService {
             futureEvent.setTitle("Próxima Visita: " + clientCompany.getName());
             futureEvent.setEventType(com.gotree.API.enums.AgendaEventType.VISITA_TECNICA);
             futureEvent.setStatus(com.gotree.API.enums.AgendaStatus.A_CONFIRMAR);
-            futureEvent.setOriginTechnicalVisitId(savedVisit.getId()); // Vínculo Exato
+            futureEvent.setTechnicalVisit(savedVisit);
 
             agendaEventRepository.save(futureEvent);
         }
@@ -160,10 +160,6 @@ public class TechnicalVisitService {
 
         // 5. Gerar o PDF
         Map<String, Object> templateData = new HashMap<>();
-
-        if (savedVisit.getTitle() != null) savedVisit.setTitle(XmlSanitizer.sanitize(savedVisit.getTitle()));
-        if (savedVisit.getLocation() != null) savedVisit.setLocation(XmlSanitizer.sanitize(savedVisit.getLocation()));
-        if (savedVisit.getSummary() != null) savedVisit.setSummary(XmlSanitizer.sanitize(savedVisit.getSummary()));
 
         templateData.put("visit", savedVisit);
 
@@ -257,12 +253,12 @@ public class TechnicalVisitService {
             }
         }
 
-        // --- SANITIZAÇÃO DOS CAMPOS DOS ACHADOS ---
-        finding.setDescription(XmlSanitizer.sanitize(dto.getDescription()));
-        finding.setConsequences(XmlSanitizer.sanitize(dto.getConsequences()));
-        finding.setLegalGuidance(XmlSanitizer.sanitize(dto.getLegalGuidance()));
-        finding.setResponsible(XmlSanitizer.sanitize(dto.getResponsible()));
-        finding.setPenalties(XmlSanitizer.sanitize(dto.getPenalties()));
+        // --- PREENCHIMENTO DIRETO DOS CAMPOS DOS ACHADOS ---
+        finding.setDescription(dto.getDescription());
+        finding.setConsequences(dto.getConsequences());
+        finding.setLegalGuidance(dto.getLegalGuidance());
+        finding.setResponsible(dto.getResponsible());
+        finding.setPenalties(dto.getPenalties());
         // ------------------------------------------
 
         finding.setDeadline(dto.getDeadline());

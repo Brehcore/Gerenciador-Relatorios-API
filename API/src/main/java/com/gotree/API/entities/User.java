@@ -11,7 +11,6 @@ import org.springframework.security.core.userdetails.UserDetails;
 import java.io.Serial;
 import java.io.Serializable;
 import java.time.LocalDate;
-import java.time.Period;
 import java.util.Collection;
 import java.util.List;
 
@@ -78,28 +77,4 @@ public class User implements Serializable, UserDetails {
         return email;
     }
 
-    @Override
-    public boolean isAccountNonLocked() {
-        return true;
-    }
-
-    @Override
-    public boolean isCredentialsNonExpired() {
-        return true;
-    }
-
-    @Override
-    public boolean isAccountNonExpired() {
-        return true;
-    }
-
-    @Override
-    public boolean isEnabled() {
-        return true;
-    }
-
-    // Metodo com lógica customizada (não é um getter simples, por isso é mantido)
-    public int getAge() {
-        return Period.between(this.birthDate, LocalDate.now()).getYears();
-    }
 }

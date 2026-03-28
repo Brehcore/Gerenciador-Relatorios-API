@@ -13,6 +13,10 @@ public class RescheduleVisitDTO {
     @Schema(description = "Nova data da visita", example = "2024-04-10")
     private LocalDate newDate;
 
+    @NotNull(message = "O turno (MANHA/TARDE) é obrigatório no reagendamento.")
+    @Schema(description = "Novo turno da visita", example = "TARDE")
+    private String shift;
+
     @Schema(description = "Motivo do reagendamento", example = "Cliente pediu adiamento")
     private String reason;
 }

@@ -75,8 +75,7 @@ public class RiskChecklistService {
         report.setInspectionDate(dto.getInspectionDate());
 
         if (dto.getTitle() != null && !dto.getTitle().isBlank()) {
-            // --- SANITIZAÇÃO ---
-            report.setTitle(XmlSanitizer.sanitize(dto.getTitle()));
+            report.setTitle(dto.getTitle());
         } else {
             // Título padrão caso o front não mande nada
             report.setTitle("Checklist de Riscos - " + java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy").format(dto.getInspectionDate()));

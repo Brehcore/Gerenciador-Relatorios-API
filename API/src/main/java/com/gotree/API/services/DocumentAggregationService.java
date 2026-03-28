@@ -412,7 +412,7 @@ public class DocumentAggregationService {
         String zipFilename = "backup_documentos_" + LocalDate.now() + ".zip";
         response.setHeader("Content-Disposition", "attachment; filename=\"" + zipFilename + "\"");
 
-        // 2. Busca todos os documentos globais (usando seu método existente)
+        // 2. Busca todos os documentos globais (usando seu metodo existente)
         List<DocumentSummaryDTO> allDocs = fetchRawDocumentsGlobal();
 
         // 3. Aplica o filtro de data

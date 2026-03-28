@@ -122,6 +122,28 @@ public class UserService implements UserDetailsService {
         userRepository.save(user);
     }
 
+    /**
+     * Completa o fluxo de redefinição de senha exigido pelo sistema.
+     * Este metodo só permite a alteração se a flag passwordResetRequired estiver ativada.
+     */
+    @Transactional
+    public void completePasswordReset(String email, String newPassword) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado."));
+
+        // Validação de segurança: Impede que a rota seja usada como "bypass" de senha
+        // se o administrador não tiver forçado o reset previamente.
+        if (user.getPasswordResetRequired() == null || !user.getPasswordResetRequired()) {
+            throw new IllegalStateException("Nenhuma redefinição de senha pendente para este usuário.");
+        }
+
+        // Codifica a nova senha, aplica no usuário e desativa a flag de reset
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setPasswordResetRequired(false); // Libera o usuário para usar o sistema
+
+        userRepository.save(user);
+    }
+
     public void validateUser(UserRequestDTO userDTO) {
         userRepository.findByEmail(userDTO.getEmail()).ifPresent(u -> {
             throw new DataIntegrityViolationException("Email já cadastrado.");

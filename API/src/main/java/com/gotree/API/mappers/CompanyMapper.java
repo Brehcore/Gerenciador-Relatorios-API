@@ -60,7 +60,7 @@ public interface CompanyMapper {
     }
 
 
-    // 2. Criamos um método que será executado APÓS o mapeamento de toEntity
+    // 2. Criamos um metodo que será executado APÓS o mapeamento de toEntity
     @AfterMapping
     default void mapUnitsAndSectors(@MappingTarget Company company, CompanyRequestDTO dto) {
         // Lógica para Unidades

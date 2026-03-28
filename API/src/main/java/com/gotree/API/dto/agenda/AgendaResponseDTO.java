@@ -48,4 +48,7 @@ public class AgendaResponseDTO {
 
     @Schema(description = "Nome do responsável")
     private String responsibleName;
+
+    @Schema(description = "ID do responsável")
+    private Long responsibleId;
 }

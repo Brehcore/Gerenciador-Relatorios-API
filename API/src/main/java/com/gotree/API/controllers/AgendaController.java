@@ -141,7 +141,7 @@ public class AgendaController {
      * @param authentication Dados do usuário autenticado
      * @return Dados do evento atualizado
      */
-    @Operation(summary = "Atualiza um evento", description = "Atualiza os dados de um evento existente na agenda do usuário autenticado.")
+    @Operation(summary = "Atualiza um evento", description = "Atualiza os dados de um evento manual existente na agenda do usuário autenticado.")
     @PutMapping("/eventos/{id}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<AgendaResponseDTO> updateEvent(

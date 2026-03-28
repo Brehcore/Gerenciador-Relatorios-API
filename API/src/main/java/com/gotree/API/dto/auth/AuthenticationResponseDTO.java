@@ -19,7 +19,10 @@ public class AuthenticationResponseDTO {
     @Schema(description = "Tipo do token", example = "Bearer")
     private String type = "Bearer";
 
-    public AuthenticationResponseDTO(String token) {
+    private Long userId;
+
+    public AuthenticationResponseDTO(String token, Long userId) {
         this.token = token;
+        this.userId = userId;
     }
 }

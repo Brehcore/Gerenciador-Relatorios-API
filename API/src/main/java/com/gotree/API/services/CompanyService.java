@@ -386,7 +386,7 @@ public class CompanyService {
         // 1. Limpa a lista antiga (Isso garante que se o usuário enviou vazio, a empresa ficará sem setores)
         company.getSectors().clear();
 
-        // 2. CORREÇÃO: Se a lista for nula ou vazia, apenas encerra o método (sem erro)
+        // 2. CORREÇÃO: Se a lista for nula ou vazia, apenas encerra o metodo (sem erro)
         if (sectorNames == null || sectorNames.isEmpty()) {
             return;
         }

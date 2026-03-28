@@ -123,6 +123,6 @@ public class ClientPortalController {
         // O ClientUserDetails implementa UserDetails, então o JwtService deve aceitá-lo
         var jwtToken = jwtService.generateToken(new ClientUserDetails(client));
 
-        return ResponseEntity.ok(new AuthenticationResponseDTO(jwtToken));
+        return ResponseEntity.ok(new AuthenticationResponseDTO(jwtToken, client.getId()));
     }
 }

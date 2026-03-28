@@ -4,6 +4,7 @@ import com.gotree.API.config.security.CustomUserDetails;
 import com.gotree.API.dto.user.CertificateUploadDTO;
 import com.gotree.API.dto.user.ChangeEmailRequestDTO;
 import com.gotree.API.dto.user.ChangePasswordRequestDTO;
+import com.gotree.API.dto.user.CompletePasswordResetDTO;
 import com.gotree.API.dto.user.UserRequestDTO;
 import com.gotree.API.dto.user.UserResponseDTO;
 import com.gotree.API.dto.user.UserUpdateDTO;
@@ -12,6 +13,8 @@ import com.gotree.API.exceptions.ResourceNotFoundException;
 import com.gotree.API.mappers.UserMapper;
 import com.gotree.API.services.UserService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
@@ -140,6 +143,33 @@ public class UserController {
 		return ResponseEntity
 				.ok(Map.of("message", "Senha redefinida com sucesso e campo passwordResetRequired Ativado"));
 
+	}
+
+	/**
+	 * Permite que o usuário defina uma nova senha após o administrador resetar sua conta.
+	 * Só funciona se a flag passwordResetRequired estiver ativada.
+	 *
+	 * @param authentication Informações de autenticação do usuário
+	 * @param dto            Dados contendo apenas a nova senha
+	 * @return Mensagem de confirmação da operação
+	 */
+	@Operation(
+			summary = "Completar redefinição de senha forçada",
+			description = "Define uma nova senha para o usuário logado caso o administrador tenha forçado um reset (passwordResetRequired = true)."
+	)
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200", description = "Senha atualizada com sucesso. Flag de reset desativada."),
+			@ApiResponse(responseCode = "400", description = "Dados inválidos fornecidos ou usuário não possui reset pendente.")
+	})
+	@PutMapping("/me/complete-password-reset")
+	@PreAuthorize("isAuthenticated()")
+	public ResponseEntity<?> completePasswordReset(Authentication authentication,
+	                                               @Valid @RequestBody CompletePasswordResetDTO dto) {
+		String userEmail = authentication.getName();
+
+		userService.completePasswordReset(userEmail, dto.getNewPassword());
+
+		return ResponseEntity.ok(Map.of("message", "Senha atualizada com sucesso. Bem-vindo(a) de volta!"));
 	}
 
 	/**
