@@ -24,7 +24,6 @@ public class CreateEventDTO {
     private String eventType;
 
     @Schema(description = "Turno do evento", example = "MANHA", allowableValues = {"MANHA", "TARDE"})
-    @NotNull(message = "O turno é obrigatório.")
     private String shift;
 
     @Schema(description = "Nome do cliente associado ao evento")

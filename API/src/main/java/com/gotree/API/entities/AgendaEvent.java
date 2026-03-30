@@ -60,7 +60,7 @@ public class AgendaEvent {
     @JoinColumn(name = "user_id")
     private User user;
 
-    @OneToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "technical_visit_id")
     private TechnicalVisit technicalVisit;
 
@@ -68,6 +68,14 @@ public class AgendaEvent {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "company_id")
     private Company company;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "unit_id")
+    private Unit unit;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "sector_id")
+    private Sector sector;
 
     /**
      * Data original da visita técnica.
@@ -88,6 +96,13 @@ public class AgendaEvent {
     @Column(nullable = false)
     private AgendaStatus status = AgendaStatus.A_CONFIRMAR; // Padrão
 
+    // null = Futuro/Pendente | true = Sim, realizada | false = Não realizada
+    @Column(name = "is_realized")
+    private Boolean isRealized;
+
+    @Column(name = "non_completion_reason", columnDefinition = "TEXT")
+    private String nonCompletionReason;
+
     // Para onde esse evento foi jogado?
     // Só será preenchido se status == REAGENDADO
     @Column(name = "rescheduled_to_date")
@@ -95,5 +110,6 @@ public class AgendaEvent {
 
     // Serão usados quando o técnico marcar "REUNIAO" ou "OUTROS"
     private String clientName;
+
     private String manualObservation;
 }

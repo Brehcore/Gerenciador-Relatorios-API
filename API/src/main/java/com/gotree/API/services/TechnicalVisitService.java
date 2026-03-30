@@ -148,6 +148,8 @@ public class TechnicalVisitService {
             futureEvent.setShift(savedVisit.getNextVisitShift());
             futureEvent.setUser(technician);
             futureEvent.setCompany(clientCompany);
+            futureEvent.setUnit(unit);
+            futureEvent.setSector(sector);
             futureEvent.setTitle("Próxima Visita: " + clientCompany.getName());
             futureEvent.setEventType(com.gotree.API.enums.AgendaEventType.VISITA_TECNICA);
             futureEvent.setStatus(com.gotree.API.enums.AgendaStatus.A_CONFIRMAR);

@@ -59,4 +59,7 @@ public interface AgendaEventRepository extends JpaRepository<AgendaEvent, Long> 
 
     // Para buscar eventos de TODOS num dia específico (usado para gerar os warnings)
     List<AgendaEvent> findAllByEventDate(LocalDate date);
+
+    // Busca eventos do usuário a partir de uma data específica
+    List<AgendaEvent> findByUserAndEventDateGreaterThanEqualOrderByEventDateAsc(User user, LocalDate date);
 }

@@ -3,6 +3,7 @@ package com.gotree.API.services;
 import com.gotree.API.dto.agenda.AgendaResponseDTO;
 import com.gotree.API.dto.agenda.CreateEventDTO;
 import com.gotree.API.dto.agenda.MonthlyAvailabilityDTO;
+import com.gotree.API.dto.agenda.ReportNotRealizedDTO;
 import com.gotree.API.dto.agenda.RescheduleVisitDTO;
 import com.gotree.API.entities.AgendaEvent;
 import com.gotree.API.entities.Company;
@@ -103,19 +104,23 @@ public class AgendaService {
      */
     public String checkAvailability(User technician, LocalDate date, String shiftStr) {
         try {
-            Shift shift = Shift.valueOf(shiftStr.toUpperCase());
-
-            // Nota: Idealmente filtrar eventos CANCELADOS/REAGENDADOS nestas contagens também
-            // Mas mantendo a lógica simples original:
+            // 1. A verificação do dia inteiro sempre roda (máximo 2 visitas por dia)
             long eventsInDay = agendaEventRepository.countByUserAndEventDate(technician, date);
             if (eventsInDay >= 2) {
-                return "Você já possui visitas agendadas para os turnos manhã e tarde nesta data. Escolha outra data.";
+                return "Você já possui 2 eventos agendados nesta data. Escolha outra data.";
             }
-            long eventsInShift = agendaEventRepository.countByUserAndEventDateAndShift(technician, date, shift);
-            if (eventsInShift > 0) {
-                return "Você já possui uma visita agendada neste turno (" + shift + "). Escolha outro turno.";
+
+            // 2. A verificação por turno SÓ roda se o turno foi informado
+            if (shiftStr != null && !shiftStr.isBlank()) {
+                Shift shift = Shift.valueOf(shiftStr.toUpperCase());
+                long eventsInShift = agendaEventRepository.countByUserAndEventDateAndShift(technician, date, shift);
+                if (eventsInShift > 0) {
+                    return "Você já possui uma visita agendada neste turno (" + shift + "). Escolha outro turno.";
+                }
             }
-            return null;
+
+            return null; // Tudo limpo, pode agendar!
+
         } catch (IllegalArgumentException e) {
             return "Turno inválido.";
         }
@@ -126,6 +131,7 @@ public class AgendaService {
      */
     @Transactional
     public AgendaEvent createEvent(CreateEventDTO dto, User user) {
+        // Agora o checkAvailability sabe lidar com turno nulo
         String conflict = checkAvailability(user, dto.getEventDate(), dto.getShift());
         if (conflict != null) {
             throw new IllegalStateException(conflict);
@@ -136,16 +142,18 @@ public class AgendaService {
         event.setDescription(dto.getDescription());
         event.setEventDate(dto.getEventDate());
         event.setUser(user);
-
-        event.setStatus(AgendaStatus.CONFIRMADO); // Ajuste conforme sua necessidade
-
+        event.setStatus(AgendaStatus.CONFIRMADO);
         event.setClientName(dto.getClientName());
         event.setManualObservation(dto.getManualObservation());
 
         try {
-            event.setShift(Shift.valueOf(dto.getShift().toUpperCase()));
-            AgendaEventType type = AgendaEventType.valueOf(dto.getEventType().toUpperCase());
+            // Tratamento seguro para o turno que agora pode vir nulo
+            if (dto.getShift() != null && !dto.getShift().isBlank()) {
+                event.setShift(Shift.valueOf(dto.getShift().toUpperCase()));
+            }
 
+            // O tipo de evento continua obrigatório
+            AgendaEventType type = AgendaEventType.valueOf(dto.getEventType().toUpperCase());
             event.setEventType(type);
 
         } catch (IllegalArgumentException e) {
@@ -182,41 +190,82 @@ public class AgendaService {
      * Gera um evento de histórico na data antiga e move a visita para a nova data e turno.
      */
     @Transactional
-    public void rescheduleVisit(Long visitId, RescheduleVisitDTO dto, User currentUser) {
-        // 1. Busca a visita original
-        TechnicalVisit visit = technicalVisitRepository.findById(visitId)
-                .orElseThrow(() -> new RuntimeException("Visita não encontrada"));
+    public void rescheduleVisit(Long eventId, RescheduleVisitDTO dto, User currentUser) {
+        // 1. Busca o evento existente (não cria um novo!)
+        AgendaEvent event = agendaEventRepository.findById(eventId)
+                .orElseThrow(() -> new RuntimeException("Evento da agenda não encontrado."));
 
-        LocalDate dataAntiga = visit.getNextVisitDate();
-        LocalDate dataNova = dto.getNewDate();
+        // 2. Garante que só o dono da agenda pode alterar
+        if (!event.getUser().getId().equals(currentUser.getId())) {
+            throw new SecurityException("Você não tem permissão para reagendar a agenda de outro técnico.");
+        }
 
-        // Guarda o turno antigo e converte o novo turno que veio do Frontend
-        Shift turnoAntigo = visit.getNextVisitShift();
-        Shift turnoNovo = Shift.valueOf(dto.getShift().toUpperCase());
+        // 3. Salva a data original (se já houver uma data original gravada, ele não mexe, para manter o histórico da PRIMEIRA data marcada)
+        if (event.getOriginalVisitDate() == null) {
+            event.setOriginalVisitDate(event.getEventDate());
+        }
 
-        // 2. Cria o "Fantasma" do passado (Rastro para o relatório)
-        AgendaEvent historicalEvent = new AgendaEvent();
-        historicalEvent.setUser(currentUser);
-        historicalEvent.setEventType(com.gotree.API.enums.AgendaEventType.VISITA_TECNICA);
-        historicalEvent.setStatus(com.gotree.API.enums.AgendaStatus.REAGENDADO);
+        // 4. Aplica a nova data e o novo turno
+        event.setEventDate(dto.getNewDate());
 
-        // Título explicativo e vínculo
-        historicalEvent.setTitle("Visita: " + (visit.getClientCompany() != null ? visit.getClientCompany().getName() : "N/A"));
+        if (dto.getShift() != null) {
+            event.setShift(com.gotree.API.enums.Shift.valueOf(dto.getShift()));
+        } else {
+            event.setShift(null); // Permite ficar "A Definir"
+        }
 
-        // Marca para quando foi reagendado (Auditoria)
-        historicalEvent.setRescheduledToDate(dataNova);
-        historicalEvent.setEventDate(dataAntiga);
-        historicalEvent.setShift(turnoAntigo); // O histórico guarda o turno que era antes
-        historicalEvent.setTechnicalVisit(visit);
+        // 5. Atualiza o status para REAGENDADO
+        event.setStatus(AgendaStatus.REAGENDADO);
 
-        agendaEventRepository.save(historicalEvent);
+        // 6. Registra o motivo do reagendamento na observação (se houver)
+        if (dto.getReason() != null && !dto.getReason().trim().isEmpty()) {
+            String obs = event.getManualObservation() != null ? event.getManualObservation() + " | " : "";
+            event.setManualObservation(obs + "Motivo Reagendamento: " + dto.getReason());
+        }
 
-        // 3. Atualiza a Visita Técnica real para o futuro (Nova Data + Novo Turno)
-        visit.setNextVisitDate(dataNova);
-        visit.setNextVisitShift(turnoNovo); // A CORREÇÃO ESTÁ AQUI!
+        // 7. Salva a MESMA entidade (Isso gera um UPDATE no banco, não um INSERT)
+        agendaEventRepository.save(event);
+    }
 
-        // Salva a visita com as novas definições
-        technicalVisitRepository.save(visit);
+    /**
+     * Registra que uma visita não pôde ser realizada e salva o motivo.
+     */
+    @Transactional
+    public void reportVisitNotRealized(Long eventId, ReportNotRealizedDTO dto, User currentUser) {
+        AgendaEvent event = agendaEventRepository.findById(eventId)
+                .orElseThrow(() -> new RuntimeException("Evento da agenda não encontrado."));
+
+        // Garante que só o próprio técnico pode dar a visita como não realizada
+        if (!event.getUser().getId().equals(currentUser.getId())) {
+            throw new SecurityException("Você não tem permissão para alterar o status do agendamento de outro técnico.");
+        }
+
+        // Atualiza a execução sem mexer no status original de agendamento
+        event.setIsRealized(false);
+        event.setNonCompletionReason(dto.getReason());
+
+        agendaEventRepository.save(event);
+    }
+
+    /**
+     * Marca um evento específico da agenda como REALIZADO.
+     * Operação independente da geração do relatório técnico.
+     */
+    @Transactional
+    public void markEventAsRealized(Long eventId, User currentUser) {
+        AgendaEvent event = agendaEventRepository.findById(eventId)
+                .orElseThrow(() -> new RuntimeException("Evento da agenda não encontrado."));
+
+        // Garante que só o próprio técnico (dono do evento) pode dar a baixa
+        if (!event.getUser().getId().equals(currentUser.getId())) {
+            throw new SecurityException("Você não tem permissão para alterar a execução da agenda de outro técnico.");
+        }
+
+        // Marca como realizada e, por precaução, limpa qualquer motivo de "não realização" que pudesse estar salvo por engano
+        event.setIsRealized(true);
+        event.setNonCompletionReason(null);
+
+        agendaEventRepository.save(event);
     }
 
     /**
@@ -240,6 +289,19 @@ public class AgendaService {
     public List<AgendaResponseDTO> findAllEventsForUser(User user) {
         // Simples e direto! Busca apenas na tabela de eventos e converte para DTO
         return agendaEventRepository.findByUserOrderByEventDateAsc(user)
+                .stream()
+                .map(this::mapToDto)
+                .toList();
+    }
+
+    /**
+     * Busca os próximos eventos com base na data de hoje
+     */
+    @Transactional(readOnly = true)
+    public List<AgendaResponseDTO> findUpcomingEventsForUser(User user) {
+        LocalDate today = LocalDate.now();
+        // Traz apenas as visitas de hoje para frente
+        return agendaEventRepository.findByUserAndEventDateGreaterThanEqualOrderByEventDateAsc(user, today)
                 .stream()
                 .map(this::mapToDto)
                 .toList();
@@ -341,8 +403,20 @@ public class AgendaService {
         dto.setReferenceId(event.getId());
         dto.setTitle(event.getTitle());
         dto.setDate(event.getEventDate());
+        dto.setOriginalVisitDate(event.getOriginalVisitDate());
         dto.setType(event.getEventType().name());
         dto.setDescription(event.getDescription());
+        dto.setIsRealized(event.getIsRealized());
+        dto.setNonCompletionReason(event.getNonCompletionReason());
+        // --- MAPEAMENTO DE UNIDADE E SETOR DA AGENDA ---
+        if (event.getUnit() != null) {
+            dto.setUnitId(event.getUnit().getId());
+            dto.setUnitName(event.getUnit().getName());
+        }
+        if (event.getSector() != null) {
+            dto.setSectorId(event.getSector().getId());
+            dto.setSectorName(event.getSector().getName());
+        }
         if (event.getShift() != null) dto.setShift(event.getShift().name());
         if (event.getUser() != null) {
             dto.setResponsibleName(event.getUser().getName());
@@ -426,32 +500,19 @@ public class AgendaService {
     }
 
     @Transactional
-    public void confirmVisit(Long visitId, User currentUser) {
-        // Busca a visita técnica
-        TechnicalVisit visit = technicalVisitRepository.findById(visitId)
-                .orElseThrow(() -> new RuntimeException("Visita Técnica não encontrada."));
+    public void confirmVisit(Long eventId, User currentUser) {
+        // Agora buscamos pelo ID da Agenda (que é o que o Front-end envia)
+        AgendaEvent event = agendaEventRepository.findById(eventId)
+                .orElseThrow(() -> new RuntimeException("Evento da agenda não encontrado."));
 
-        if (!visit.getTechnician().getId().equals(currentUser.getId())) {
-            throw new SecurityException("Sem permissão para confirmar a visita de outro técnico.");
+        // Garante que só o técnico dono do agendamento pode confirmar
+        if (!event.getUser().getId().equals(currentUser.getId())) {
+            throw new SecurityException("Sem permissão para confirmar a agenda de outro técnico.");
         }
 
-        // Opção A: Apenas cria um AgendaEvent "Confirmado" vinculado (Recomendado para manter padrão)
-        AgendaEvent confirmation = agendaEventRepository.findByTechnicalVisit_Id(visitId)
-                .orElse(new AgendaEvent());
+        // Simplesmente atualiza o status para CONFIRMADO
+        event.setStatus(AgendaStatus.CONFIRMADO);
 
-        if (confirmation.getId() == null) {
-            // Se ainda não existe evento manual vinculado, cria um novo
-            confirmation.setTechnicalVisit(visit);
-            confirmation.setUser(visit.getTechnician());
-            confirmation.setEventDate(visit.getNextVisitDate());
-            confirmation.setShift(visit.getNextVisitShift());
-            confirmation.setTitle(visit.getTitle());
-            confirmation.setEventType(AgendaEventType.VISITA_TECNICA);
-        }
-
-        // Atualiza o status para CONFIRMADO
-        confirmation.setStatus(AgendaStatus.CONFIRMADO);
-
-        agendaEventRepository.save(confirmation);
+        agendaEventRepository.save(event);
     }
 }

@@ -25,16 +25,28 @@ public class AgendaResponseDTO {
     @Schema(description = "Status do evento", example = "CONFIRMADO")
     private String status;
 
+    @Schema(description = "Indica se a visita foi realizada (true), não realizada (false) ou pendente (null)")
+    private Boolean isRealized;
+
+    @Schema(description = "Motivo caso a visita não tenha sido realizada")
+    private String nonCompletionReason;
+
     @Schema(description = "Descrição formatada do status", example = "Reagendado p/ 15/02")
     private String statusDescricao;
 
     @Schema(description = "ID de referência do evento ou visita técnica")
     private Long referenceId;
 
-    @Schema(description = "Nome da unidade")
+    @Schema(description = "ID da Unidade associada")
+    private Long unitId;
+
+    @Schema(description = "Nome da Unidade associada")
     private String unitName;
 
-    @Schema(description = "Nome do setor")
+    @Schema(description = "ID do Setor associado")
+    private Long sectorId;
+
+    @Schema(description = "Nome do Setor associado")
     private String sectorName;
 
     @Schema(description = "Nome do cliente")

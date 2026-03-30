@@ -4,6 +4,7 @@ import com.gotree.API.config.security.CustomUserDetails;
 import com.gotree.API.dto.agenda.AgendaResponseDTO;
 import com.gotree.API.dto.agenda.CreateEventDTO;
 import com.gotree.API.dto.agenda.MonthlyAvailabilityDTO;
+import com.gotree.API.dto.agenda.ReportNotRealizedDTO;
 import com.gotree.API.dto.agenda.RescheduleVisitDTO;
 import com.gotree.API.entities.AgendaEvent;
 import com.gotree.API.entities.User;
@@ -133,6 +134,15 @@ public class AgendaController {
         return ResponseEntity.ok(allEvents);
     }
 
+    @Operation(summary = "Lista os próximos eventos", description = "Retorna os eventos do usuário a partir da data atual.")
+    @GetMapping("/eventos/proximos")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<List<AgendaResponseDTO>> getUpcomingEvents(Authentication authentication) {
+        User currentUser = ((CustomUserDetails) authentication.getPrincipal()).user();
+        List<AgendaResponseDTO> upcomingEvents = agendaService.findUpcomingEventsForUser(currentUser);
+        return ResponseEntity.ok(upcomingEvents);
+    }
+
     /**
      * Atualiza um evento existente na agenda.
      *
@@ -157,24 +167,20 @@ public class AgendaController {
     /**
      * Reagenda uma visita técnica para nova data/horário.
      *
-     * @param visitId        ID da visita a ser reagendada
      * @param dto            Dados do novo agendamento
      * @param authentication Dados do usuário autenticado
      * @return Dados da visita reagendada
      */
-    @Operation(summary = "Reagenda uma visita", description = "Altera a data e/ou o turno de uma visita técnica agendada.")
-    @PutMapping("/visitas/{visitId}/reagendar")
+    @Operation(summary = "Reagenda uma visita", description = "Altera a data e/ou o turno de um evento na agenda.")
+    @PutMapping("/{eventId}/reagendar")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> rescheduleVisit(
-            @PathVariable Long visitId,
+            @PathVariable("eventId") Long eventId, // <-- Adicione o nome explicitamente aqui
             @RequestBody @Valid RescheduleVisitDTO dto,
             Authentication authentication) {
 
         User currentUser = ((CustomUserDetails) authentication.getPrincipal()).user();
-
-        // [3] O Service agora retorna void (pois cria histórico + move visita)
-        agendaService.rescheduleVisit(visitId, dto, currentUser);
-
+        agendaService.rescheduleVisit(eventId, dto, currentUser);
         return ResponseEntity.ok().build();
     }
 
@@ -293,7 +299,7 @@ public class AgendaController {
         String warningMessage = agendaService.checkGlobalConflicts(date, shift, user);
 
         if (warningMessage != null) {
-            return ResponseEntity.ok(Map.of("warning", HtmlUtils.htmlEscape(warningMessage)));
+            return ResponseEntity.ok(Map.of("warning", warningMessage));
         }
         return ResponseEntity.ok(Map.of());
     }
@@ -361,5 +367,36 @@ public class AgendaController {
         agendaService.confirmVisit(visitId, currentUser);
 
         return ResponseEntity.ok().build();
+    }
+
+    @PatchMapping("/{id}/not-realized")
+    @Operation(summary = "Reportar visita não realizada", description = "Marca um evento da agenda como não realizado e salva a justificativa do técnico.")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Void> reportVisitNotRealized(
+            @PathVariable Long id,
+            @Valid @RequestBody ReportNotRealizedDTO dto,
+            Authentication authentication) {
+
+        // Extrai o usuário igual aos outros endpoints!
+        User currentUser = ((CustomUserDetails) authentication.getPrincipal()).user();
+
+        agendaService.reportVisitNotRealized(id, dto, currentUser);
+
+        return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{id}/realized")
+    @Operation(summary = "Marcar evento como realizado", description = "Dá baixa no evento da agenda indicando que ele ocorreu com sucesso.")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Void> markEventAsRealized(
+            @PathVariable Long id,
+            Authentication authentication) {
+
+        // Extrai o usuário igual aos outros endpoints!
+        User currentUser = ((CustomUserDetails) authentication.getPrincipal()).user();
+
+        agendaService.markEventAsRealized(id, currentUser);
+
+        return ResponseEntity.noContent().build();
     }
 }
