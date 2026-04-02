@@ -5,465 +5,408 @@
     <title>Relatório de Visita Técnica</title>
 
     <style>
-        @page { size: A4 landscape; margin: 0.5cm; }
-        body { font-family: 'Montserrat', sans-serif; font-size: 10pt; color: #333; }
-        h1 { font-size: 14pt; text-align: center; margin-bottom: 20px; text-transform: uppercase; }
-        .info-block { border: 1px solid #ccc; padding: 10px; margin-bottom: 15px; }
-        .info-block p { margin: 5px 0; }
-        h2 { font-size: 11pt; background-color: #f2f2f2; padding: 6px; margin-top: 20px; margin-bottom: 10px; }
-        .summary-text { text-align: justify; }
+        @page { size: A4 portrait; margin: 0; }
 
-        /* Tabela de achados */
-        .findings-table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 8pt; border-spacing: 0; }
-        .findings-table th, .findings-table td {
-            border: 1px solid #999;
-            padding: 2px;
-            text-align: center; /* MUDEI DE justify PARA center */
-            vertical-align: middle; /* Centraliza verticalmente */
-        }
-        .findings-table th { background-color: #f2f2f2; }
-        .findings-table thead { display: table-row-group }
-        .findings-table tr { page-break-inside: avoid; page-break-after: auto; }
-        .findings-table td { word-wrap: break-word; overflow-wrap: break-word; hyphens: auto; }
-
-        /* Célula da foto */
-        .findings-table .photo-cell { text-align: center; padding: 0;}
-
-        .photo-wrapper {
-            width: 7.0cm;
-            min-height: 6.2cm;
-            text-align: center;      /* Centraliza horizontalmente */
-            padding: 1px;
-            margin: 0 auto;
-        }
-
-        .img-single {
-            max-height: 6.0cm !important;
-            max-width: 98% !important;
-            width: auto;
-            height: auto;
-            object-fit: contain;
-            display: block;
-            margin: 0 auto;          /* Centraliza */
-        }
-
-        .img-dual {
-            max-height: 1.95cm !important;
-            max-width: 98% !important;
-            width: auto;
-            height: auto;
-            object-fit: contain;
-            display: block;
-            margin: 0 auto 1px auto;  /* Centraliza + espaço */
-        }
-
-        /* --- ESTILO DO CABEÇALHO E GRADES DE DADOS --- */
-
-        /* 1. Tabela do Topo (Logo | Título | Logo) */
-        .header-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 10px;
+        body {
             font-family: 'Montserrat', sans-serif;
-        }
-        .header-table td {
-            border: 1px solid #ccc;
-            padding: 5px;
-            vertical-align: middle;
-            text-align: center;
-            height: 60px;
-        }
-        .header-table .logo-cell {
-            width: 15%;
-            background-color: #fff;
-            text-align: center; /* Garante alinhamento horizontal */
-            vertical-align: middle; /* Garante alinhamento vertical */
-        }
-        .header-table .logo-cell img {
-            height: 50px; /* Altura fixa para não estourar */
-            width: auto;
-            object-fit: contain;
-            display: inline-block; /* Importante para o text-align funcionar */
-            margin: 0 auto;
-        }
-        .header-table .title-cell {
-            width: 70%;
-            font-size: 14pt;
-            font-weight: 700;
-            background-color: #f2f2f2;
-            text-transform: uppercase;
-            color: #000;
-        }
-
-        /* 2. Títulos das Seções (Barra Cinza) */
-        .section-title {
-            background-color: #e0e0e0;
-            padding: 4px 8px;
-            margin-top: 10px;
-            margin-bottom: 0;
-            font-weight: 700;
             font-size: 9pt;
-            border: 1px solid #ccc;
-            border-bottom: none;
-            text-transform: uppercase;
+            color: #000000;
+            background-color: #ffffff;
+            margin: 0;
+            padding: 0;
         }
 
-        /* 3. Grade de Dados (Tabela de Informações) */
-        .data-grid {
+        .content-wrapper { padding: 0.8cm 0.8cm; }
+
+        /* --- CABEÇALHO ESCURO --- */
+        table.main-header {
             width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 5px;
-            font-size: 9pt;
-        }
-        .data-grid td {
-            border: 1px solid #ccc;
-            padding: 5px;
-            vertical-align: middle;
-        }
-        .data-grid .label {
-            width: 15%;
-            font-weight: 700;
-            background-color: #f2f2f2;
-            color: #333;
-        }
-        .data-grid .value {
-            width: 35%;
-        }
-        /* Fim */
-
-        /* Assinaturas */
-        .signatures {
-            margin-top: 40px;
-            width: 100%;
-            page-break-inside: avoid;    /* evita quebra dentro do bloco de assinaturas */
-            break-inside: avoid;
-            -webkit-column-break-inside: avoid;
-        }
-
-        .signatures table {
-            width: 95%;
-            margin: 0 auto;
+            background-color: #004d31;
+            border-bottom: 4px solid #8cc63f;
             border-collapse: collapse;
             table-layout: fixed;
-            page-break-inside: avoid;    /* proteção adicional */
-            break-inside: avoid;
+            margin: 0;
         }
-
-        .signature-cell {
-            vertical-align: bottom;
-            padding: 0 20px;
+        table.main-header td {
+            padding: 10px 8px;
+            vertical-align: middle;
+        }
+        .header-title-text {
             text-align: center;
-            page-break-inside: avoid;    /* evita quebra dentro de cada célula */
-            break-inside: avoid;
+            color: #fff;
+            text-transform: uppercase;
+            font-weight: 700;
+            font-size: 11pt;
+            letter-spacing: 0.5px;
         }
 
-        /* Layout em grid: imagem | linha | metadados */
-        .sig-inner {
-            display: grid;
-            grid-template-rows: auto 2px auto; /* a linha tem altura explícita */
-            justify-items: center;
-            align-items: start;
-            row-gap: 0.35cm; /* reduzido para diminuir espaço vertical */
-            width: 100%;
+        /* --- CARDS MODERNOS COM LINHAS --- */
+        .info-card {
+            background-color: #fff;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            margin-bottom: 15px;
             page-break-inside: avoid;
-            break-inside: avoid;
+            overflow: hidden;
         }
 
-        .sig-image-container {
-            display: flex;
-            justify-content: center;
-            align-items: flex-end; /* base alinhada para "flutuar" acima da linha */
-            width: 100%;
-            box-sizing: border-box;
-            min-height: 1.6cm; /* reserva espaço para a imagem */
-            overflow: visible;
-            padding: 0;
-            margin: 0;
-        }
-
-        /* Imagem da assinatura: limitamos a altura para evitar overlap */
-        .sig-image-container img {
-            display: inline-block;
-            max-height: 1.2cm; /* menor para garantir distância até a linha */
-            width: auto;
-            object-fit: contain;
-            vertical-align: bottom;
-            margin: 0;
-            padding: 0;
-            z-index: 5;
-        }
-
-        /* Proteção contra inline styles */
-        .sig-image-container img[style] {
-            max-height: 1.2cm !important;
-            width: auto !important;
-            object-fit: contain !important;
-            display: inline-block !important;
-        }
-
-        /* Linha de assinatura sempre visível: ocupa a segunda track do grid */
-        .signature-line {
-            grid-row: 2;
-            width: 90%;
-            height: 2px;               /* define espessura clara e consistente */
-            background-color: #333;
-            align-self: center;
-            margin: 0;
-            z-index: 2;
-        }
-
-        /* Metadados (nome, registro, data) */
-        .signature-meta {
-            grid-row: 3;
+        .card-header-label {
+            background-color: #f8f9fa;
+            color: #004d31;
+            font-weight: 700;
+            font-size: 9pt;
+            text-transform: uppercase;
+            border-bottom: 1px solid #ccc;
             display: block;
+            padding: 6px 12px;
+            margin: 0;
+        }
+
+        .data-row {
+            display: table;
             width: 100%;
+            border-bottom: 1px solid #eee;
+        }
+        .data-row:last-child {
+            border-bottom: none;
+        }
+
+        .data-item {
+            display: table-cell;
+            padding: 6px 12px;
+            vertical-align: top;
+            border-right: 1px solid #eee;
+        }
+        .data-item:last-child {
+            border-right: none;
+        }
+
+        .item-label {
+            font-weight: 700;
+            color: #004d31;
+            font-size: 7.5pt;
+            display: block;
+            text-transform: uppercase;
+            margin-bottom: 2px;
+        }
+        .item-value {
+            color: #000000;
+            font-size: 9pt;
+            font-weight: 500;
+        }
+
+        /* --- REFERÊNCIAS TÉCNICAS --- */
+        .ref-container {
+            display: block;
+            background: #fff;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            padding: 12px;
+            page-break-inside: avoid;
+        }
+        .ref-item {
+            font-size: 8pt;
+            color: #555;
+            padding: 4px 0;
+            border-bottom: 1px solid #f0f0f0;
+            display: inline-block;
+            width: 48%;
+            box-sizing: border-box;
+            vertical-align: top;
+        }
+
+        /* --- CARDS DE ACHADOS --- */
+        .finding-block {
+            background: #fff;
+            border: 1px solid #ccc;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 20px;
+            /* Permite que textos gigantes vazem para a página seguinte normalmente */
+            page-break-inside: auto;
+        }
+
+        /* CONFIGURAÇÃO PARA FOTOS 10CM RETRATO */
+        table.photo-table {
+            width: 100%;
+            margin-bottom: 15px;
+            table-layout: fixed;
+            border-collapse: separate;
+            border-spacing: 12px 0;
+        }
+
+        .photo-box {
+            height: 10.5cm;
+            border: 1px solid #ddd;
+            background: #f9f9f9;
+            border-radius: 8px;
             text-align: center;
-            margin-top: 0.08cm; /* pequeno espaçamento após a linha */
-        }
-        .signature-meta p { margin: 0 0 4px 0; line-height: 1.18; } /* reduzir espaço entre linhas */
-        .signature-meta p.name { font-weight: bold; font-size: 10pt; color: #000; margin-bottom: 2px; }
-        .signature-meta p.meta { font-size: 9pt; color: #333; margin-bottom: 2px; }
-        .signature-meta p.submeta { font-size: 8pt; color: #666; margin-top: 2px; }
-
-        .sig-empty .signature-line { border-top-style: dashed; opacity: 0.5; }
-
-        /* Impressão: ajuste fino */
-        @media print and (min-resolution: 150dpi) {
-            .sig-image-container img { max-height: 1.0cm !important; }
-            .sig-inner { row-gap: 0.25cm; }
         }
 
-        /* Preview em telas pequenas */
-        @media (max-width: 800px) {
-            .sig-image-container img { max-height: 0.9cm !important; }
-            .sig-inner { row-gap: 0.28cm; }
+        /* Hack de alinhamento vertical */
+        .photo-box::before {
+            content: "";
+            display: inline-block;
+            height: 100%;
+            vertical-align: middle;
         }
 
+        .form-group {
+            page-break-inside: avoid; /* Mantém titulo e caixa de texto juntos */
+            margin-bottom: 8px;
+        }
+
+        .form-label {
+            font-weight: 700;
+            font-size: 8pt;
+            color: #004d31;
+            display: block;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            margin-left: 2px;
+        }
+
+        .form-control {
+            border: 1px solid #ccc;
+            padding: 8px;
+            min-height: 16px;
+            background: #fafafa;
+            font-size: 9pt;
+            border-radius: 6px;
+            color: #000000;
+            margin-bottom: 0;
+        }
+
+        .footer-row {
+            display: table;
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 8px 0;
+            margin-top: 8px;
+            page-break-inside: avoid;
+        }
+        .footer-col {
+            display: table-cell;
+            vertical-align: top;
+            text-align: center;
+        }
+        .footer-col .form-control {
+            text-align: center;
+        }
+
+        .divider-thick { border-bottom: 4px solid #004d31; margin-top: 15px; border-radius: 4px; page-break-inside: avoid;}
+
+        /* --- ASSINATURAS --- */
+        .sig-section { display: table; width: 100%; margin-top: 30px; page-break-inside: avoid; }
+        .sig-box { display: table-cell; width: 50%; text-align: center; padding: 0 40px; vertical-align: bottom; }
+        .sig-line { border-top: 1px solid #333; margin-top: 5px; margin-bottom: 8px; border-radius: 1px; width: 100%; }
+        .sig-meta-text { font-size: 8pt; color: #666; margin-top: 2px; display: block; }
+        .sig-image-container { min-height: 1.6cm; display: block; }
+
+        h2 {
+            color: #004d31;
+            font-size: 11pt;
+            margin: 20px 0 10px 0;
+            text-transform: uppercase;
+            font-weight: 700;
+            display: block;
+        }
     </style>
 </head>
 <body>
 
-<table class="header-table">
+<table class="main-header">
     <tr>
-        <td class="logo-cell">
-            <img th:if="${generatingCompanyLogo != null}"
-                 th:src="'data:image/png;base64,' + ${generatingCompanyLogo}" alt="Logo" />
+        <td style="width: 15%; text-align: center;">
+            <img th:if="${generatingCompanyLogo != null}" th:src="'data:image/png;base64,' + ${generatingCompanyLogo}" alt="Logo" style="max-height: 45px; max-width: 100%;" />
         </td>
-        <td class="title-cell">
-            RELATÓRIO DE VISITA TÉCNICA DE SEGURANÇA DO TRABALHO
-        </td>
-        <td class="logo-cell">
-            <img th:if="${generatingCompanyLogo != null}"
-                 th:src="'data:image/png;base64,' + ${generatingCompanyLogo}" alt="Logo" />
+        <td class="header-title-text">Relatório de Visita Técnica de Segurança do Trabalho</td>
+        <td style="width: 15%; text-align: center;">
+            <img th:if="${generatingCompanyLogo != null}" th:src="'data:image/png;base64,' + ${generatingCompanyLogo}" alt="Logo" style="max-height: 45px; max-width: 100%;" />
         </td>
     </tr>
 </table>
 
-<div class="section-title">DADOS DO EMISSOR</div>
-<table class="data-grid">
-    <tr>
-        <td class="label">Empresa</td>
-        <td class="value" th:text="${generatingCompanyName}"></td>
-        <td class="label">CNPJ</td>
-        <td class="value" th:text="${generatingCompanyCnpj}"></td>
-    </tr>
-</table>
+<div class="content-wrapper">
 
-<div class="section-title">DADOS DO CLIENTE E LOCAL DA VISITA</div>
-<table class="data-grid">
-    <tr>
-        <td class="label">Empresa Cliente</td>
-        <td class="value" th:text="${visit.clientCompany?.name}"></td>
-        <td class="label">CNPJ</td>
-        <td class="value" th:text="${visit.clientCompany?.cnpj}"></td>
-    </tr>
-    <tr>
-        <td class="label">Unidade</td>
-        <td class="value" th:text="${visit.unit != null ? visit.unit.name : '-'}"></td>
-        <td class="label">Setor</td>
-        <td class="value" th:text="${visit.sector != null ? visit.sector.name : '-'}"></td>
-    </tr>
-    <tr>
-        <td class="label">Local da Visita</td>
-        <td class="value" colspan="3" th:text="${visit.location}"></td>
-    </tr>
-</table>
-
-<div class="section-title">DADOS TEMPORAIS DA VISITA</div>
-<table class="data-grid">
-    <tr>
-        <td class="label">Data da Visita</td>
-        <td class="value" th:text="${#temporals.format(visit.visitDate, 'dd/MM/yyyy')}"></td>
-        <td class="label">Tempo Total</td>
-        <td class="value">
-            <span th:if="${visit.endTime != null and visit.startTime != null}"
-                  th:text="${T(java.time.Duration).between(visit.startTime, visit.endTime).toMinutes() + ' minutos'}">
-            </span>
-            <span th:if="${visit.endTime == null or visit.startTime == null}">-</span>
-        </td>
-    </tr>
-    <tr>
-        <td class="label">Hora Inicial</td>
-        <td class="value" th:text="${#temporals.format(visit.startTime, 'HH:mm')}"></td>
-        <td class="label">Hora Final</td>
-        <td class="value" th:text="${visit.endTime != null ? #temporals.format(visit.endTime, 'HH:mm') : '-'}"></td>
-    </tr>
-</table>
-
-<div class="section-title">RESPONSÁVEL TÉCNICO</div>
-<table class="data-grid">
-    <tr>
-        <td class="label">Nome</td>
-        <td class="value" th:text="${visit.technician?.name}"></td>
-        <td class="label">Registro Conselho</td>
-        <td class="value" th:text="${visit.technician?.conselhoClasse}"></td>
-    </tr>
-    <tr>
-        <td class="label">Especialidade</td>
-        <td class="value" th:text="${visit.technician?.especialidade}"></td>
-        <td class="label">Sigla Conselho</td>
-        <td class="value" th:text="${visit.technician?.siglaConselhoClasse}"></td>
-    </tr>
-</table>
-
-<div style="page-break-inside: avoid;">
-    <h2>Referências Técnicas Utilizadas</h2>
-
-    <table style="width: 100%; border-collapse: collapse; font-size: 9pt;">
-        <thead>
-        <tr>
-            <th style="background-color: #f2f2f2; border: 1px solid #ccc; padding: 5px; text-align: left;">Norma / Inspeção</th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr><td style="border: 1px solid #ccc; padding: 4px;">INSPEÇÃO Meio Ambiente</td></tr>
-        <tr style="background-color: #f9f9f9;"><td style="border: 1px solid #ccc; padding: 4px;">INSPEÇÃO NR 01 - Documentações</td></tr>
-        <tr><td style="border: 1px solid #ccc; padding: 4px;">INSPEÇÃO NR 06 - EPI (Equipamento de Proteção Individual)</td></tr>
-        <tr style="background-color: #f9f9f9;"><td style="border: 1px solid #ccc; padding: 4px;">INSPEÇÃO NR 06 - EPC (Equipamento de Proteção Coletiva)</td></tr>
-        <tr><td style="border: 1px solid #ccc; padding: 4px;">INSPEÇÃO NR 07 - Documentações</td></tr>
-        <tr style="background-color: #f9f9f9;"><td style="border: 1px solid #ccc; padding: 4px;">INSPEÇÃO NR 11 - Transporte, movimentação, manuseio e armazenagem de materiais</td></tr>
-        <tr><td style="border: 1px solid #ccc; padding: 4px;">INSPEÇÃO NR 12 - Máquinas e equipamentos</td></tr>
-        <tr style="background-color: #f9f9f9;"><td style="border: 1px solid #ccc; padding: 4px;">INSPEÇÃO NR 23 - Proteção e Combate Contra Incêndios</td></tr>
-        <tr><td style="border: 1px solid #ccc; padding: 4px;">INSPEÇÃO NR 35 - Trabalho em altura</td></tr>
-        </tbody>
-    </table>
-</div>
-
-<h2>Resumo Geral da Visita</h2>
-<p class="summary-text" th:text="${visit.summary}"></p>
-
-<div style="page-break-before: auto;" th:if="${!visit.findings.isEmpty()}">
-    <h2>Registro Fotográfico e Recomendações</h2>
-    <table class="findings-table" style="table-layout: fixed; width: 100%;">
-        <colgroup>
-            <col style="width: 7.0cm;" />
-            <col style="width: 3cm;" />
-            <col style="width: 3.5cm;" />
-            <col style="width: 3cm;" />
-            <col style="width: 2.3cm;" />
-            <col style="width: 2.5cm;" />
-            <col style="width: 2cm;" />
-            <col style="width: 2cm;" />
-            <col style="width: 3cm;" />
-        </colgroup>
-        <thead>
-        <tr>
-            <th>Registro Fotográfico</th><th>Descrição</th><th>Consequências</th><th>Orientação Legal</th>
-            <th>Penalidades</th><th>Responsável</th><th>Prioridade</th><th>Prazo</th><th>Reincidência</th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr th:each="finding : ${visit.findings}">
-            <td class="photo-cell">
-                <div class="photo-wrapper">
-
-                    <img th:if="${finding.photoPath1}"
-                         th:src="'file:///' + ${finding.photoPath1}"
-                         th:class="${finding.photoPath2 != null} ? 'img-dual' : 'img-single'" />
-
-                    <img th:if="${finding.photoPath2}"
-                         th:src="'file:///' + ${finding.photoPath2}"
-                         class="img-dual" />
-                </div>
-            </td>
-            <td th:text="${finding.description}"></td>
-            <td th:text="${finding.consequences}"></td>
-            <td th:text="${finding.legalGuidance}"></td>
-            <td th:text="${finding.penalties}"></td>
-            <td th:text="${finding.responsible}"></td>
-            <td th:text="${finding.priority}"></td>
-            <td th:text="${finding.deadline != null ? #temporals.format(finding.deadline, 'dd/MM/yyyy') : ''}"></td>
-            <td th:text="${finding.recurrence ? 'Sim' : 'Não'}"></td>
-        </tr>
-        </tbody>
-    </table>
-</div>
-
-<div th:if="${visit.nextVisitDate != null}" style="page-break-inside: avoid; margin-top: 30px;">
-    <h2>Agendamento da Próxima Visita</h2>
-    <div class="info-block" style="border-style: dashed; background-color: #fcfcfc;">
-        <p><strong>Data da Próxima Visita:</strong> <span th:text="${#temporals.format(visit.nextVisitDate, 'dd/MM/yyyy')}"></span></p>
-        <p><strong>Turno da Próxima Visita:</strong> <span th:text="${visit.nextVisitShift}"></span></p>
+    <div class="info-card">
+        <div class="card-header-label">Dados do Emissor</div>
+        <div class="data-row">
+            <div class="data-item" style="width: 50%;"><span class="item-label">Empresa</span><span class="item-value" th:text="${generatingCompanyName}"></span></div>
+            <div class="data-item" style="width: 50%;"><span class="item-label">CNPJ</span><span class="item-value" th:text="${generatingCompanyCnpj}"></span></div>
+        </div>
     </div>
-</div>
 
-<!-- ASSINATURAS -->
-<div class="signatures">
-    <table>
-        <tbody>
-        <tr>
-            <td class="signature-cell" th:classappend="${visit.technicianSignatureImageBase64 == null} ? ' sig-empty' : ''">
-                <div class="sig-inner">
-                    <div class="sig-image-container">
-                        <img th:if="${visit.technicianSignatureImageBase64}"
-                             th:src="'data:image/png;base64,' + ${visit.technicianSignatureImageBase64}"
-                             alt="Assinatura do Técnico" />
-                    </div>
+    <div class="info-card">
+        <div class="card-header-label">Dados do Cliente e Local da Visita</div>
+        <div class="data-row">
+            <div class="data-item" style="width: 50%;"><span class="item-label">Empresa Cliente</span><span class="item-value" th:text="${visit.clientCompany?.name}"></span></div>
+            <div class="data-item" style="width: 50%;"><span class="item-label">CNPJ</span><span class="item-value" th:text="${visit.clientCompany?.cnpj}"></span></div>
+        </div>
+        <div class="data-row">
+            <div class="data-item" style="width: 50%;"><span class="item-label">Unidade</span><span class="item-value" th:text="${visit.unit != null ? visit.unit.name : '-'}"></span></div>
+            <div class="data-item" style="width: 50%;"><span class="item-label">Setor</span><span class="item-value" th:text="${visit.sector != null ? visit.sector.name : '-'}"></span></div>
+        </div>
+        <div class="data-row">
+            <div class="data-item" style="width: 100%;"><span class="item-label">Local da Visita</span><span class="item-value" th:text="${visit.location}"></span></div>
+        </div>
+    </div>
 
-                    <div class="signature-line"></div>
+    <div class="info-card">
+        <div class="card-header-label">Dados Temporais da Visita</div>
+        <div class="data-row">
+            <div class="data-item" style="width: 50%;"><span class="item-label">Data da Visita</span><span class="item-value" th:text="${#temporals.format(visit.visitDate, 'dd/MM/yyyy')}"></span></div>
+            <div class="data-item" style="width: 50%;"><span class="item-label">Tempo Total</span>
+                <span class="item-value" th:if="${visit.endTime != null and visit.startTime != null}" th:text="${T(java.time.Duration).between(visit.startTime, visit.endTime).toMinutes() + ' minutos'}"></span>
+                <span class="item-value" th:if="${visit.endTime == null or visit.startTime == null}">-</span>
+            </div>
+        </div>
+        <div class="data-row">
+            <div class="data-item" style="width: 50%;"><span class="item-label">Hora Inicial</span><span class="item-value" th:text="${#temporals.format(visit.startTime, 'HH:mm')}"></span></div>
+            <div class="data-item" style="width: 50%;"><span class="item-label">Hora Final</span><span class="item-value" th:text="${visit.endTime != null ? #temporals.format(visit.endTime, 'HH:mm') : '-'}"></span></div>
+        </div>
+    </div>
 
-                    <div class="signature-meta">
-                        <p class="name" th:text="${visit.technician?.name}"></p>
+    <div class="info-card">
+        <div class="card-header-label">Responsável Técnico</div>
+        <div class="data-row">
+            <div class="data-item" style="width: 50%;"><span class="item-label">Nome</span><span class="item-value" th:text="${visit.technician?.name}"></span></div>
+            <div class="data-item" style="width: 50%;"><span class="item-label">Registro Conselho</span><span class="item-value" th:text="${visit.technician?.conselhoClasse}"></span></div>
+        </div>
+        <div class="data-row">
+            <div class="data-item" style="width: 50%;"><span class="item-label">Especialidade</span><span class="item-value" th:text="${visit.technician?.especialidade}"></span></div>
+            <div class="data-item" style="width: 50%;"><span class="item-label">Sigla Conselho</span><span class="item-value" th:text="${visit.technician?.siglaConselhoClasse}"></span></div>
+        </div>
+    </div>
 
-                        <p th:if="${visit.technician?.conselhoClasse != null}" class="meta"
-                           th:text="${visit.technician.conselhoClasse + ' | ' + visit.technician.siglaConselhoClasse}"></p>
+    <h2>Referências Técnicas Utilizadas</h2>
+    <div class="ref-container">
+        <div class="ref-item">• INSPEÇÃO Meio Ambiente</div>
+        <div class="ref-item">• INSPEÇÃO NR 01 - Documentações</div>
+        <div class="ref-item">• INSPEÇÃO NR 06 - EPI (Individual)</div>
+        <div class="ref-item">• INSPEÇÃO NR 06 - EPC (Coletiva)</div>
+        <div class="ref-item">• INSPEÇÃO NR 07 - Documentações</div>
+        <div class="ref-item">• INSPEÇÃO NR 11 - Transporte e Materiais</div>
+        <div class="ref-item">• INSPEÇÃO NR 12 - Máquinas e Equipamentos</div>
+        <div class="ref-item">• INSPEÇÃO NR 23 - Combate a Incêndios</div>
+        <div class="ref-item">• INSPEÇÃO NR 35 - Trabalho em Altura</div>
+    </div>
 
-                        <p th:if="${visit.technician?.especialidade != null}" class="meta"
-                           th:text="${visit.technician.especialidade}"></p>
+    <h2>Resumo Geral da Visita</h2>
+    <div class="info-card" style="padding: 15px; text-align: justify; margin-bottom: 15px;" th:text="${visit.summary}"></div>
 
-                        <p th:if="${visit.technicianSignedAt != null}" class="submeta"
-                           th:text="${'Assinado em: ' + #temporals.format(visit.technicianSignedAt, 'dd/MM/yyyy HH:mm:ss')}"></p>
-                    </div>
+    <div th:if="${!visit.findings.isEmpty()}" style="page-break-before: always;">
+        <h2>Registro Fotográfico e Recomendações</h2>
+
+        <div th:each="finding, iterStat : ${visit.findings}" class="finding-block"
+             th:style="${iterStat.index > 0 ? 'page-break-before: always;' : ''}">
+
+            <table class="photo-table">
+                <tr>
+                    <td th:if="${finding.photoPath1 != null}" style="padding: 0; vertical-align: middle; text-align: center;">
+                        <div class="photo-box" th:style="${finding.photoPath2 == null ? 'width: 50%; margin: 0 auto;' : 'width: 100%;'}">
+                            <img th:src="${finding.photoPath1.startsWith('/') ? 'file://' + finding.photoPath1 : 'file:///' + finding.photoPath1}"
+                                 style="max-height: 10cm; max-width: 8.5cm; display: inline-block; vertical-align: middle;" />
+                        </div>
+                    </td>
+
+                    <td th:if="${finding.photoPath2 != null}" style="padding: 0; vertical-align: middle; text-align: center;">
+                        <div class="photo-box" th:style="${finding.photoPath1 == null ? 'width: 50%; margin: 0 auto;' : 'width: 100%;'}">
+                            <img th:src="${finding.photoPath2.startsWith('/') ? 'file://' + finding.photoPath2 : 'file:///' + finding.photoPath2}"
+                                 style="max-height: 10cm; max-width: 8.5cm; display: inline-block; vertical-align: middle;" />
+                        </div>
+                    </td>
+
+                    <td th:if="${finding.photoPath1 == null and finding.photoPath2 == null}" style="padding: 0; vertical-align: middle; text-align: center;">
+                        <div class="photo-box" style="width: 50%; margin: 0 auto;">
+                            <span style="color: #ccc; font-weight: bold; display: inline-block; vertical-align: middle;">SEM REGISTRO FOTOGRÁFICO</span>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+
+            <div class="form-group">
+                <span class="form-label">Descrição:</span>
+                <div class="form-control" th:text="${finding.description}"></div>
+            </div>
+
+            <div class="form-group">
+                <span class="form-label">Consequências:</span>
+                <div class="form-control" th:text="${finding.consequences}"></div>
+            </div>
+
+            <div class="form-group">
+                <span class="form-label">Orientação Legal:</span>
+                <div class="form-control" th:text="${finding.legalGuidance}"></div>
+            </div>
+
+            <div class="form-group">
+                <span class="form-label">Penalidades:</span>
+                <div class="form-control" th:text="${finding.penalties}"></div>
+            </div>
+
+            <div class="footer-row">
+                <div class="footer-col" style="width: 25%;">
+                    <span class="form-label">Responsável</span>
+                    <div class="form-control" th:text="${finding.responsible}"></div>
                 </div>
-            </td>
-
-            <td class="signature-cell" th:classappend="${visit.clientSignatureImageBase64 == null} ? ' sig-empty' : ''">
-                <div class="sig-inner">
-                    <div class="sig-image-container">
-                        <img th:if="${visit.clientSignatureImageBase64}"
-                             th:src="'data:image/png;base64,' + ${visit.clientSignatureImageBase64}"
-                             alt="Assinatura do Cliente" />
-                    </div>
-
-                    <div class="signature-line"></div>
-
-                    <div class="signature-meta">
-                        <p class="name" th:text="${visit.clientSignerName}"></p>
-                        <p class="meta">Responsável</p>
-
-                        <p th:if="${visit.clientSignedAt != null}" class="submeta">
-                            <span th:text="${'Assinado em: ' + #temporals.format(visit.clientSignedAt, 'dd/MM/yyyy HH:mm:ss')}" style="display:block;"></span>
-                            <span th:if="${visit.clientSignatureLatitude != null}"
-                                  th:text="${'Lat ' + visit.clientSignatureLatitude + ', Lon ' + visit.clientSignatureLongitude}"
-                                  style="display:block; margin-top:1px;"></span>
-                        </p>
-                    </div>
+                <div class="footer-col" style="width: 25%;">
+                    <span class="form-label">Prioridade</span>
+                    <div class="form-control" th:text="${finding.priority}"></div>
                 </div>
-            </td>
-        </tr>
-        </tbody>
-    </table>
-</div>
+                <div class="footer-col" style="width: 25%;">
+                    <span class="form-label">Prazo</span>
+                    <div class="form-control" th:text="${finding.deadline != null ? #temporals.format(finding.deadline, 'dd/MM/yyyy') : '--/--/----'}"></div>
+                </div>
+                <div class="footer-col" style="width: 25%;">
+                    <span class="form-label">Reincidente?</span>
+                    <div class="form-control" th:text="${finding.recurrence ? 'SIM' : 'NÃO'}"></div>
+                </div>
+            </div>
+            <div class="divider-thick"></div>
+        </div>
+    </div>
 
+    <div th:if="${nextVisitDateFormatted != null}" style="page-break-inside: avoid; margin-top: 10px;">
+        <h2>Agendamento da Próxima Visita</h2>
+        <div class="info-card" style="border: 2px dashed #8cc63f;">
+            <div class="data-row" style="margin-bottom: 0; border-bottom: none;">
+                <div class="data-item" style="width: 50%;">
+                    <span class="item-label">Data Sugerida</span>
+                    <span class="item-value" th:text="${nextVisitDateFormatted}"></span>
+                </div>
+                <div class="data-item" style="width: 50%; border-right: none;">
+                    <span class="item-label">Turno Sugerido</span>
+                    <span class="item-value" th:text="${nextVisitShiftLabel}"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="sig-section">
+        <div class="sig-box">
+            <div class="sig-image-container">
+                <img th:if="${visit.technicianSignatureImageBase64}" th:src="'data:image/png;base64,' + ${visit.technicianSignatureImageBase64}" style="max-height: 55px; margin: 0 auto; display: block; width: auto;"/>
+            </div>
+            <div class="sig-line"></div>
+            <strong th:text="${visit.technician?.name}"></strong><br/>
+            <small>Responsável Técnico</small>
+            <span class="sig-meta-text" th:if="${visit.technicianSignedAt != null}" th:text="${'Assinado em: ' + #temporals.format(visit.technicianSignedAt, 'dd/MM/yyyy HH:mm:ss')}"></span>
+        </div>
+
+        <div class="sig-box">
+            <div class="sig-image-container">
+                <img th:if="${visit.clientSignatureImageBase64}" th:src="'data:image/png;base64,' + ${visit.clientSignatureImageBase64}" style="max-height: 55px; margin: 0 auto; display: block; width: auto;"/>
+            </div>
+            <div class="sig-line"></div>
+            <strong th:text="${visit.clientSignerName}"></strong><br/>
+            <small>Representante Cliente</small>
+
+            <span class="sig-meta-text" th:if="${visit.clientSignedAt != null}" th:text="${'Assinado em: ' + #temporals.format(visit.clientSignedAt, 'dd/MM/yyyy HH:mm:ss')}"></span>
+            <span class="sig-meta-text" th:if="${visit.clientSignatureLatitude != null}" th:text="${'Lat ' + visit.clientSignatureLatitude + ', Lon ' + visit.clientSignatureLongitude}"></span>
+        </div>
+    </div>
+
+</div>
 </body>
 </html>

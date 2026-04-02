@@ -2,14 +2,12 @@ package com.gotree.API.repositories;
 
 import com.gotree.API.entities.TechnicalVisit;
 import com.gotree.API.entities.User;
-import com.gotree.API.enums.Shift;
+import lombok.NonNull;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.time.LocalDate;
-import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -20,13 +18,9 @@ import java.util.Optional;
  * Inclui funcionalidades para:
  * - Busca e filtragem de visitas por diferentes critérios
  * - Cálculos de duração e estatísticas
- * - Verificações de agendamento e conflitos
  * - Geração de relatórios e KPIs
  */
 public interface TechnicalVisitRepository extends JpaRepository<TechnicalVisit, Long> {
-
-    // Para buscar visitas antigas num dia específico (usado para gerar os warnings)
-    List<TechnicalVisit> findAllByNextVisitDate(LocalDate nextVisitDate);
 
     /**
      * Busca todas as visitas de um técnico, ordenadas por data decrescente.
@@ -36,35 +30,12 @@ public interface TechnicalVisitRepository extends JpaRepository<TechnicalVisit, 
 
     /**
      * Recupera todas as visitas técnicas realizadas por um técnico específico,
-     * incluindo os dados completos da empresa cliente através de JOIN FETCH.
+     * incluindo os dados completos da empresa cliente por JOIN FETCH.
      * @param technician Usuário técnico para filtrar as visitas
      * @return Lista de visitas ordenada por data decrescente
      */
     @Query("SELECT v FROM TechnicalVisit v LEFT JOIN FETCH v.clientCompany WHERE v.technician = :technician ORDER BY v.visitDate DESC")
     List<TechnicalVisit> findAllWithCompanyByTechnician(@Param("technician") User technician);
-
-    /**
-     * Encontra visitas com "próxima visita" agendada (Filtrado por Técnico).
-     */
-    @Query("SELECT v FROM TechnicalVisit v " +
-            "LEFT JOIN FETCH v.clientCompany " +
-            "LEFT JOIN FETCH v.unit " +
-            "LEFT JOIN FETCH v.sector " +
-            "WHERE v.technician = :technician AND v.nextVisitDate IS NOT NULL " +
-            "ORDER BY v.nextVisitDate ASC")
-    List<TechnicalVisit> findAllScheduledWithCompanyByTechnician(@Param("technician") User technician);
-
-    /**
-     * Encontra TODAS as visitas com "próxima visita" agendada (Geral).
-     */
-    @Query("SELECT v FROM TechnicalVisit v " +
-            "LEFT JOIN FETCH v.clientCompany " +
-            "LEFT JOIN FETCH v.unit " +
-            "LEFT JOIN FETCH v.sector " +
-            "LEFT JOIN FETCH v.technician " +
-            "WHERE v.nextVisitDate IS NOT NULL " +
-            "ORDER BY v.nextVisitDate ASC")
-    List<TechnicalVisit> findAllScheduledWithCompany();
 
     /**
      * Conta o número total de visitas realizadas por um técnico específico.
@@ -119,41 +90,7 @@ public interface TechnicalVisitRepository extends JpaRepository<TechnicalVisit, 
      */
     boolean existsBySector_Id(Long sectorId);
 
+    @NonNull //Garante que o retorno (Optional) nunca será nulo
     @EntityGraph(attributePaths = {"clientCompany", "clientCompany.clients"})
-    Optional<TechnicalVisit> findById(Long id);
-    
-    boolean existsByTechnicianAndVisitDateAndStartTimeBetween(
-            User technician,
-            LocalDate visitDate,
-            LocalTime startTimeStart,
-            LocalTime startTimeEnd
-    );
-
-    // 1. Verifica se já existe agendamento na data "PRÓXIMA VISITA" (Usado no checkDuplicity)
-    boolean existsByTechnicianAndNextVisitDateAndNextVisitShift(
-            User technician,
-            LocalDate nextVisitDate,
-            Shift nextVisitShift
-    );
-
-    // 2. Busca visitas REALIZADAS no intervalo (Usado para pintar dias passados no calendário)
-    @Query("SELECT v FROM TechnicalVisit v WHERE v.technician = :technician AND v.visitDate BETWEEN :startDate AND :endDate")
-    List<TechnicalVisit> findByTechnicianAndDateRange(User technician, LocalDate startDate, LocalDate endDate);
-
-    // 3. Busca visitas AGENDADAS (FUTURO) no intervalo (Usado para pintar dias futuros no calendário)
-    @Query("SELECT v FROM TechnicalVisit v WHERE v.technician = :technician AND v.nextVisitDate BETWEEN :startDate AND :endDate")
-    List<TechnicalVisit> findByTechnicianAndNextVisitDateBetween(@Param("technician") User technician, @Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
-
-    // AGENDA GLOBAL (Busca visitas futuras de TODOS os técnicos)
-    @Query("SELECT v FROM TechnicalVisit v " +
-            "JOIN FETCH v.technician " + // Importante trazer o técnico
-            "LEFT JOIN FETCH v.clientCompany " +
-            "WHERE v.nextVisitDate BETWEEN :startDate AND :endDate")
-    List<TechnicalVisit> findAllByNextVisitDateBetween(@Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
-
-    // CONCORRÊNCIA (Busca quem tem visita marcada em Data/Turno específicos)
-    @Query("SELECT v FROM TechnicalVisit v " +
-            "JOIN FETCH v.technician " +
-            "WHERE v.nextVisitDate = :date AND v.nextVisitShift = :shift")
-    List<TechnicalVisit> findAllByNextVisitDateAndNextVisitShift(@Param("date") LocalDate date, @Param("shift") Shift shift);
+    Optional<TechnicalVisit> findById(@NonNull Long id); //Garante que o parâmetro 'id' não pode ser nulo
 }

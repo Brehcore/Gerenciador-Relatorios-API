@@ -353,11 +353,8 @@ public class AgendaService {
         LocalDate startDate = LocalDate.of(year, month, 1);
         LocalDate endDate = startDate.withDayOfMonth(startDate.lengthOfMonth());
 
-        // 1. BUSCA GLOBAL: Traz os eventos de TODOS os técnicos neste período
+        // BUSCA GLOBAL: Traz os eventos de TODOS os técnicos neste período (A única fonte da verdade agora)
         List<AgendaEvent> monthEvents = agendaEventRepository.findAllByEventDateBetween(startDate, endDate);
-        // 2. BUSCA GLOBAL: Traz as visitas de TODOS os técnicos neste período
-
-        List<TechnicalVisit> monthVisits = technicalVisitRepository.findAllByNextVisitDateBetween(startDate, endDate);
 
         for (int i = 1; i <= startDate.lengthOfMonth(); i++) {
             LocalDate currentDate = LocalDate.of(year, month, i);
@@ -365,21 +362,14 @@ public class AgendaService {
             boolean morningBusy = false;
             boolean afternoonBusy = false;
 
-            // Checa eventos globais
+            // Checa apenas os eventos da agenda!
             for (AgendaEvent event : monthEvents) {
                 if (event.getEventDate().equals(currentDate) && event.getStatus() != com.gotree.API.enums.AgendaStatus.CANCELADO) {
-                    String shiftStr = event.getShift().name().toUpperCase();
-                    if (shiftStr.equals("MANHA") || shiftStr.equals("MORNING")) morningBusy = true;
-                    else if (shiftStr.equals("TARDE") || shiftStr.equals("AFTERNOON")) afternoonBusy = true;
-                }
-            }
-
-            // Checa visitas globais
-            for (TechnicalVisit visit : monthVisits) {
-                if (visit.getNextVisitDate() != null && visit.getNextVisitDate().equals(currentDate)) {
-                    String shiftStr = visit.getNextVisitShift().name().toUpperCase();
-                    if (shiftStr.equals("MANHA") || shiftStr.equals("MORNING")) morningBusy = true;
-                    else if (shiftStr.equals("TARDE") || shiftStr.equals("AFTERNOON")) afternoonBusy = true;
+                    if (event.getShift() != null) {
+                        String shiftStr = event.getShift().name().toUpperCase();
+                        if (shiftStr.equals("MANHA") || shiftStr.equals("MORNING")) morningBusy = true;
+                        else if (shiftStr.equals("TARDE") || shiftStr.equals("AFTERNOON")) afternoonBusy = true;
+                    }
                 }
             }
 
@@ -461,20 +451,13 @@ public class AgendaService {
             Shift shift = Shift.valueOf(shiftStr.toUpperCase());
             List<String> busyTechnicians = new ArrayList<>();
 
+            // Verifica conflitos olhando APENAS para a tabela de agenda
             List<AgendaEvent> events = agendaEventRepository.findAllByEventDateAndShift(date, shift);
             for (AgendaEvent evt : events) {
-                // Ignora cancelados
                 if (evt.getStatus() == AgendaStatus.CANCELADO) continue;
 
                 if (!evt.getUser().getId().equals(currentUser.getId())) {
                     busyTechnicians.add(evt.getUser().getName());
-                }
-            }
-
-            List<TechnicalVisit> visits = technicalVisitRepository.findAllByNextVisitDateAndNextVisitShift(date, shift);
-            for (TechnicalVisit tv : visits) {
-                if (tv.getTechnician() != null && !tv.getTechnician().getId().equals(currentUser.getId())) {
-                    busyTechnicians.add(tv.getTechnician().getName());
                 }
             }
 

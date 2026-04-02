@@ -4,9 +4,7 @@ import com.gotree.API.dto.visit.CreateTechnicalVisitRequestDTO;
 import com.gotree.API.dto.visit.VisitFindingDTO;
 import com.gotree.API.entities.AgendaEvent;
 import com.gotree.API.entities.Company;
-import com.gotree.API.entities.Sector;
 import com.gotree.API.entities.TechnicalVisit;
-import com.gotree.API.entities.Unit;
 import com.gotree.API.entities.User;
 import com.gotree.API.entities.VisitFinding;
 import com.gotree.API.enums.Shift;
@@ -26,12 +24,12 @@ import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.ArrayList;
 
 /**
  * Serviço responsável por gerenciar visitas técnicas, incluindo criação,
@@ -40,15 +38,13 @@ import java.util.UUID;
 @Service
 public class TechnicalVisitService {
 
-
     private final TechnicalVisitRepository technicalVisitRepository;
     private final CompanyRepository companyRepository;
-    private final ReportService reportService; // Para gerar o PDF
+    private final ReportService reportService;
     private final UnitRepository unitRepository;
     private final SectorRepository sectorRepository;
     private final AgendaEventRepository agendaEventRepository;
     private final DigitalSignatureService digitalSignatureService;
-
 
     @Value("${file.storage.path}")
     private String fileStoragePath;
@@ -66,123 +62,24 @@ public class TechnicalVisitService {
         this.digitalSignatureService = digitalSignatureService;
     }
 
-    /**
-     * Cria uma nova visita técnica e gera o relatório PDF correspondente.
-     *
-     * @param dto        Objeto contendo os dados da visita técnica a ser criada
-     * @param technician Usuário técnico responsável pela visita
-     * @return A entidade TechnicalVisit criada e salva
-     * @throws RuntimeException se a empresa cliente não for encontrada ou houver erro ao salvar arquivos
-     */
     @Transactional
     public TechnicalVisit createAndGeneratePdf(CreateTechnicalVisitRequestDTO dto, User technician) {
-        // 1. Buscar a empresa cliente
-        Company clientCompany = companyRepository.findById(dto.getClientCompanyId())
-                .orElseThrow(() -> new RuntimeException("Empresa cliente com ID " + dto.getClientCompanyId() + " não encontrada."));
-
-        // SUBSTITUÍDO: Agora usa a validação nova para proteger o backend
-        if (dto.getNextVisitDate() != null && dto.getNextVisitShift() != null) {
-            Map<String, Object> validation = validateNextVisitSchedule(dto.getNextVisitDate(), dto.getNextVisitShift(), technician);
-            if ((Boolean) validation.get("blocked")) {
-                throw new IllegalStateException("BLOQUEIO DE AGENDA: " + validation.get("blockMessage"));
-            }
-        }
-
-        Unit unit = dto.getUnitId() != null ? unitRepository.findById(dto.getUnitId()).orElse(null) : null;
-        Sector sector = dto.getSectorId() != null ? sectorRepository.findById(dto.getSectorId()).orElse(null) : null;
-
-        // 2. Mapear DTO para a entidade principal
         TechnicalVisit visit = new TechnicalVisit();
-
-        // --- ATRIBUIÇÃO DIRETA DOS DADOS DA VISITA ---
-        visit.setTitle(dto.getTitle());
-        visit.setLocation(dto.getLocation());
-        visit.setSummary(dto.getSummary());
-        // --------------------------------------
-
-        visit.setClientCompany(clientCompany);
-        visit.setUnit(unit);
-        visit.setSector(sector);
         visit.setTechnician(technician);
-        visit.setVisitDate(dto.getVisitDate());
-        visit.setStartTime(dto.getStartTime());
-        visit.setEndTime(LocalTime.now());
 
-        visit.setNextVisitDate(dto.getNextVisitDate());
+        // Garante que nunca é guardado como rascunho
+        visit.setDraft(false);
 
-        if (dto.getNextVisitShift() != null && !dto.getNextVisitShift().isBlank()) {
-            try {
-                visit.setNextVisitShift(Shift.valueOf(dto.getNextVisitShift().toUpperCase()));
-            } catch (IllegalArgumentException e) {
-                System.err.println("Turno inválido recebido: " + dto.getNextVisitShift());
-            }
-        }
+        // Delega o mapeamento pesado para o metodo auxiliar
+        applyRequestDataToVisit(visit, dto);
 
-        // Mapear dados das assinaturas
-        visit.setTechnicianSignatureImageBase64(stripDataUrlPrefix(dto.getTechnicianSignatureImageBase64()));
-        visit.setTechnicianSignedAt(LocalDateTime.now());
-        visit.setClientSignatureImageBase64(stripDataUrlPrefix(dto.getClientSignatureImageBase64()));
-        visit.setClientSignerName(dto.getClientSignerName());
-        visit.setClientSignedAt(LocalDateTime.now());
-        visit.setClientSignatureLatitude(dto.getClientSignatureLatitude());
-        visit.setClientSignatureLongitude(dto.getClientSignatureLongitude());
-
-        // 3. Processar e salvar as imagens e dados dos "findings"
-        if (dto.getFindings() != null) {
-            dto.getFindings().forEach(findingDto -> {
-                VisitFinding finding = mapFindingDtoToEntity(findingDto);
-                finding.setTechnicalVisit(visit);
-                visit.getFindings().add(finding);
-            });
-        }
-
-        // 4. Salvar tudo no banco de dados pela primeira vez para gerar os IDs
         TechnicalVisit savedVisit = technicalVisitRepository.save(visit);
 
-        // ====================================================================
-        // NOVA LÓGICA: Cria o evento na Agenda automaticamente
-        // ====================================================================
-        if (savedVisit.getNextVisitDate() != null && savedVisit.getNextVisitShift() != null) {
-            AgendaEvent futureEvent = new AgendaEvent();
-            futureEvent.setEventDate(savedVisit.getNextVisitDate());
-            futureEvent.setShift(savedVisit.getNextVisitShift());
-            futureEvent.setUser(technician);
-            futureEvent.setCompany(clientCompany);
-            futureEvent.setUnit(unit);
-            futureEvent.setSector(sector);
-            futureEvent.setTitle("Próxima Visita: " + clientCompany.getName());
-            futureEvent.setEventType(com.gotree.API.enums.AgendaEventType.VISITA_TECNICA);
-            futureEvent.setStatus(com.gotree.API.enums.AgendaStatus.A_CONFIRMAR);
-            futureEvent.setTechnicalVisit(savedVisit);
+        createAgendaEventForNextVisit(savedVisit, dto.getNextVisitDate(), dto.getNextVisitShift(), technician);
 
-            agendaEventRepository.save(futureEvent);
-        }
-        // ====================================================================
-
-        // 5. Gerar o PDF
-        Map<String, Object> templateData = new HashMap<>();
-
-        templateData.put("visit", savedVisit);
-
-        byte[] pdfBytes = reportService.generatePdfFromHtml("visit-report-template", templateData);
-
-        try {
-            String fileName = "technical_visit_" + savedVisit.getId() + "_" + UUID.randomUUID() + ".pdf";
-            Path path = Paths.get(fileStoragePath, fileName);
-            Files.createDirectories(path.getParent());
-            Files.write(path, pdfBytes);
-
-            savedVisit.setPdfPath(fileName);
-            return technicalVisitRepository.save(savedVisit);
-
-        } catch (IOException e) {
-            throw new RuntimeException("Falha ao salvar a foto 1 do achado: " + e.getMessage(), e);
-        }
+        return generateAndSavePdf(savedVisit, dto.getNextVisitDate(), dto.getNextVisitShift());
     }
 
-    /**
-     * Assina o PDF da visita técnica com o certificado digital do técnico.
-     */
     @Transactional
     public void signExistingVisit(Long id, User signer) throws IOException {
         TechnicalVisit visit = technicalVisitRepository.findById(id)
@@ -202,144 +99,76 @@ public class TechnicalVisitService {
         }
 
         byte[] pdfBytes = Files.readAllBytes(path);
-
-        // Aplica a assinatura
         byte[] signedBytes = digitalSignatureService.signPdf(pdfBytes, signer);
 
-        // Sobrescreve o arquivo no disco
         Files.write(path, signedBytes);
 
-        visit.setIcpSignedAt(LocalDateTime.now()); // Marca o pdf como assinado digitalmente
+        visit.setIcpSignedAt(LocalDateTime.now());
         technicalVisitRepository.save(visit);
     }
 
-    /**
-     * Converte um DTO de achados da visita para sua entidade correspondente,
-     * incluindo o processamento e salvamento das imagens associadas.
-     *
-     * @param dto DTO contendo os dados do achado da visita
-     * @return Uma nova instância de VisitFinding com os dados convertidos
-     */
-    private VisitFinding mapFindingDtoToEntity(VisitFindingDTO dto) {
-        VisitFinding finding = new VisitFinding();
-        // Lógica para salvar a IMAGEM 1
-        if (dto.getPhotoBase64_1() != null && !dto.getPhotoBase64_1().isEmpty()) {
-            try {
-                // Limpa o prefixo e decodifica
-                byte[] imageBytes = Base64.getDecoder().decode(stripDataUrlPrefix(dto.getPhotoBase64_1()));
-                String imageFileName = "finding_" + UUID.randomUUID() + ".jpg";
-                Path imagePath = Paths.get(fileStoragePath, "visit_photos", imageFileName);
-                Files.createDirectories(imagePath.getParent());
-                Files.write(imagePath, imageBytes);
-                // Salva o caminho absoluto do arquivo, que será usado com 'file:///' no template
-                finding.setPhotoPath1(imagePath.toAbsolutePath().toString().replace("\\", "/"));
-            } catch (IOException e) {
-                throw new RuntimeException("Erro ao processar a imagem do achado. Verifique se o arquivo é válido.", e);
-            }
-        }
-
-        // LÓGICA ADICIONADA PARA A IMAGEM 2
-        if (dto.getPhotoBase64_2() != null && !dto.getPhotoBase64_2().isEmpty()) {
-            try {
-                // Limpa o prefixo e decodifica
-                byte[] imageBytes = Base64.getDecoder().decode(stripDataUrlPrefix(dto.getPhotoBase64_2()));
-                String imageFileName = "finding_" + UUID.randomUUID() + ".jpg";
-                Path imagePath = Paths.get(fileStoragePath, "visit_photos", imageFileName);
-                Files.createDirectories(imagePath.getParent()); // Não há problema em chamar de novo
-                Files.write(imagePath, imageBytes);
-                // Salva o caminho absoluto do arquivo
-                finding.setPhotoPath2(imagePath.toAbsolutePath().toString().replace("\\", "/"));
-            } catch (IOException e) {
-                throw new RuntimeException("Erro ao processar a imagem do achado. Verifique se o arquivo é válido.", e);
-            }
-        }
-
-        // --- PREENCHIMENTO DIRETO DOS CAMPOS DOS ACHADOS ---
-        finding.setDescription(dto.getDescription());
-        finding.setConsequences(dto.getConsequences());
-        finding.setLegalGuidance(dto.getLegalGuidance());
-        finding.setResponsible(dto.getResponsible());
-        finding.setPenalties(dto.getPenalties());
-        // ------------------------------------------
-
-        finding.setDeadline(dto.getDeadline());
-        finding.setRecurrence(dto.isRecurrence());
-
-        // Converte a String de prioridade para o Enum de forma segura
-        if (dto.getPriority() != null && !dto.getPriority().isBlank()) {
-            try {
-                finding.setPriority(VisitFinding.Priority.valueOf(dto.getPriority().toUpperCase()));
-            } catch (IllegalArgumentException e) {
-                throw new IllegalArgumentException("Prioridade inválida: " + dto.getPriority() + ". Valores aceitos: BAIXA, MEDIA, ALTA.");
-            }
-        }
-        // Se a prioridade for nula ou em branco, ela simplesmente não será definida, evitando, erros.
-
-        return finding;
-    }
-
-    /**
-     * Remove o prefixo 'data:image/...' de uma string Base64.
-     *
-     * @param dataUrl String contendo a URL de dados da imagem
-     * @return String Base64 sem o prefixo ou null se a entrada for null
-     */
-    private String stripDataUrlPrefix(String dataUrl) {
-        if (dataUrl == null) return null;
-        int commaIndex = dataUrl.indexOf(',');
-        return commaIndex != -1 ? dataUrl.substring(commaIndex + 1) : dataUrl;
-    }
-
-    /**
-     * Busca todas as visitas técnicas associadas a um técnico específico.
-     *
-     * @param technician Usuário técnico para filtrar as visitas
-     * @return Lista de visitas técnicas ordenadas por data em ordem decrescente
-     */
     @Transactional(readOnly = true)
     public List<TechnicalVisit> findAllByTechnician(User technician) {
         return technicalVisitRepository.findByTechnicianOrderByVisitDateDesc(technician);
     }
 
-    /**
-     * Exclui uma visita técnica e seus arquivos associados.
-     *
-     * @param visitId     ID da visita técnica a ser excluída
-     * @param currentUser Usuário atual que está tentando excluir a visita
-     * @throws RuntimeException  se a visita não for encontrada
-     * @throws SecurityException se o usuário atual não for o técnico que criou a visita
-     */
     @Transactional
     public void deleteVisit(Long visitId, User currentUser) {
-        // 1. Busca o relatório no banco de dados
         TechnicalVisit visit = technicalVisitRepository.findById(visitId)
                 .orElseThrow(() -> new RuntimeException("Relatório de Visita com ID " + visitId + " não encontrado."));
 
-        // 2. VERIFICAÇÃO DE SEGURANÇA: Garante que só o técnico que criou pode apagar.
         if (!visit.getTechnician().getId().equals(currentUser.getId())) {
             throw new SecurityException("Usuário não autorizado a deletar este relatório de visita.");
         }
 
-        // 3. APAGA O ARQUIVO PDF DO DISCO
         try {
             if (visit.getPdfPath() != null && !visit.getPdfPath().isBlank()) {
-                Path pdfPath = Paths.get(visit.getPdfPath());
-                Files.deleteIfExists(pdfPath);
+                Files.deleteIfExists(Paths.get(fileStoragePath, visit.getPdfPath()));
             }
         } catch (IOException e) {
-            // Loga o erro, mas não impede a exclusão do registro do banco
             System.err.println("Falha ao deletar o arquivo PDF da visita: " + visit.getPdfPath());
         }
 
-        // 4. APAGA O REGISTRO DO BANCO DE DADOS
         technicalVisitRepository.deleteById(visitId);
     }
 
     /**
-     * Valida a disponibilidade da agenda (Bloqueios e Avisos).
+     * Endpoint exposto para o Controller validar a agenda
      */
     @Transactional(readOnly = true)
     public Map<String, Object> validateNextVisitSchedule(LocalDate nextDate, String nextShiftStr, User currentUser) {
+        return internalValidateNextVisitSchedule(nextDate, nextShiftStr, currentUser);
+    }
+
+
+    // ===================================================================================
+    // MÉTODOS PRIVADOS AUXILIARES (Para evitar duplicação de código)
+    // ===================================================================================
+
+    private void applyRequestDataToVisit(TechnicalVisit visit, CreateTechnicalVisitRequestDTO dto) {
+        Company clientCompany = companyRepository.findById(dto.getClientCompanyId())
+                .orElseThrow(() -> new RuntimeException("Empresa cliente com ID " + dto.getClientCompanyId() + " não encontrada."));
+        visit.setClientCompany(clientCompany);
+
+        // Chama o metodo auxiliar reaproveitável
+        setCommonVisitFields(visit, dto.getUnitId(), dto.getSectorId(), dto.getTitle(),
+                dto.getLocation(), dto.getSummary(), dto.getVisitDate(), dto.getStartTime());
+
+        visit.setEndTime(LocalTime.now());
+
+        applySignaturesToVisit(visit, dto.getTechnicianSignatureImageBase64(), dto.getClientSignatureImageBase64(),
+                dto.getClientSignerName(), dto.getClientSignatureLatitude(), dto.getClientSignatureLongitude());
+
+        visit.setTechnicianSignedAt(LocalDateTime.now());
+        visit.setClientSignedAt(LocalDateTime.now());
+
+        updateFindings(visit, dto.getFindings());
+    }
+
+    /**
+     * Metodo interno sem anotação transacional para evitar alerta de Self-Invocation.
+     */
+    private Map<String, Object> internalValidateNextVisitSchedule(LocalDate nextDate, String nextShiftStr, User currentUser) {
         Map<String, Object> response = new HashMap<>();
         List<String> warnings = new ArrayList<>();
 
@@ -347,46 +176,39 @@ public class TechnicalVisitService {
         response.put("blockMessage", null);
         response.put("warnings", warnings);
 
-        if (nextDate == null || nextShiftStr == null || nextShiftStr.isBlank()) {
+        if (nextDate == null) {
             return response;
         }
 
         try {
-            Shift shift = Shift.valueOf(nextShiftStr.toUpperCase());
-
-            // 1. BLOQUEIO (Eu já tenho algo neste dia e turno?)
-            boolean visitConflict = technicalVisitRepository.existsByTechnicianAndNextVisitDateAndNextVisitShift(currentUser, nextDate, shift);
-            long eventConflict = agendaEventRepository.countByUserAndEventDateAndShift(currentUser, nextDate, shift);
-
-            if (visitConflict || eventConflict > 0) {
+            // Validação 1: Limite global de visitas no dia (Independente do turno)
+            long eventsInDay = agendaEventRepository.countByUserAndEventDate(currentUser, nextDate);
+            if (eventsInDay >= 2) {
                 response.put("blocked", true);
-                response.put("blockMessage", "Você já possui um compromisso no dia " +
-                        nextDate.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")) +
-                        " no turno da " + shift.name() + ". Escolha outro turno ou data.");
+                response.put("blockMessage", "Você já possui 2 eventos agendados nesta data. Escolha outra data.");
                 return response;
             }
 
-            // 2. AVISOS (Outros técnicos estão ocupados neste dia?)
-            // A. Busca na Agenda (Eventos Manuais ou Refatorados)
+            // Validação 2: Se enviou o turno, valida conflito específico do turno
+            if (nextShiftStr != null && !nextShiftStr.isBlank()) {
+                Shift shift = Shift.valueOf(nextShiftStr.toUpperCase());
+                long eventConflict = agendaEventRepository.countByUserAndEventDateAndShift(currentUser, nextDate, shift);
+
+                if (eventConflict > 0) {
+                    response.put("blocked", true);
+                    response.put("blockMessage", "Você já possui um compromisso neste turno. Escolha outro turno ou data.");
+                    return response;
+                }
+            }
+
             List<AgendaEvent> otherEvents = agendaEventRepository.findAllByEventDate(nextDate).stream()
                     .filter(event -> event.getStatus() != com.gotree.API.enums.AgendaStatus.CANCELADO)
                     .filter(event -> !event.getUser().getId().equals(currentUser.getId()))
                     .toList();
 
             for (AgendaEvent event : otherEvents) {
-                warnings.add(event.getUser().getName() + " marcou visita neste dia (" + event.getShift().name() + ").");
-            }
-
-            // B. Busca nas Visitas Antigas (Para não perder avisos do passado)
-            List<TechnicalVisit> otherVisits = technicalVisitRepository.findAllByNextVisitDate(nextDate).stream()
-                    .filter(v -> v.getTechnician() != null && !v.getTechnician().getId().equals(currentUser.getId()))
-                    .toList();
-
-            for (TechnicalVisit tv : otherVisits) {
-                String msg = tv.getTechnician().getName() + " marcou visita neste dia (" + tv.getNextVisitShift().name() + ").";
-                if (!warnings.contains(msg)) {
-                    warnings.add(msg);
-                }
+                String shiftName = event.getShift() != null ? event.getShift().name() : "A DEFINIR";
+                warnings.add(event.getUser().getName() + " marcou visita neste dia (" + shiftName + ").");
             }
 
             response.put("warnings", warnings);
@@ -397,5 +219,165 @@ public class TechnicalVisitService {
             response.put("blockMessage", "Turno inválido fornecido.");
             return response;
         }
+    }
+
+    private void applySignaturesToVisit(TechnicalVisit visit, String techBase64, String clientBase64, String clientName, Double lat, Double lon) {
+        if (techBase64 != null) visit.setTechnicianSignatureImageBase64(stripDataUrlPrefix(techBase64));
+        if (clientBase64 != null) visit.setClientSignatureImageBase64(stripDataUrlPrefix(clientBase64));
+        if (clientName != null) visit.setClientSignerName(clientName);
+        if (lat != null) visit.setClientSignatureLatitude(lat);
+        if (lon != null) visit.setClientSignatureLongitude(lon);
+    }
+
+    private void updateFindings(TechnicalVisit visit, List<VisitFindingDTO> findingsDto) {
+        // 1. Remove os arquivos físicos antigos do VPS
+        for (VisitFinding finding : visit.getFindings()) {
+            try {
+                if (finding.getPhotoPath1() != null) Files.deleteIfExists(Paths.get(finding.getPhotoPath1()));
+                if (finding.getPhotoPath2() != null) Files.deleteIfExists(Paths.get(finding.getPhotoPath2()));
+            } catch (IOException e) {
+                System.err.println("Aviso: Falha ao remover foto de rascunho anterior.");
+            }
+        }
+
+        // 2. Remove do banco
+        visit.getFindings().clear();
+
+        // 3. Adiciona os novos
+        if (findingsDto != null && !findingsDto.isEmpty()) {
+            findingsDto.forEach(findingDto -> {
+                VisitFinding finding = mapFindingDtoToEntity(findingDto);
+                finding.setTechnicalVisit(visit);
+                visit.getFindings().add(finding);
+            });
+        }
+    }
+
+    private void createAgendaEventForNextVisit(TechnicalVisit visit, LocalDate nextDate, String nextShift, User currentUser) {
+        if (nextDate == null) return;
+
+        if (nextShift != null) {
+            Map<String, Object> validation = internalValidateNextVisitSchedule(nextDate, nextShift, currentUser);
+            if ((Boolean) validation.get("blocked")) {
+                throw new IllegalStateException("BLOQUEIO DE AGENDA: " + validation.get("blockMessage"));
+            }
+        }
+
+        AgendaEvent futureEvent = new AgendaEvent();
+        futureEvent.setEventDate(nextDate);
+
+        if (nextShift != null && !nextShift.isBlank()) {
+            try {
+                futureEvent.setShift(Shift.valueOf(nextShift.toUpperCase()));
+            } catch (IllegalArgumentException e) {
+                System.err.println("Turno inválido recebido para agenda.");
+            }
+        }
+
+        futureEvent.setUser(currentUser);
+        futureEvent.setCompany(visit.getClientCompany());
+        futureEvent.setUnit(visit.getUnit());
+        futureEvent.setSector(visit.getSector());
+        futureEvent.setTitle("Retorno: " + visit.getClientCompany().getName());
+        futureEvent.setEventType(com.gotree.API.enums.AgendaEventType.VISITA_TECNICA);
+        futureEvent.setStatus(com.gotree.API.enums.AgendaStatus.A_CONFIRMAR);
+        futureEvent.setOriginTechnicalVisitId(visit.getId());
+
+        agendaEventRepository.save(futureEvent);
+    }
+
+    private TechnicalVisit generateAndSavePdf(TechnicalVisit visit, LocalDate nextVisitDate, String nextVisitShift) {
+        Map<String, Object> templateData = new HashMap<>();
+        templateData.put("visit", visit);
+
+        if (nextVisitDate != null) {
+            templateData.put("nextVisitDateFormatted", nextVisitDate.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")));
+            templateData.put("nextVisitShiftLabel", nextVisitShift != null ? nextVisitShift : "-");
+        } else {
+            templateData.put("nextVisitDateFormatted", "A Definir");
+            templateData.put("nextVisitShiftLabel", "-");
+        }
+
+        byte[] pdfBytes = reportService.generatePdfFromHtml("visit-report-template", templateData);
+
+        try {
+            String fileName = "technical_visit_" + visit.getId() + "_" + UUID.randomUUID() + ".pdf";
+            Path path = Paths.get(fileStoragePath, fileName);
+            Files.createDirectories(path.getParent());
+            Files.write(path, pdfBytes);
+
+            visit.setPdfPath(fileName);
+            return technicalVisitRepository.save(visit);
+
+        } catch (IOException e) {
+            throw new RuntimeException("Falha ao salvar o PDF da visita: " + e.getMessage(), e);
+        }
+    }
+
+    private VisitFinding mapFindingDtoToEntity(VisitFindingDTO dto) {
+        VisitFinding finding = new VisitFinding();
+
+        if (dto.getPhotoBase64_1() != null && !dto.getPhotoBase64_1().isEmpty()) {
+            try {
+                byte[] imageBytes = Base64.getMimeDecoder().decode(stripDataUrlPrefix(dto.getPhotoBase64_1()));
+                String imageFileName = "finding_" + UUID.randomUUID() + ".jpg";
+                Path imagePath = Paths.get(fileStoragePath, "visit_photos", imageFileName);
+                Files.createDirectories(imagePath.getParent());
+                Files.write(imagePath, imageBytes);
+                finding.setPhotoPath1(imagePath.toAbsolutePath().toString().replace("\\", "/"));
+            } catch (IOException e) {
+                throw new RuntimeException("Erro ao processar a imagem 1 do achado.", e);
+            }
+        }
+
+        if (dto.getPhotoBase64_2() != null && !dto.getPhotoBase64_2().isEmpty()) {
+            try {
+                byte[] imageBytes2 = Base64.getMimeDecoder().decode(stripDataUrlPrefix(dto.getPhotoBase64_2()));
+                String imageFileName = "finding_" + UUID.randomUUID() + ".jpg";
+                Path imagePath = Paths.get(fileStoragePath, "visit_photos", imageFileName);
+                Files.createDirectories(imagePath.getParent());
+                Files.write(imagePath, imageBytes2);
+                finding.setPhotoPath2(imagePath.toAbsolutePath().toString().replace("\\", "/"));
+            } catch (IOException e) {
+                throw new RuntimeException("Erro ao processar a imagem 2 do achado.", e);
+            }
+        }
+
+        finding.setDescription(dto.getDescription());
+        finding.setConsequences(dto.getConsequences());
+        finding.setLegalGuidance(dto.getLegalGuidance());
+        finding.setResponsible(dto.getResponsible());
+        finding.setPenalties(dto.getPenalties());
+        finding.setDeadline(dto.getDeadline());
+        finding.setRecurrence(dto.isRecurrence());
+
+        if (dto.getPriority() != null && !dto.getPriority().isBlank()) {
+            try {
+                finding.setPriority(VisitFinding.Priority.valueOf(dto.getPriority().toUpperCase()));
+            } catch (IllegalArgumentException e) {
+                throw new IllegalArgumentException("Prioridade inválida: " + dto.getPriority());
+            }
+        }
+
+        return finding;
+    }
+
+    private String stripDataUrlPrefix(String dataUrl) {
+        if (dataUrl == null) return null;
+        int commaIndex = dataUrl.indexOf(',');
+        return commaIndex != -1 ? dataUrl.substring(commaIndex + 1) : dataUrl;
+    }
+
+    private void setCommonVisitFields(TechnicalVisit visit, Long unitId, Long sectorId,
+                                      String title, String location, String summary,
+                                      LocalDate visitDate, LocalTime startTime) {
+
+        visit.setUnit(unitId != null ? unitRepository.findById(unitId).orElse(null) : null);
+        visit.setSector(sectorId != null ? sectorRepository.findById(sectorId).orElse(null) : null);
+        visit.setTitle(title);
+        visit.setLocation(location);
+        visit.setSummary(summary);
+        visit.setVisitDate(visitDate);
+        visit.setStartTime(startTime);
     }
 }

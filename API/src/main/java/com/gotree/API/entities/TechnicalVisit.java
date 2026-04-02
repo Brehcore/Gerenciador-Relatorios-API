@@ -42,9 +42,6 @@ public class TechnicalVisit {
 
     private String pdfPath;
 
-    @Enumerated(EnumType.STRING)
-    private Shift nextVisitShift;
-
     @OneToMany(mappedBy = "technicalVisit", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<VisitFinding> findings = new ArrayList<>();
 
@@ -60,12 +57,19 @@ public class TechnicalVisit {
     private Double clientSignatureLatitude;
     private Double clientSignatureLongitude;
 
-    @Column(name = "next_visit_date")
-    private LocalDate nextVisitDate;
+    // A entidade agenda armazenará os dados recebidos pelo DTO
+//    @Column(name = "next_visit_date")
+//    private LocalDate nextVisitDate;
+//
+//    @Enumerated(EnumType.STRING)
+//    private Shift nextVisitShift;
 
     @Column(name = "sent_to_client_at")
     private java.time.LocalDateTime sentToClientAt;
 
     @Column(name = "icp_signed_at")
     private LocalDateTime icpSignedAt; // Data da assinatura PFX
+
+    @Column(name = "is_draft", nullable = false)
+    private boolean isDraft = true; // true = rascunho, false = relatório finalizado
 }

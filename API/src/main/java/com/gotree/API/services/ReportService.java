@@ -2,19 +2,17 @@ package com.gotree.API.services;
 
 import com.gotree.API.entities.SystemInfo;
 import com.gotree.API.repositories.SystemInfoRepository;
-import com.lowagie.text.pdf.BaseFont;
+import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
-import org.xhtmlrenderer.pdf.ITextRenderer;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.net.URL;
 import java.util.Map;
 
 @Service
@@ -30,7 +28,7 @@ public class ReportService {
     }
 
     public byte[] generatePdfFromHtml(String templateName, Map<String, Object> data) {
-        // 1. INJEÇÃO AUTOMÁTICA: Garante que a logo e dados da empresa estejam no mapa
+        // 1. Garante que a logo e dados da empresa estejam no mapa
         enrichDataWithSystemInfo(data);
 
         Context context = new Context();
@@ -40,26 +38,38 @@ public class ReportService {
         String htmlContent = templateEngine.process(templateName, context);
 
         try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
-            ITextRenderer renderer = new ITextRenderer();
 
+            // Instancia o novo construtor de PDF moderno
+            PdfRendererBuilder builder = new PdfRendererBuilder();
+            builder.useFastMode(); // Otimiza a renderização
+
+            // Tenta carregar a fonte Montserrat da pasta resources/fonts/
             try {
-                URL fontUrl = getClass().getResource("/fonts/Montserrat.ttf");
-                if (fontUrl != null) {
-                    renderer.getFontResolver().addFont(fontUrl.toString(), BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
+                ClassPathResource fontResource = new ClassPathResource("fonts/Montserrat.ttf");
+                if (fontResource.exists()) {
+                    builder.useFont(() -> {
+                        try {
+                            return fontResource.getInputStream();
+                        } catch (IOException ex) {
+                            return null;
+                        }
+                    }, "Montserrat");
                 }
             } catch (Exception e) {
                 logger.error("Aviso: Fonte Montserrat não carregada.", e);
             }
 
-            // BaseURI para recursos locais (caso ainda use alguma imagem estática)
+            // BaseURI para recursos locais
             String baseUri = new File(".").toURI().toString();
-            renderer.setDocumentFromString(htmlContent, baseUri);
 
-            renderer.layout();
-            renderer.createPDF(outputStream);
+            // Passa o HTML e constrói o documento
+            builder.withHtmlContent(htmlContent, baseUri);
+            builder.toStream(outputStream);
+            builder.run();
 
-            logger.info("PDF gerado com sucesso.");
+            logger.info("PDF gerado com sucesso com OpenHTMLToPDF.");
             return outputStream.toByteArray();
+
         } catch (Exception e) {
             logger.error("==== FALHA CRÍTICA NA GERAÇÃO DO PDF ====", e);
             throw new RuntimeException("Erro ao renderizar o PDF.", e);
@@ -85,7 +95,6 @@ public class ReportService {
                 }
             } else {
                 // FALLBACK: Se o banco estiver vazio (primeira execução), tenta carregar do arquivo estático
-                // Isso atende seu desejo de usar o static como backup
                 logger.warn("SystemInfo não encontrado no banco. Tentando logo padrão estática.");
                 loadStaticLogoFallback(data);
             }

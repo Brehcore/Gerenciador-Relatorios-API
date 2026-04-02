@@ -48,7 +48,7 @@ public class TechnicalVisitController {
     }
 
     /**
-     * Cria uma nova visita técnica.
+     * Cria uma nova visita técnica e gera o relatório PDF correspondente.
      * @param dto            Objeto contendo os dados necessários para criação da visita técnica
      * @param authentication Informações de autenticação do técnico que está criando a visita
      * @return ResponseEntity com status 201 (CREATED) contendo mensagem de sucesso e o ID da visita criada
