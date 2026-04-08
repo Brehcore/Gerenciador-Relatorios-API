@@ -25,7 +25,6 @@ import java.util.Map;
 @Tag(name = "Clientes", description = "Gerenciamento de clientes")
 @RestController
 @RequestMapping("/clients")
-@PreAuthorize("isAuthenticated()")
 public class ClientController {
 
     private final ClientService clientService;
@@ -42,6 +41,7 @@ public class ClientController {
      */
     @Operation(summary = "Busca um cliente pelo ID", description = "Retorna os detalhes de um cliente específico baseado no seu identificador único.")
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('') or hasRole('ADMIN')")
     public ResponseEntity<ClientDTO> getById(@PathVariable Long id) {
         return ResponseEntity.ok(clientService.findById(id));
     }
@@ -54,7 +54,7 @@ public class ClientController {
      */
     @Operation(summary = "Lista todos os clientes paginados", description = "Recupera uma lista paginada de todos os clientes cadastrados no sistema.")
     @GetMapping
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('') or hasRole('ADMIN')")
     public ResponseEntity<Page<ClientDTO>> getAll(
             @PageableDefault(sort = "name", direction = Sort.Direction.ASC) Pageable pageable
     ) {
@@ -71,6 +71,7 @@ public class ClientController {
      */
     @Operation(summary = "Cria um novo cliente", description = "Cria um novo cliente no sistema e persiste as informações no banco de dados.")
     @PostMapping
+    @PreAuthorize("hasAuthority('CREATE_CLIENT') or hasRole('ADMIN')")
     public ResponseEntity<ClientDTO> create(@RequestBody ClientDTO dto) {
         return ResponseEntity.ok(clientService.save(dto));
     }
@@ -84,6 +85,7 @@ public class ClientController {
      */
     @Operation(summary = "Atualiza um cliente existente", description = "Atualiza as informações de um cliente cadastrado com base no seu ID.")
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('EDIT_CLIENT') or hasRole('ADMIN')")
     public ResponseEntity<ClientDTO> update(@PathVariable Long id, @RequestBody ClientDTO dto) {
         dto.setId(id);
         return ResponseEntity.ok(clientService.save(dto));
@@ -101,7 +103,7 @@ public class ClientController {
      */
     @Operation(summary = "Exclui um cliente", description = "Remove permanentemente um cliente do sistema pelo seu ID. Requer permissão de ADMIN.")
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('DELETE_AGENDA') or hasRole('ADMIN')")
     public ResponseEntity<?> delete(@PathVariable Long id) {
         try {
             clientService.delete(id);

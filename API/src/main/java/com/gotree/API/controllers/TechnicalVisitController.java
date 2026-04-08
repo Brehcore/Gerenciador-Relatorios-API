@@ -55,7 +55,7 @@ public class TechnicalVisitController {
      */
     @Operation(summary = "Cria uma visita", description = "Criação de uma nova visita técnica.")
     @PostMapping
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('CREATE_REPORTS') or hasRole('ADMIN')")
     public ResponseEntity<?> createVisit(@RequestBody @Valid CreateTechnicalVisitRequestDTO dto, Authentication authentication) {
         // Obtém os detalhes do utilizador autenticado de forma segura.
         CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
@@ -78,8 +78,9 @@ public class TechnicalVisitController {
      * @param authentication Informações de autenticação do técnico logado
      * @return ResponseEntity com status 200 (OK) contendo a lista de DTOs das visitas técnicas do técnico
      */
+    @Operation(summary = "Lista todas as visitas", description = "Lista todas as visitas técnicas realizadas pelo técnico autenticado.")
     @GetMapping
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('VIEW_REPORTS') or hasRole('ADMIN')")
     public ResponseEntity<List<TechnicalVisitResponseDTO>> findMyVisits(Authentication authentication) {
         CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
         User technician = userDetails.user();
@@ -104,7 +105,7 @@ public class TechnicalVisitController {
      */
     @Operation(summary = "Verificar Disponibilidade", description = "Verifica se o técnico tem a agenda livre e retorna avisos de outros técnicos no mesmo dia.")
     @GetMapping("/check-availability")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('VIEW_REPORTS') or hasRole('ADMIN')")
     public ResponseEntity<Map<String, Object>> checkNextVisitAvailability(
             Authentication auth,
             @RequestParam LocalDate date,
@@ -133,7 +134,7 @@ public class TechnicalVisitController {
      */
     @Operation(summary = "Assinatura digital em um relatório", description = "Assina digitalmente um relatório de risco utilizando certificado digital padrão ICP-Brasil")
     @PostMapping("/{id}/sign")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('CREATE_REPORTS') or hasRole('ADMIN')")
     public ResponseEntity<?> signVisit(@PathVariable Long id, Authentication authentication) {
         try {
             User user = ((CustomUserDetails) authentication.getPrincipal()).user();

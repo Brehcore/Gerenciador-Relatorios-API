@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -40,6 +41,7 @@ public class JobRoleController {
      */
     @Operation(summary = "Recupera todos os cargos", description = "Recupera todos os cargos de uma empresa específica, ordenados por nome e em ordem alfabética.")
     @GetMapping("/company/{companyId}")
+    @PreAuthorize("hasAuthority('VIEW_COMPANIES') or hasRole('ADMIN')")
     public ResponseEntity<List<JobRoleResponseDTO>> getByCompany(@PathVariable Long companyId) {
         // 1. Busca a empresa
         Company company = companyRepository.findById(companyId).orElseThrow();
@@ -71,6 +73,7 @@ public class JobRoleController {
      */
     @Operation(summary = "Criação de cargo", description = "Cria um novo cargo para uma empresa específica.")
     @PostMapping
+    @PreAuthorize("hasAuthority('CREATE_COMPANIES') or hasRole('ADMIN')")
     public ResponseEntity<JobRoleResponseDTO> create(@RequestBody @Valid JobRoleDTO dto) { // <-- Mude o retorno
         Company company = companyRepository.findById(dto.getCompanyId()).orElseThrow();
 

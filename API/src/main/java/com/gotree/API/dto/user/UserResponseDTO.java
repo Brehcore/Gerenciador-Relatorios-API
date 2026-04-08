@@ -30,6 +30,9 @@ public class UserResponseDTO {
 	@Schema(description = "Papel/Perfil do usuário no sistema", example = "USER")
 	private UserRole role;
 
+	@Schema(description = "ID do Perfil de Acesso", example = "1")
+	private Long accessProfileId;
+
 	@Schema(description = "Sigla do conselho de classe", example = "CREFITO")
 	private String siglaConselhoClasse;
 

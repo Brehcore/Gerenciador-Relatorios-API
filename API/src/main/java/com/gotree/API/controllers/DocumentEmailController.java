@@ -51,7 +51,7 @@ public class DocumentEmailController {
      */
     @Operation(summary = "Envia um documento por e-mail", description = "Envia um documento PDF para os clientes vinculados.")
     @PostMapping("/{type}/{id}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('CREATE_REPORTS') or hasRole('ADMIN')")
     public ResponseEntity<?> sendDocumentToClient(@PathVariable String type, @PathVariable Long id, Authentication auth) {
         User user = ((CustomUserDetails) auth.getPrincipal()).user();
 

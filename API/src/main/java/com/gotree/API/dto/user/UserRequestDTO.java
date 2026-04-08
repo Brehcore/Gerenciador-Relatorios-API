@@ -49,6 +49,9 @@ public class UserRequestDTO {
 	@Schema(description = "Papel/Perfil do usuário no sistema", example = "USER")
 	private UserRole role;
 
+	@Schema(description = "ID do perfil de Aceso do usuário", example = "123")
+	private Long accessProfileId;
+
 	@Schema(description = "Sigla do conselho de classe", example = "CREFITO")
 	private String siglaConselhoClasse;
 

@@ -41,6 +41,12 @@ public class User implements Serializable, UserDetails {
     @Convert(converter = UserRoleConverter.class)
     private UserRole role = UserRole.USER;
 
+    // Relacionamento com o perfil.
+    // nullable = true garante que os usuários antigos no banco não quebrem a aplicação.
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "profile_id", nullable = true)
+    private AccessProfile profile;
+
     @Column(name = "password_reset_required")
     private Boolean passwordResetRequired = false;
 

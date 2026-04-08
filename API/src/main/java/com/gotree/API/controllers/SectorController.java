@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -34,6 +35,7 @@ public class SectorController {
      */
     @Operation(summary = "Remove um setor", description = "Remove um setor do sistema")
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('DELETE_COMPANIES') or hasRole('ADMIN')")
     public ResponseEntity<?> deleteSector(@PathVariable Long id) {
         try {
             sectorService.deleteSector(id);

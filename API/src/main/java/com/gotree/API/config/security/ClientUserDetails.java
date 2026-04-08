@@ -40,10 +40,5 @@ public class ClientUserDetails implements UserDetails {
     // Configurações padrão para dizer que a conta está ativa
     @Override
     public boolean isAccountNonExpired() { return true; }
-    @Override
-    public boolean isAccountNonLocked() { return true; }
-    @Override
-    public boolean isCredentialsNonExpired() { return true; }
-    @Override
-    public boolean isEnabled() { return true; }
+
 }

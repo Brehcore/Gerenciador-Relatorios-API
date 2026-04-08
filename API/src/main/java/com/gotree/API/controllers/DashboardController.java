@@ -46,7 +46,7 @@ public class DashboardController {
      */
     @Operation(summary = "Retorna os KPIs", description = "Retorna as KPIs para qualquer usuário autenticado (Técnico).")
     @GetMapping("/my-stats")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('VIEW_DASHBOARDS') or hasRole('ADMIN')")
     public ResponseEntity<MyStatsDTO> getMyStats(Authentication authentication) {
         User currentUser = ((CustomUserDetails) authentication.getPrincipal()).user();
         MyStatsDTO stats = dashboardService.getMyStats(currentUser);

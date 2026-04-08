@@ -32,4 +32,7 @@ public class UserUpdateDTO {
 
 	@Schema(description = "E-mail do usuário", example = "joao@exemplo.com")
 	private String email;
+
+	@Schema(description = "ID do Perfil de Acesso do usuário", example = "1")
+	private Long accessProfileId;
 }

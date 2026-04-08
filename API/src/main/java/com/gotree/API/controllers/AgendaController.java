@@ -57,7 +57,7 @@ public class AgendaController {
      */
     @Operation(summary = "Verifica disponibilidade", description = "Verifica se uma determinada data e turno estão disponíveis na agenda do usuário autenticado.")
     @GetMapping("/check-availability")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('VIEW_AGENDA') or hasRole('ADMIN')")
     public ResponseEntity<?> checkAvailability(
             Authentication auth,
             @RequestParam LocalDate date,
@@ -84,7 +84,7 @@ public class AgendaController {
      */
     @Operation(summary = "Cria um novo evento", description = "Cria um novo evento ou agendamento de visita na agenda do usuário autenticado.")
     @PostMapping("/eventos")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('CREATE_AGENDA') or hasRole('ADMIN')")
     public ResponseEntity<AgendaResponseDTO> createEvent(
             @RequestBody @Valid CreateEventDTO dto,
             Authentication authentication
@@ -127,7 +127,7 @@ public class AgendaController {
      */
     @Operation(summary = "Lista todos os eventos do usuário", description = "Retorna todos os eventos e visitas agendadas para o usuário autenticado.")
     @GetMapping("/eventos")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('VIEW_AGENDA') or hasRole('ADMIN')")
     public ResponseEntity<List<AgendaResponseDTO>> getAllEvents(Authentication authentication) {
         User currentUser = ((CustomUserDetails) authentication.getPrincipal()).user();
         List<AgendaResponseDTO> allEvents = agendaService.findAllEventsForUser(currentUser);
@@ -136,7 +136,7 @@ public class AgendaController {
 
     @Operation(summary = "Lista os próximos eventos", description = "Retorna os eventos do usuário a partir da data atual.")
     @GetMapping("/eventos/proximos")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('VIEW_AGENDA') or hasRole('ADMIN')")
     public ResponseEntity<List<AgendaResponseDTO>> getUpcomingEvents(Authentication authentication) {
         User currentUser = ((CustomUserDetails) authentication.getPrincipal()).user();
         List<AgendaResponseDTO> upcomingEvents = agendaService.findUpcomingEventsForUser(currentUser);
@@ -153,7 +153,7 @@ public class AgendaController {
      */
     @Operation(summary = "Atualiza um evento", description = "Atualiza os dados de um evento manual existente na agenda do usuário autenticado.")
     @PutMapping("/eventos/{id}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('EDIT_AGENDA') or hasRole('ADMIN')")
     public ResponseEntity<AgendaResponseDTO> updateEvent(
             @PathVariable Long id,
             @RequestBody @Valid CreateEventDTO dto,
@@ -173,9 +173,9 @@ public class AgendaController {
      */
     @Operation(summary = "Reagenda uma visita", description = "Altera a data e/ou o turno de um evento na agenda.")
     @PutMapping("/{eventId}/reagendar")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('EDIT_AGENDA') or hasRole('ADMIN')")
     public ResponseEntity<Void> rescheduleVisit(
-            @PathVariable("eventId") Long eventId, // <-- Adicione o nome explicitamente aqui
+            @PathVariable Long eventId,
             @RequestBody @Valid RescheduleVisitDTO dto,
             Authentication authentication) {
 
@@ -193,7 +193,7 @@ public class AgendaController {
      */
     @Operation(summary = "Remove um evento", description = "Exclui permanentemente um evento da agenda do usuário.")
     @DeleteMapping("/eventos/{id}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('DELETE_AGENDA') or hasRole('ADMIN')")
     public ResponseEntity<Void> deleteEvent(
             @PathVariable Long id,
             Authentication authentication) {
@@ -226,7 +226,7 @@ public class AgendaController {
      */
     @Operation(summary = "Valida submissão de relatório", description = "Verifica se o relatório de uma visita pode ser enviado com base na data e turno.")
     @GetMapping("/validate-report")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('VIEW_AGENDA') or hasRole('ADMIN')")
     public ResponseEntity<?> validateReportSubmission(
             Authentication auth,
             @RequestParam Long visitId,
@@ -263,6 +263,7 @@ public class AgendaController {
      */
     @Operation(summary = "Consulta disponibilidade mensal", description = "Retorna a disponibilidade diária (livre/ocupado) de um usuário para um mês específico.")
     @GetMapping("/availability")
+    @PreAuthorize("hasAuthority('VIEW_AGENDA') or hasRole('ADMIN')")
     public ResponseEntity<List<MonthlyAvailabilityDTO>> getAvailability(
             Authentication auth,
             @RequestParam int year,
@@ -274,7 +275,7 @@ public class AgendaController {
 
     @Operation(summary = "Consulta agenda global", description = "Retorna todos os eventos de todos os técnicos em um período determinado.")
     @GetMapping("/global")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('VIEW_AGENDA') or hasRole('ADMIN')")
     public ResponseEntity<List<AgendaResponseDTO>> getGlobalAgenda(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
@@ -289,7 +290,7 @@ public class AgendaController {
      */
     @Operation(summary = "Verifica conflitos globais", description = "Verifica se há outros técnicos agendados para a mesma data e turno para evitar conflitos.")
     @GetMapping("/check-global-conflicts")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('VIEW_AGENDA') or hasRole('ADMIN')")
     public ResponseEntity<Map<String, String>> checkGlobalConflicts(
             Authentication auth,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
@@ -314,7 +315,7 @@ public class AgendaController {
      */
     @Operation(summary = "Exporta agenda em PDF", description = "Gera um documento PDF com os eventos da agenda em um intervalo de datas.")
     @GetMapping("/export/pdf")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('VIEW_AGENDA') or hasRole('ADMIN')")
     public ResponseEntity<byte[]> exportAgendaPdf(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
@@ -355,7 +356,7 @@ public class AgendaController {
      */
     @Operation(summary = "Confirma uma visita", description = "Marca uma visita agendada como confirmada pelo técnico responsável.")
     @PutMapping("/visitas/{visitId}/confirmar")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('EDIT_AGENDA') or hasRole('ADMIN')")
     public ResponseEntity<Void> confirmVisit(
             @PathVariable Long visitId,
             Authentication authentication) {
@@ -371,7 +372,7 @@ public class AgendaController {
 
     @PatchMapping("/{id}/not-realized")
     @Operation(summary = "Reportar visita não realizada", description = "Marca um evento da agenda como não realizado e salva a justificativa do técnico.")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('CREATE_AGENDA') or hasRole('ADMIN')")
     public ResponseEntity<Void> reportVisitNotRealized(
             @PathVariable Long id,
             @Valid @RequestBody ReportNotRealizedDTO dto,
@@ -387,7 +388,7 @@ public class AgendaController {
 
     @PatchMapping("/{id}/realized")
     @Operation(summary = "Marcar evento como realizado", description = "Dá baixa no evento da agenda indicando que ele ocorreu com sucesso.")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('EDIT_AGENDA') or hasRole('ADMIN')")
     public ResponseEntity<Void> markEventAsRealized(
             @PathVariable Long id,
             Authentication authentication) {

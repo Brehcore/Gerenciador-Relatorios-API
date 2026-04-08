@@ -39,7 +39,7 @@ public class PhysiotherapistController {
      */
     @Operation(summary = "Lista todos os fisioterapeutas", description = "Retorna a lista de todos os fisioterapeutas cadastrados no sistema.")
     @GetMapping
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('VIEW_REPORTS') or hasRole('ADMIN')")
     public ResponseEntity<List<Physiotherapist>> getAllPhysiotherapists() {
         return ResponseEntity.ok(repository.findAll());
     }
@@ -57,7 +57,7 @@ public class PhysiotherapistController {
      */
     @Operation(summary = "Cria um novo fisioterapeuta", description = "Cria um novo registo de fisioterapeuta no sistema de forma segura.")
     @PostMapping
-    @PreAuthorize("isAuthenticated")
+    @PreAuthorize("hasAuthority('CREATE_REPORTS') or hasRole('ADMIN')")
     public ResponseEntity<Physiotherapist> createPhysiotherapist(@Valid @RequestBody CreatePhysiotherapistDTO dto) {
 
         // 1. Instancia uma Entidade NOVA (A IDE confia nisto, pois o objeto nasceu no servidor)

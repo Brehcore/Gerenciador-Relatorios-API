@@ -69,7 +69,7 @@ public class UserController {
 	 */
 	@Operation(summary = "Busca de todos os usuários", description = "Realiza a busca de todos os usuários de forma paginada.")
 	@GetMapping
-	@PreAuthorize("hasRole('ADMIN')")
+	@PreAuthorize("hasAuthority('VIEW_USERS') or hasRole('ADMIN')")
 	public ResponseEntity<Page<UserResponseDTO>> findAll(
 			@PageableDefault(size = 5, sort = "id") Pageable pageable
 	) {
@@ -89,7 +89,7 @@ public class UserController {
 	 */
 	@Operation(summary = "Busca de usuários por ID", description = "Realiza a busca de um usuário específico pelo ID.")
 	@GetMapping("/{id}")
-	@PreAuthorize("hasRole('ADMIN')")
+	@PreAuthorize("hasAuthority('VIEW_USERS') or hasRole('ADMIN')")
 	public ResponseEntity<UserResponseDTO> findById(@PathVariable Long id) {
 		User user = userService.findById(id);
 		return ResponseEntity.ok(userMapper.toDto(user));
@@ -104,7 +104,7 @@ public class UserController {
 	 */
 	@Operation(summary = "Criação de usuário", description = "Cria um novo usuário no sistema.")
 	@PostMapping("/insert")
-	@PreAuthorize("hasRole('ADMIN')")
+	@PreAuthorize("hasAuthority('CREATE_USERS') or hasRole('ADMIN')")
 	public ResponseEntity<UserResponseDTO> insertUser(@RequestBody @Valid UserRequestDTO dto) {
 		User createdUser = userService.insertUser(dto);
 		return ResponseEntity.ok(userMapper.toDto(createdUser));
@@ -120,7 +120,7 @@ public class UserController {
 	 */
 	@Operation(summary = "Atualização de usuário", description = "Atualiza os dados de um usuário existente no sistema.")
 	@PutMapping("/{id}")
-	@PreAuthorize("hasRole('ADMIN')")
+	@PreAuthorize("hasAuthority('EDIT_USERS') or hasRole('ADMIN')")
 	public ResponseEntity<UserResponseDTO> updateUser(@PathVariable Long id, @RequestBody @Valid UserUpdateDTO dto) {
 		User updateUser = userService.updateUser(id, dto);
 		return ResponseEntity.ok(userMapper.toDto(updateUser));
@@ -137,12 +137,35 @@ public class UserController {
 	 */
 	@Operation(summary = "Redefinição de senha", description = "Redefine a senha de um usuário para o valor padrão e força a alteração no próximo login.")
 	@PutMapping("/admin/reset-password/{id}")
-	@PreAuthorize("hasRole('ADMIN')") // garante que só admin pode chamar
+	@PreAuthorize("hasAuthority('EDIT_USERS') or hasRole('ADMIN')")
 	public ResponseEntity<?> resetPassword(@PathVariable Long id) {
 		userService.resetPassword(id);
 		return ResponseEntity
 				.ok(Map.of("message", "Senha redefinida com sucesso e campo passwordResetRequired Ativado"));
 
+	}
+
+	/**
+	 * Remove um usuário do sistema.
+	 * Apenas administradores têm acesso a este endpoint.
+	 *
+	 * @param id Identificador único do usuário
+	 * @return Resposta vazia em caso de sucesso ou mensagem de erro
+	 */
+	@Operation(summary = "Exclusão de usuário", description = "Remove um usuário do sistema.")
+	@DeleteMapping("/{id}")
+	@PreAuthorize("hasAuthority('DELETE_USERS') or hasRole('ADMIN')")
+	public ResponseEntity<?> deleteUser(@PathVariable Long id) {
+		try {
+			userService.deleteUser(id);
+			return ResponseEntity.noContent().build();
+
+		} catch (IllegalStateException e) {
+			return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message", e.getMessage()));
+
+		} catch (ResourceNotFoundException e) {
+			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", e.getMessage()));
+		}
 	}
 
 	/**
@@ -173,29 +196,6 @@ public class UserController {
 	}
 
 	/**
-	 * Remove um usuário do sistema.
-	 * Apenas administradores têm acesso a este endpoint.
-	 *
-	 * @param id Identificador único do usuário
-	 * @return Resposta vazia em caso de sucesso ou mensagem de erro
-	 */
-	@Operation(summary = "Exclusão de usuário", description = "Remove um usuário do sistema.")
-	@DeleteMapping("/{id}")
-	@PreAuthorize("hasRole('ADMIN')")
-	public ResponseEntity<?> deleteUser(@PathVariable Long id) {
-		try {
-			userService.deleteUser(id);
-			return ResponseEntity.noContent().build();
-
-		} catch (IllegalStateException e) {
-			return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message", e.getMessage()));
-
-		} catch (ResourceNotFoundException e) {
-			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", e.getMessage()));
-		}
-	}
-
-	/**
 	 * Retorna os dados do usuário atualmente autenticado.
 	 *
 	 * @param authentication Informações de autenticação do usuário
@@ -203,6 +203,7 @@ public class UserController {
 	 */
 	@Operation(summary = "Busca de usuário atual", description = "Retorna os dados do usuário atualmente autenticado.")
 	@GetMapping("/me")
+	@PreAuthorize("isAuthenticated()")
 	public ResponseEntity<UserResponseDTO> getCurrentUser(Authentication authentication) {
 
 		CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
@@ -224,7 +225,7 @@ public class UserController {
 	 */
 	@Operation(summary = "Alteração de senha", description = "Permite que o usuário autenticado altere sua própria senha.")
 	@PutMapping("/me/change-password")
-	@PreAuthorize("isAuthenticated()") // Garante que o utilizador esteja logado
+	@PreAuthorize("isAuthenticated()")
 	public ResponseEntity<?> changePassword(Authentication authentication,
 											@Valid @RequestBody ChangePasswordRequestDTO dto) {
 		String userEmail = authentication.getName();

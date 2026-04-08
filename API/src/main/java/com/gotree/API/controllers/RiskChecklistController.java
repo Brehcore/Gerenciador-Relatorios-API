@@ -38,7 +38,7 @@ public class RiskChecklistController {
      */
     @Operation(summary = "Busca dados de um relatório", description = "Retorna os dados detalhados de um relatório de risco para edição.")
     @GetMapping("/{id}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('VIEW_REPORTS') or hasRole('ADMIN')")
     public ResponseEntity<SaveRiskReportRequestDTO> getReportDetailsForEdit(@PathVariable Long id, Authentication authentication) {
         var user = ((CustomUserDetails) authentication.getPrincipal()).user();
 
@@ -56,7 +56,7 @@ public class RiskChecklistController {
      */
     @Operation(summary = "Cria novo relatório", description = "Criação de um novo relatório de risco ocupacional e gera o PDF correspondente.")
     @PostMapping
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('CREATE_REPORTS') or hasRole('ADMIN')")
     public ResponseEntity<?> create(@RequestBody SaveRiskReportRequestDTO dto, Authentication authentication) {
         var user = ((CustomUserDetails) authentication.getPrincipal()).user();
         OccupationalRiskReport report = service.createAndGeneratePdf(dto, user);
@@ -74,7 +74,7 @@ public class RiskChecklistController {
      */
     @Operation(summary = "Atualiza um relatório", description = "Atualiza um relatório de risco ocupacional existente e regenera o PDF.")
     @PutMapping("/{id}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('EDIT_REPORTS') or hasRole('ADMIN')")
     public ResponseEntity<?> update(@PathVariable Long id, @RequestBody SaveRiskReportRequestDTO dto, Authentication authentication) {
         var user = ((CustomUserDetails) authentication.getPrincipal()).user();
         OccupationalRiskReport report = service.updateReport(id, dto, user);
@@ -94,7 +94,7 @@ public class RiskChecklistController {
      */
     @Operation(summary = "Assinatura digital em um relatório", description = "Assina digitalmente um relatório de risco utilizando certificado digital padrão ICP-Brasil")
     @PostMapping("/{id}/sign")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('CREATE_REPORTS') or hasRole('ADMIN')")
     public ResponseEntity<?> signReport(@PathVariable Long id, Authentication authentication) {
         try {
             User user = ((CustomUserDetails) authentication.getPrincipal()).user();

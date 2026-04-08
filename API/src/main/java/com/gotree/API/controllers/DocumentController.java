@@ -60,7 +60,7 @@ public class DocumentController {
      */
     @Operation(summary = "Retorna todos os documentos", description = "Retorna todos os documentos associados ao usuário autenticado, com filtro e paginação")
     @GetMapping
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('VIEW_REPORTS') or hasRole('ADMIN')")
     public ResponseEntity<Page<DocumentSummaryDTO>> getAllMyDocuments(
             Authentication authentication,
             @RequestParam(required = false) String type,
@@ -90,7 +90,7 @@ public class DocumentController {
      */
     @Operation(summary = "Retorna documentos mais recentes", description = "Retorna os documentos mais recentes do usuário autenticado.")
     @GetMapping("/latest")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('VIEW_REPORTS') or hasRole('ADMIN')")
     public ResponseEntity<List<DocumentSummaryDTO>> getMyLatestDocuments(Authentication authentication) {
         CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
         User technician = userDetails.user();
@@ -112,7 +112,7 @@ public class DocumentController {
      */
     @Operation(summary = "Download ou visualização do documento", description = "Permite o download ou visualização de um documento PDF específico.")
     @GetMapping("/{type}/{id}/pdf")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('VIEW_REPORTS') or hasRole('ADMIN')")
     public ResponseEntity<byte[]> downloadDocumentPdf(@PathVariable String type, @PathVariable Long id, Authentication authentication) {
 
         try {
@@ -146,7 +146,7 @@ public class DocumentController {
      */
     @Operation(summary = "Exclui um documento", description = "Exclui um documento específico com base no tipo e ID fornecidos.")
     @DeleteMapping("/{type}/{id}") // Ex: DELETE /documents/visit/45
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('DELETE_REPORTS') or hasRole('ADMIN')")
     public ResponseEntity<Void> deleteDocument(@PathVariable String type, @PathVariable Long id, Authentication authentication) {
 
         CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
@@ -208,6 +208,7 @@ public class DocumentController {
      */
     @Operation(summary = "Exportar documentos (ZIP)", description = "Baixa todos os documentos do sistema em um arquivo .zip, podendo filtrar por intervalo de datas.")
     @GetMapping("/export/zip")
+    @PreAuthorize("hasAuthority('VIEW_REPORT') or hasRole('ADMIN')")
     public void exportDocumentsAsZip(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,

@@ -22,6 +22,7 @@ import java.io.IOException;
 @Tag(name = "Importação e Exportação de Empresas", description = "Gerenciamento de importação e exportação de empresas")
 @RestController
 @RequestMapping("/import")
+@PreAuthorize("hasRole('ADMIN')")
 public class ImportController {
 
     private final ExcelService excelService;
@@ -40,7 +41,6 @@ public class ImportController {
      */
     @Operation(summary = "Importa empresas de um arquivo Excel", description = "Importa empresas de um arquivo Excel para o sistema.")
     @PostMapping("/companies")
-    @PreAuthorize("hasRole('ADMIN')") // Apenas admin deve importar
     public ResponseEntity<String> importCompanies(@RequestParam("file") MultipartFile file) {
         try {
             excelService.importCompanies(file);
@@ -61,7 +61,6 @@ public class ImportController {
      */
     @Operation(summary = "Exporta todas as empresas para um arquivo Excel", description = "Exporta todas as empresas do sistema para um arquivo Excel.")
     @GetMapping("/export")
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<InputStreamResource> exportCompanies() throws IOException {
         ByteArrayInputStream in = excelService.exportCompaniesToExcel(); // Ou excelService
 

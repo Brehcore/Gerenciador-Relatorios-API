@@ -49,7 +49,7 @@ public class CompanyController {
      */
     @Operation(summary = "Cria uma empresa", description = "Cria uma empresa no sistema")
     @PostMapping
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('CREATE_COMPANIES') or hasRole('ADMIN')")
     public ResponseEntity<CompanyResponseDTO> createCompany(@Valid @RequestBody CompanyRequestDTO dto) {
         Company newCompany = companyService.createCompany(dto);
         CompanyResponseDTO responseDto = companyMapper.toDto(newCompany);
@@ -66,7 +66,7 @@ public class CompanyController {
      */
     @Operation(summary = "Busca uma empresa pelo ID", description = "Busca uma empresa pelo seu ID")
     @GetMapping("/{id}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('VIEW_COMPANIES') or hasRole('ADMIN')")
     public ResponseEntity<CompanyResponseDTO> findById(@PathVariable Long id) {
         Company company = companyService.findById(id);
         CompanyResponseDTO responseDto = companyMapper.toDto(company);
@@ -83,7 +83,7 @@ public class CompanyController {
      */
     @Operation(summary = "Listagem de empresas", description = "Lista todas as empresas com paginação.")
     @GetMapping
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('VIEW_COMPANIES') or hasRole('ADMIN')")
     public ResponseEntity<Page<CompanyResponseDTO>> getAll(
                                                             @PageableDefault(page = 0, size = 10, sort = "name", direction = Sort.Direction.ASC) Pageable pageable
     ) {
@@ -104,7 +104,7 @@ public class CompanyController {
      */
     @Operation(summary = "Atualiza os dados de uma empresa", description = "Atualiza os dados de uma empresa existente")
     @PutMapping("/{id}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('EDIT_COMPANIES') or hasRole('ADMIN')")
     public ResponseEntity<CompanyResponseDTO> updateCompany(@PathVariable Long id, @Valid @RequestBody CompanyRequestDTO dto) {
         Company updatedCompany = companyService.updateCompany(id, dto);
         CompanyResponseDTO responseDto = companyMapper.toDto(updatedCompany);
@@ -120,7 +120,7 @@ public class CompanyController {
      */
     @Operation(summary = "Remove uma empresa", description = "Remove uma empresa do sistema")
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('DELETE_COMPANIES') or hasRole('ADMIN')")
     public ResponseEntity<?> deleteCompany(@PathVariable Long id) {
         try {
             companyService.deleteCompany(id);
