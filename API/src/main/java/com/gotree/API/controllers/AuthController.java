@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -54,17 +55,23 @@ public class AuthController {
 		CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
 		User user = userDetails.user();
 
-		System.out.println(user.getPasswordResetRequired());
+		// Extrai as permissões do perfil do usuário
+		List<String> permissions = new java.util.ArrayList<>();
+		if (user.getProfile() != null && user.getProfile().getPermissions() != null) {
+			permissions = user.getProfile().getPermissions().stream()
+					.map(Enum::name) // Extrai o nome em String (ex: "VIEW_AGENDA")
+					.toList();
+		}
 
 		// Gera o token jwt com base nesse usuário
-
 		String jwt = jwtService.generateToken(userDetails);
 
 		return ResponseEntity.ok(Map.of(
 				"token", jwt,
 				"passwordResetRequired", user.getPasswordResetRequired(),
-				"role", user.getRole().getRoleName(),
-				"userId", user.getId()
+				"role", user.getRole().name(), // Mantemos a role principal
+				"userId", user.getId(),
+				"permissions", permissions // <-- Adicionado ao JSON de resposta
 		));
 	}
 

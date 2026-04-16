@@ -2,82 +2,201 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8"/>
+    <title>Relatório de Agendamentos</title>
+
     <style>
-        @page { size: A4; margin: 15mm; }
-        body { font-family: Helvetica, Arial, sans-serif; font-size: 10pt; }
+        /* --- MUDANÇA PARA PAISAGEM (LANDSCAPE) --- */
+        @page {
+            size: A4 landscape;
+            margin-top: 0; margin-left: 0; margin-right: 0; margin-bottom: 1.5cm;
+            @bottom-center { content: element(footer); }
+        }
 
-        .header { width: 100%; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 10px; }
-        .header-logo { width: 150px; vertical-align: middle; }
-        .header-title { text-align: center; font-weight: bold; font-size: 14pt; text-transform: uppercase; vertical-align: middle; }
+        body {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 9pt; color: #000000; background-color: #ffffff;
+            margin: 0; padding: 0;
+        }
 
-        table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-        th, td { border: 1px solid #000; padding: 5px; text-align: center; vertical-align: middle; word-wrap: break-word; }
-        th { background-color: #A9A9A9; color: black; font-weight: bold; font-size: 9pt; }
-        td { font-size: 9pt; }
+        .content-wrapper { padding: 0.8cm 1.2cm; } /* Margens laterais um pouco maiores na paisagem */
 
-        /* Coluna Cliente mais larga para caber Empresa/Unidade/Setor */
-        .col-data { width: 12%; }
-        .col-dia { width: 12%; }
-        .col-cliente { width: 28%; }
-        .col-turno { width: 12%; }
-        .col-colab { width: 20%; }
-        .col-situacao { width: 16%; }
+        /* --- CABEÇALHO ESCURO --- */
+        table.main-header {
+            width: 100%; background-color: #004d31; border-bottom: 4px solid #8cc63f;
+            border-collapse: collapse; table-layout: fixed; margin: 0;
+        }
+        table.main-header td { padding: 15px 25px; vertical-align: middle; }
 
-        .footer { position: fixed; bottom: 0; width: 100%; font-size: 8pt; text-align: center; color: #555; }
+        .header-title-text {
+            text-align: center; color: #fff; text-transform: uppercase;
+            font-weight: 700; font-size: 13pt; letter-spacing: 0.5px;
+        }
+        .header-subtitle {
+            display: block; font-size: 10pt; font-weight: 500;
+            text-transform: none; margin-top: 3px; color: #e0e0e0;
+        }
+        .header-filters {
+            display: block; font-size: 8pt; font-weight: 500;
+            text-transform: uppercase; margin-top: 8px; color: #a5d666;
+        }
+
+        /* --- CARD E TABELA --- */
+        .info-card {
+            background-color: #fff; border: 1px solid #ccc;
+            border-radius: 8px; margin-bottom: 15px; overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05); /* Leve sombra para destacar o card */
+        }
+
+        table.agenda-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        table.agenda-table th {
+            background-color: #f8f9fa; color: #004d31; font-weight: 700;
+            font-size: 8pt; text-transform: uppercase; border-bottom: 2px solid #e2e8f0;
+            padding: 12px 8px; text-align: left;
+        }
+        table.agenda-table td {
+            padding: 12px 8px; border-bottom: 1px solid #eee;
+            vertical-align: top; word-wrap: break-word; font-size: 8.5pt;
+        }
+        table.agenda-table tr:last-child td { border-bottom: none; }
+        table.agenda-table tbody tr:nth-child(even) { background-color: #fcfcfc; }
+
+        /* --- TAMANHOS DAS COLUNAS (Rebalanceados para Paisagem = 100%) --- */
+        .col-data { width: 8%; }
+        .col-dia { width: 8%; }
+        .col-cliente { width: 28%; } /* Muito mais espaço horizontal real agora */
+        .col-tipo { width: 11%; text-align: center; }
+        .col-turno { width: 8%; text-align: center; }
+        .col-colab { width: 18%; } /* Muito espaço para o nome não quebrar */
+        .col-situacao { width: 10%; text-align: center; }
+        .col-realizada { width: 9%; text-align: center; }
+
+        table.agenda-table th.col-turno, table.agenda-table td.col-turno,
+        table.agenda-table th.col-situacao, table.agenda-table td.col-situacao,
+        table.agenda-table th.col-tipo, table.agenda-table td.col-tipo,
+        table.agenda-table th.col-realizada, table.agenda-table td.col-realizada { text-align: center; }
+
+        /* --- DESTAQUE DO COLABORADOR --- */
+        td.colab-name {
+            font-weight: 700;
+            color: #004d31;
+            font-size: 9pt;
+        }
+
+        /* --- HIERARQUIA DO CLIENTE --- */
+        .item-label {
+            font-weight: 700; color: #004d31; font-size: 7pt;
+            text-transform: uppercase; display: inline-block; margin-right: 3px;
+        }
+        .hierarchy-main { display: block; margin-bottom: 4px; }
+        .hierarchy-sub {
+            display: block; margin-top: 3px; padding-left: 8px;
+            border-left: 2px solid #8cc63f;
+        }
+        .item-value { font-weight: 600; color: #1e293b; }
+        .doc-number { font-weight: normal; color: #64748b; font-size: 7pt; white-space: nowrap; }
+
+        /* --- BADGES --- */
+        .badge {
+            display: inline-block; padding: 4px 6px; border-radius: 4px;
+            font-size: 7pt; font-weight: 700; background-color: #f1f5f9;
+            border: 1px solid #e2e8f0; color: #004d31;
+        }
+
+        /* --- RODAPÉ --- */
+        div.footer {
+            display: block; position: running(footer); text-align: center;
+            font-size: 8pt; color: #555; padding-top: 10px;
+            margin-left: 1.2cm; margin-right: 1.2cm; border-top: 1px solid #ccc;
+        }
     </style>
 </head>
 <body>
 
-<table class="header" style="border: none;">
-    <tr style="border: none;">
-        <td style="border: none; text-align: left; width: 20%;">
+<table class="main-header">
+    <tr>
+        <td style="width: 25%; text-align: left;">
             <img th:if="${generatingCompanyLogo != null}"
                  th:src="'data:image/png;base64,' + ${generatingCompanyLogo}"
-                 class="header-logo" />
+                 alt="Logo" style="max-height: 50px; max-width: 100%;" />
         </td>
-        <td class="header-title" style="border: none;">
-            AGENDA VISITAS TÉCNICAS<br/>
-            <span th:text="${periodo}" style="font-size: 12pt;"></span>
+        <td class="header-title-text" style="width: 50%;">
+            Relatório de Agendamentos
+            <span class="header-subtitle" th:text="${periodo}"></span>
+            <span class="header-filters">
+                Colaborador: <span th:text="${filtroColaborador}"></span> |
+                Tipo: <span th:text="${filtroTipo}"></span> |
+                Empresa: <span th:text="${filtroEmpresa}"></span>
+            </span>
         </td>
-        <td style="border: none; width: 20%;"></td>
+        <td style="width: 25%; text-align: right;"></td>
     </tr>
 </table>
 
-<table>
-    <thead>
-    <tr>
-        <th class="col-data">Data</th>
-        <th class="col-dia">Dia</th>
-        <th class="col-cliente">Cliente</th>
-        <th class="col-turno">Turno</th>
-        <th class="col-colab">Colaborador(a)</th>
-        <th class="col-situacao">Situação</th>
-    </tr>
-    </thead>
-    <tbody>
-    <tr th:each="item : ${itens}">
-        <td th:text="${#temporals.format(item.date, 'dd/MM/yyyy')}"></td>
-        <td th:text="${#strings.capitalize(#temporals.dayOfWeekName(item.date))}"></td>
+<div class="content-wrapper">
+    <div class="info-card">
+        <table class="agenda-table">
+            <thead>
+            <tr>
+                <th class="col-data">Data</th>
+                <th class="col-dia">Dia</th>
+                <th class="col-cliente">Cliente / Local</th>
+                <th class="col-tipo">Tipo</th>
+                <th class="col-turno">Turno</th>
+                <th class="col-colab">Colaborador(a)</th>
+                <th class="col-situacao">Situação</th>
+                <th class="col-realizada">Realizada?</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="item : ${itens}">
+                <td th:text="${#temporals.format(item.date, 'dd/MM/yyyy')}"></td>
+                <td th:text="${#strings.capitalize(#temporals.dayOfWeekName(item.date))}"></td>
 
-        <td>
-            <span th:text="${item.clientName}">Empresa</span>
-            <span th:if="${item.unitName != null}" th:text="' - ' + ${item.unitName}"></span>
-            <span th:if="${item.sectorName != null}" th:text="' - ' + ${item.sectorName}"></span>
-        </td>
+                <td>
+                    <div class="hierarchy-main">
+                        <span class="item-label">Emp</span>
+                        <span class="item-value" th:text="${item.clientName}"></span>
+                        <span class="doc-number" th:if="${item.companyCnpj != null}" th:text="' - CNPJ: ' + ${item.companyCnpj}"></span>
+                    </div>
+                    <div class="hierarchy-sub" th:if="${item.unitName != null}">
+                        <span class="item-label">Und</span>
+                        <span class="item-value" th:text="${item.unitName}"></span>
+                        <span class="doc-number" th:if="${item.unitCnpj != null}" th:text="'(CNPJ: ' + ${item.unitCnpj} + ')'"></span>
+                    </div>
+                    <div class="hierarchy-sub" th:if="${item.sectorName != null}">
+                        <span class="item-label">Setor</span>
+                        <span class="item-value" th:text="${item.sectorName}"></span>
+                    </div>
+                </td>
 
-        <td th:text="${item.shift}"></td>
-        <td th:text="${item.responsibleName}"></td>
-        <td th:text="${item.statusDescricao}"></td>
-    </tr>
-    <tr th:if="${#lists.isEmpty(itens)}">
-        <td colspan="6">Nenhum agendamento encontrado.</td>
-    </tr>
-    </tbody>
-</table>
+                <td><span class="badge" style="background-color: #e2e8f0; border-color: #cbd5e1;" th:text="${item.type}"></span></td>
+                <td><span class="badge" th:text="${item.shift}"></span></td>
+
+                <td class="colab-name" th:text="${item.responsibleName}"></td>
+
+                <td><span class="badge" th:text="${item.statusDescricao}"></span></td>
+
+                <td>
+                    <span th:if="${item.isRealized == true}" class="badge" style="background-color: #dcfce7; color: #166534; border-color: #bbf7d0;">Sim</span>
+                    <span th:if="${item.isRealized == false}" class="badge" style="background-color: #fee2e2; color: #991b1b; border-color: #fecaca;">Não</span>
+                    <span th:if="${item.isRealized == null}" class="badge" style="background-color: #f1f5f9; color: #475569; border-color: #e2e8f0;">Pendente</span>
+                </td>
+            </tr>
+
+            <tr th:if="${#lists.isEmpty(itens)}">
+                <td colspan="8" style="text-align: center; padding: 30px; color: #64748b; font-size: 10pt;">
+                    Nenhum agendamento encontrado para os filtros selecionados.
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
 
 <div class="footer">
     Gerado por: <span th:text="${generatingCompanyName}"></span> |
     CNPJ: <span th:text="${generatingCompanyCnpj}"></span>
 </div>
+
 </body>
 </html>

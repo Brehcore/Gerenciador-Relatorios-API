@@ -38,7 +38,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/agenda")
 public class AgendaController {
-    
+
     private final AgendaService agendaService;
     private final ReportService reportService;
 
@@ -265,12 +265,10 @@ public class AgendaController {
     @GetMapping("/availability")
     @PreAuthorize("hasAuthority('VIEW_AGENDA') or hasRole('ADMIN')")
     public ResponseEntity<List<MonthlyAvailabilityDTO>> getAvailability(
-            Authentication auth,
             @RequestParam int year,
             @RequestParam int month) {
 
-        User user = ((CustomUserDetails) auth.getPrincipal()).user();
-        return ResponseEntity.ok(agendaService.getMonthAvailability(user, year, month));
+        return ResponseEntity.ok(agendaService.getMonthAvailability(year, month));
     }
 
     @Operation(summary = "Consulta agenda global", description = "Retorna todos os eventos de todos os técnicos em um período determinado.")
@@ -313,35 +311,44 @@ public class AgendaController {
      * @return um ResponseEntity contendo o PDF gerado como um array de bytes,
      *         com o tipo de conteúdo e os cabeçalhos adequados para download do arquivo
      */
-    @Operation(summary = "Exporta agenda em PDF", description = "Gera um documento PDF com os eventos da agenda em um intervalo de datas.")
+    @Operation(summary = "Exporta agenda em PDF", description = "Gera um documento PDF com os eventos da agenda, permitindo filtros por data, colaborador, tipo e empresa.")
     @GetMapping("/export/pdf")
     @PreAuthorize("hasAuthority('VIEW_AGENDA') or hasRole('ADMIN')")
     public ResponseEntity<byte[]> exportAgendaPdf(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(required = false) Long userId,
+            @RequestParam(required = false) String eventType,
+            @RequestParam(required = false) String companyName) { // <-- NOVO PARÂMETRO
 
-        // 1. Busca os dados
-        List<AgendaResponseDTO> listaEventos = agendaService.getReportData(startDate, endDate);
+        // 1. Busca os dados com TODOS os filtros
+        List<AgendaResponseDTO> listaEventos = agendaService.getReportData(startDate, endDate, userId, eventType, companyName);
 
         // 2. Prepara os dados para o ReportService
         Map<String, Object> data = new HashMap<>();
-
-        // Dados principais
         data.put("itens", listaEventos);
 
-        // Formata o período para exibir no título
-        String periodoTexto = startDate.format(DateTimeFormatter.ofPattern("MM/yyyy")) +
-                " a " + endDate.format(DateTimeFormatter.ofPattern("MM/yyyy"));
+        String periodoTexto = startDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) +
+                " a " + endDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
         data.put("periodo", periodoTexto);
 
-        // O ReportService vai injetar automaticamente:
-        // generatingCompanyName, generatingCompanyCnpj e generatingCompanyLogo (Base64)
+        // 3. Envia os rótulos dos filtros para exibir no cabeçalho do PDF
+        data.put("filtroTipo", (eventType != null && !eventType.isBlank()) ? eventType : "TODOS");
+        data.put("filtroEmpresa", (companyName != null && !companyName.isBlank()) ? companyName.toUpperCase() : "TODAS");
 
-        // 3. Gera o PDF usando o template "relatorio-agenda"
+        if (userId != null && !listaEventos.isEmpty()) {
+            data.put("filtroColaborador", listaEventos.getFirst().getResponsibleName());
+        } else if (userId != null) {
+            data.put("filtroColaborador", "ID: " + userId + " (Sem eventos)");
+        } else {
+            data.put("filtroColaborador", "TODOS");
+        }
+
         byte[] pdfBytes = reportService.generatePdfFromHtml("relatorio-agenda", data);
 
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=agenda_visitas.pdf")
+                // Atualizado o nome do arquivo baixado também
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=relatorio_agendamentos.pdf")
                 .contentType(MediaType.APPLICATION_PDF)
                 .body(pdfBytes);
     }

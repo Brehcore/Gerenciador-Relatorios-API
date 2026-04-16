@@ -67,9 +67,6 @@ public class TechnicalVisitService {
         TechnicalVisit visit = new TechnicalVisit();
         visit.setTechnician(technician);
 
-        // Garante que nunca é guardado como rascunho
-        visit.setDraft(false);
-
         // Delega o mapeamento pesado para o metodo auxiliar
         applyRequestDataToVisit(visit, dto);
 

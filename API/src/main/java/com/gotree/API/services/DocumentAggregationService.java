@@ -272,11 +272,6 @@ public class DocumentAggregationService {
             TechnicalVisit visit = technicalVisitRepository.findById(id)
                     .orElseThrow(() -> new RuntimeException("Relatório não encontrado."));
 
-            // Validar se é um draft (não pode visualizar drafts)
-            if (visit.isDraft()) {
-                throw new IllegalStateException("Este rascunho ainda não foi finalizado. Finalize-o primeiro para gerar o PDF.");
-            }
-
             pdfPathOnDisk = visit.getPdfPath();
             docTypeLabel = "Visita Tecnica";
             title = visit.getTitle();

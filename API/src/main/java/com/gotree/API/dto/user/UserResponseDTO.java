@@ -1,6 +1,7 @@
 package com.gotree.API.dto.user;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.gotree.API.enums.SystemPermission;
 import com.gotree.API.enums.UserRole;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
@@ -8,6 +9,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.util.Set;
 
 @Data
 @NoArgsConstructor
@@ -32,6 +34,12 @@ public class UserResponseDTO {
 
 	@Schema(description = "ID do Perfil de Acesso", example = "1")
 	private Long accessProfileId;
+
+	@Schema(description = "Nome do Perfil de Acesso", example = "Administrador")
+	private String accessProfileName;
+
+	@Schema(description = "Perfil de Acesso", example = "VIEW_AGENDA")
+	private Set<SystemPermission> permissions;
 
 	@Schema(description = "Sigla do conselho de classe", example = "CREFITO")
 	private String siglaConselhoClasse;

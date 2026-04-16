@@ -1,6 +1,5 @@
 package com.gotree.API.entities;
 
-import com.gotree.API.enums.Shift;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDate;
@@ -57,19 +56,10 @@ public class TechnicalVisit {
     private Double clientSignatureLatitude;
     private Double clientSignatureLongitude;
 
-    // A entidade agenda armazenará os dados recebidos pelo DTO
-//    @Column(name = "next_visit_date")
-//    private LocalDate nextVisitDate;
-//
-//    @Enumerated(EnumType.STRING)
-//    private Shift nextVisitShift;
-
     @Column(name = "sent_to_client_at")
     private java.time.LocalDateTime sentToClientAt;
 
     @Column(name = "icp_signed_at")
     private LocalDateTime icpSignedAt; // Data da assinatura PFX
 
-    @Column(name = "is_draft", nullable = false)
-    private boolean isDraft = true; // true = rascunho, false = relatório finalizado
 }

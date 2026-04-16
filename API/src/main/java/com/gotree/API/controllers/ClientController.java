@@ -41,7 +41,7 @@ public class ClientController {
      */
     @Operation(summary = "Busca um cliente pelo ID", description = "Retorna os detalhes de um cliente específico baseado no seu identificador único.")
     @GetMapping("/{id}")
-    @PreAuthorize("hasAuthority('') or hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('VIEW_CLIENTS') or hasRole('ADMIN')")
     public ResponseEntity<ClientDTO> getById(@PathVariable Long id) {
         return ResponseEntity.ok(clientService.findById(id));
     }
@@ -54,7 +54,7 @@ public class ClientController {
      */
     @Operation(summary = "Lista todos os clientes paginados", description = "Recupera uma lista paginada de todos os clientes cadastrados no sistema.")
     @GetMapping
-    @PreAuthorize("hasAuthority('') or hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('VIEW_CLIENTS') or hasRole('ADMIN')")
     public ResponseEntity<Page<ClientDTO>> getAll(
             @PageableDefault(sort = "name", direction = Sort.Direction.ASC) Pageable pageable
     ) {

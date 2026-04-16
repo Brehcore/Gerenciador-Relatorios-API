@@ -89,10 +89,12 @@ public class ResourceExceptionHandler {
         log.error("Erro interno não tratado:", e);
 
         HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
-        // Retorna uma mensagem genérica para o frontend, escondendo o e.getMessage()
+
+        // Passa o e.getMessage() para o Frontend, acabando com o mistério do Erro 500
         StandardError err = new StandardError(Instant.now(), status.value(), "Erro interno no servidor",
-                "Ocorreu um erro inesperado. A nossa equipa técnica já foi notificada.",
+                "Falha na operação: " + e.getMessage(),
                 request.getRequestURI());
+
         return ResponseEntity.status(status).body(err);
     }
 

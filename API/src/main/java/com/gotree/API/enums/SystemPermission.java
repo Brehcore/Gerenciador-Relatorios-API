@@ -38,7 +38,11 @@ public enum SystemPermission {
     DELETE_COMPANIES("Empresas", "Excluir empresas, unidades, setores e cargos"),
 
     // --- MÓDULO DASHBOARDS ---
-    VIEW_DASHBOARDS("Dashboards", "Visualizar dashboards");
+    VIEW_DASHBOARDS("Dashboards", "Visualizar dashboards"),
+
+    // --- MÓDULO CERTIFICADO ---
+    CREATE_CERTIFICATE("Certificado", "Emitir certificado de acesso"),
+    DELETE_CERTIFICATE("Certificado", "Excluir certificado de acesso");
 
     private final String category;
     private final String description;

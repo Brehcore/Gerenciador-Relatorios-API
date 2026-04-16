@@ -265,7 +265,7 @@ public class UserController {
 	 */
 	@Operation(summary = "Upload de certificado digital", description = "Permite que o usuário autenticado faça upload de um certificado digital.")
 	@PostMapping(value = "/me/certificate", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-	@PreAuthorize("isAuthenticated()")
+	@PreAuthorize("hasAuthority('CREATE_CERTIFICATE') or hasRole('ADMIN')")
 	public ResponseEntity<Map<String, String>> uploadCertificate(
 			Authentication authentication,
 			@ModelAttribute @Valid CertificateUploadDTO dto) {
@@ -305,7 +305,7 @@ public class UserController {
 	 */
 	@Operation(summary = "Remoção de certificado digital", description = "Remove o certificado digital do usuário autenticado.")
 	@DeleteMapping("/me/certificate")
-	@PreAuthorize("isAuthenticated()")
+	@PreAuthorize("hasAuthority('DELETE_CERTIFICATE') or hasRole('ADMIN')")
 	public ResponseEntity<?> removeCertificate(Authentication authentication) {
 		String userEmail = authentication.getName();
 		try {

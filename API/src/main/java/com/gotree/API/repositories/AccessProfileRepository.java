@@ -4,4 +4,6 @@ import com.gotree.API.entities.AccessProfile;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface AccessProfileRepository extends JpaRepository<AccessProfile, Long> {
+
+    boolean existsByName(String name);
 }

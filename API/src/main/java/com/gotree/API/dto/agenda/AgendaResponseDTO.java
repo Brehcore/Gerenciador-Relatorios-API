@@ -37,8 +37,14 @@ public class AgendaResponseDTO {
     @Schema(description = "ID de referência do evento ou visita técnica")
     private Long referenceId;
 
+    @Schema(description = "CNPJ da empresa")
+    private String companyCnpj;
+
     @Schema(description = "ID da Unidade associada")
     private Long unitId;
+
+    @Schema(description = "CNPJ da unidade")
+    private String unitCnpj;
 
     @Schema(description = "Nome da Unidade associada")
     private String unitName;

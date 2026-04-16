@@ -38,6 +38,7 @@ public class UserService implements UserDetailsService {
     private final TechnicalVisitRepository technicalVisitRepository;
     private final ClientRepository clientRepository;
     private final SymmetricCryptoService cryptoService;
+    private final AccessProfileRepository accessProfileRepository;
 
     @Value("${file.storage.path}")
     private String fileStoragePath;
@@ -45,7 +46,7 @@ public class UserService implements UserDetailsService {
     public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, UserMapper userMapper,
                        AepReportRepository aepReportRepository, OccupationalRiskReportRepository riskReportRepository,
                        TechnicalVisitRepository technicalVisitRepository, ClientRepository clientRepository,
-                       SymmetricCryptoService cryptoService) {
+                       SymmetricCryptoService cryptoService, AccessProfileRepository accessProfileRepository) {
         this.passwordEncoder = passwordEncoder;
         this.userRepository = userRepository;
         this.userMapper = userMapper;
@@ -54,6 +55,7 @@ public class UserService implements UserDetailsService {
         this.technicalVisitRepository = technicalVisitRepository;
         this.clientRepository = clientRepository;
         this.cryptoService = cryptoService;
+        this.accessProfileRepository = accessProfileRepository;
     }
 
     public List<User> findAll() { return userRepository.findAll(); }
@@ -70,6 +72,13 @@ public class UserService implements UserDetailsService {
         validateUser(dto);
         User user = userMapper.toEntity(dto);
         user.setPassword(passwordEncoder.encode(user.getPassword()));
+
+        if (dto.getAccessProfileId() != null) {
+            var profile = accessProfileRepository.findById(dto.getAccessProfileId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Perfil não encontrado."));
+            user.setProfile(profile);
+        }
+
         return userRepository.save(user);
     }
 
@@ -97,6 +106,15 @@ public class UserService implements UserDetailsService {
             }
             user.setCpf(dto.getCpf());
         }
+
+        if (dto.getAccessProfileId() != null) {
+            var profile = accessProfileRepository.findById(dto.getAccessProfileId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Perfil não encontrado."));
+            user.setProfile(profile);
+        } else {
+            user.setProfile(null); // Caso queira permitir remover o perfil
+        }
+
         return userRepository.save(user);
     }
 

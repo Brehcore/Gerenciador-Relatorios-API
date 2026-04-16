@@ -44,7 +44,7 @@ public class User implements Serializable, UserDetails {
     // Relacionamento com o perfil.
     // nullable = true garante que os usuários antigos no banco não quebrem a aplicação.
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "profile_id", nullable = true)
+    @JoinColumn(name = "access_profile_id")
     private AccessProfile profile;
 
     @Column(name = "password_reset_required")
