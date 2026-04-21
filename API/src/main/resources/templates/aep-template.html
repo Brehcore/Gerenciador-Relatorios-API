@@ -1,236 +1,286 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" lang="">
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR">
 <head>
     <meta charset="UTF-8"/>
-    <title>AEP</title>
+    <title>AEP - Avaliação Ergonômica Preliminar</title>
+
     <style>
-        @page {
-            size: A4;
-            margin: 1.0cm; /* Margem ajustada */
-        }
+        /* --- CONFIGURAÇÕES GERAIS E MARGENS --- */
+        @page { size: A4 portrait; margin: 0; }
+
         body {
             font-family: 'Montserrat', sans-serif;
-            font-size: 10pt;
-            color: #333;
-        }
-
-        /* --- PADRÃO DE CABEÇALHO (Igual aos outros relatórios) --- */
-        .header-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 10px;
-            font-family: 'Montserrat', sans-serif;
-        }
-        .header-table td {
-            border: 1px solid #ccc;
-            padding: 5px;
-            vertical-align: middle;
-            text-align: center;
-            height: 60px;
-        }
-        .header-table .logo-cell {
-            width: 15%;
-            background-color: #fff;
-            text-align: center;     /* Centraliza Horizontalmente */
-            vertical-align: middle; /* Centraliza Verticalmente */
-        }
-        .header-table .logo-cell img {
-            height: 50px;           /* Altura fixa segura */
-            width: auto;            /* Largura proporcional */
-            object-fit: contain;
-            display: inline-block;  /* Importante: Faz a imagem obedecer ao text-align do pai */
-            margin: 0;              /* Remove margens que podem atrapalhar */
+            font-size: 9pt;
+            color: #000000;
+            background-color: #ffffff;
+            margin: 0;
             padding: 0;
-            border: none;
-        }
-        .header-table .title-cell {
-            width: 70%;
-            font-size: 14pt;
-            font-weight: 700;
-            background-color: #f2f2f2;
-            text-transform: uppercase;
-            color: #000;
         }
 
-        /* --- PADRÃO DE DADOS (DATA GRID) --- */
-        .section-title {
-            background-color: #e0e0e0;
-            padding: 4px 8px;
-            margin-top: 10px;
-            margin-bottom: 0;
+        .content-wrapper { padding: 0.8cm 0.8cm; }
+
+        /* --- CABEÇALHO ESCURO (Full Bleed) --- */
+        table.main-header {
+            width: 100%;
+            background-color: #004d31;
+            border-bottom: 4px solid #8cc63f;
+            border-collapse: collapse;
+            table-layout: fixed;
+            margin: 0;
+        }
+        table.main-header td {
+            padding: 10px 8px;
+            vertical-align: middle;
+        }
+        .header-title-text {
+            text-align: center;
+            color: #fff;
+            text-transform: uppercase;
+            font-weight: 700;
+            font-size: 11pt;
+            letter-spacing: 0.5px;
+        }
+
+        /* --- CARDS MODERNOS COM LINHAS --- */
+        .info-card {
+            background-color: #fff;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            page-break-inside: avoid;
+            overflow: hidden;
+        }
+
+        .card-header-label {
+            background-color: #f8f9fa;
+            color: #004d31;
             font-weight: 700;
             font-size: 9pt;
-            border: 1px solid #ccc;
+            text-transform: uppercase;
+            border-bottom: 1px solid #ccc;
+            display: block;
+            padding: 6px 12px;
+            margin: 0;
+        }
+
+        .data-row {
+            display: table;
+            width: 100%;
+            border-bottom: 1px solid #eee;
+        }
+        .data-row:last-child {
             border-bottom: none;
-            text-transform: uppercase;
         }
 
-        .data-grid {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 5px;
-            font-size: 9pt;
+        .data-item {
+            display: table-cell;
+            padding: 6px 12px;
+            vertical-align: top;
+            border-right: 1px solid #eee;
         }
-        .data-grid td {
-            border: 1px solid #ccc;
-            padding: 5px;
-            vertical-align: middle;
+        .data-item:last-child {
+            border-right: none;
         }
-        .data-grid .label {
-            width: 20%; /* Ajuste conforme necessidade */
+
+        .item-label {
             font-weight: 700;
-            background-color: #f2f2f2;
-            color: #333;
-        }
-        .data-grid .value {
-            width: 30%;
-        }
-
-        /* --- ESTILOS ESPECÍFICOS DA AEP (TABELA DE RISCOS) --- */
-        h2 {
-            font-size: 10pt;
-            background-color: #f2f2f2;
-            padding: 8px;
-            margin-top: 20px;
-            margin-bottom: 10px;
-            border: 1px solid #ccc;
+            color: #004d31;
+            font-size: 7.5pt;
+            display: block;
             text-transform: uppercase;
-            text-align: center;
-            font-weight: bold;
+            margin-bottom: 2px;
+        }
+        .item-value {
+            color: #000000;
+            font-size: 9pt;
+            font-weight: 500;
         }
 
-        .risk-table {
+        /* --- TÍTULOS DE SEÇÃO --- */
+        h2 {
+            color: #004d31;
+            font-size: 11pt;
+            margin: 25px 0 10px 0;
+            text-transform: uppercase;
+            font-weight: 700;
+            display: block;
+        }
+
+        /* --- TABELA DE RISCOS --- */
+        table.modern-risk-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 9pt;
+            table-layout: fixed;
+            margin: 0;
         }
-        .risk-table th {
-            background-color: #f2f2f2;
-            padding: 8px;
-            border: 1px solid #999; /* Borda um pouco mais escura para contraste */
-            text-align: center;
-            font-weight: bold;
-        }
-        .risk-table td {
-            padding: 5px;
-            border: 1px solid #999;
-            vertical-align: middle;
-        }
-        .risk-table td.check-col {
-            width: 5%;
-            text-align: center;
-            font-weight: bold;
-        }
-        .risk-table td.risk-col {
-            width: 25%;
-            text-align: center;
-        }
-        .risk-table td.factor-col {
-            width: 70%;
+        table.modern-risk-table th {
+            background-color: #ffffff;
+            color: #004d31;
+            font-weight: 700;
+            font-size: 8pt;
+            text-transform: uppercase;
+            border-bottom: 2px solid #e2e8f0;
+            padding: 10px 8px;
             text-align: left;
         }
+        table.modern-risk-table td {
+            padding: 10px 8px;
+            border-bottom: 1px solid #eee;
+            vertical-align: middle;
+            font-size: 8.5pt;
+            color: #1e293b;
+        }
+        table.modern-risk-table tr:last-child td {
+            border-bottom: none;
+        }
+        table.modern-risk-table tbody tr:nth-child(even) {
+            background-color: #fafafa;
+        }
 
-        /* ASSINATURAS */
-        .signatures {
-            margin-top: 50px;
-            page-break-inside: avoid;
+        /* Colunas Específicas da Tabela de AEP */
+        .check-col {
+            width: 8%;
+            text-align: center !important;
+            font-weight: 700;
+            font-size: 10pt !important;
+            color: #004d31 !important;
         }
-        .signature-block {
-            width: 300px;
-            margin: 0 auto;
-            border-top: 1px solid #000;
-            padding-top: 8px;
-            text-align: center;
+        .risk-col {
+            width: 25%;
+            font-weight: 600;
         }
+        .factor-col {
+            width: 67%;
+        }
+
+        /* --- ASSINATURAS --- */
+        .sig-section { display: table; width: 100%; margin-top: 40px; page-break-inside: avoid; }
+        .sig-box { display: block; width: 100%; text-align: center; padding: 0 40px; vertical-align: bottom; }
+        .sig-line { border-top: 1px solid #333; margin: 5px auto 8px auto; border-radius: 1px; width: 50%; max-width: 350px; }
+        .sig-meta-text { font-size: 8.5pt; color: #555; margin-top: 2px; display: block; }
+        .sig-image-container { min-height: 1.6cm; display: block; } /* Espaço garantido se não houver foto */
     </style>
 </head>
 <body>
 
-<table class="header-table">
+<table class="main-header">
     <tr>
-        <td class="logo-cell">
-            <img th:if="${generatingCompanyLogo != null}"
-                 th:src="'data:image/png;base64,' + ${generatingCompanyLogo}" alt="Logo" />
+        <td style="width: 15%; text-align: center;">
+            <img th:if="${generatingCompanyLogo != null}" th:src="'data:image/png;base64,' + ${generatingCompanyLogo}" alt="Logo" style="max-height: 45px; max-width: 100%;" />
         </td>
-        <td class="title-cell">
-            AVALIAÇÃO ERGONÔMICA PRELIMINAR (AEP)
-        </td>
-        <td class="logo-cell">
-            <img th:if="${generatingCompanyLogo != null}"
-                 th:src="'data:image/png;base64,' + ${generatingCompanyLogo}" alt="Logo" />
+        <td class="header-title-text">Avaliação Ergonômica Preliminar (AEP)</td>
+        <td style="width: 15%; text-align: center;">
+            <img th:if="${generatingCompanyLogo != null}" th:src="'data:image/png;base64,' + ${generatingCompanyLogo}" alt="Logo" style="max-height: 45px; max-width: 100%;" />
         </td>
     </tr>
 </table>
 
-<div class="section-title">DADOS DO EMISSOR</div>
-<table class="data-grid">
-    <tr>
-        <td class="label">Empresa</td>
-        <td class="value" th:text="${generatingCompanyName}"></td>
-        <td class="label">CNPJ</td>
-        <td class="value" th:text="${generatingCompanyCnpj}"></td>
-    </tr>
-</table>
+<div class="content-wrapper">
 
-<div class="section-title">DADOS DO CLIENTE E AVALIAÇÃO</div>
-<table class="data-grid">
-    <tr>
-        <td class="label">Empresa Cliente</td>
-        <td class="value" th:text="${aep.company?.name}"></td>
-        <td class="label">CNPJ</td>
-        <td class="value" th:text="${aep.company?.cnpj}"></td>
-    </tr>
-    <tr>
-        <td class="label">Data da Avaliação</td>
-        <td class="value" th:text="${#temporals.format(aep.evaluationDate, 'dd/MM/yyyy')}"></td>
-        <td class="label">Função Avaliada</td>
-        <td class="value" th:text="${aep.evaluatedFunction}"></td>
-    </tr>
-</table>
-
-<div class="section-title">RESPONSÁVEL TÉCNICO</div>
-<table class="data-grid">
-    <tr>
-        <td class="label">Nome</td>
-        <td class="value" th:text="${aep.evaluator?.name}"></td>
-        <td class="label">Registro Conselho</td>
-        <td class="value" th:text="${aep.evaluator?.conselhoClasse}"></td>
-    </tr>
-    <tr>
-        <td class="label">Especialidade</td>
-        <td class="value" th:text="${aep.evaluator?.especialidade}"></td>
-        <td class="label">Sigla Conselho</td>
-        <td class="value" th:text="${aep.evaluator?.siglaConselhoClasse}"></td>
-    </tr>
-</table>
-
-<h2>RISCOS IDENTIFICADOS POR FUNÇÃO</h2>
-
-<table class="risk-table">
-    <thead>
-    <tr>
-        <th>X</th> <th>RISCO</th>
-        <th>FATOR DE RISCO</th>
-    </tr>
-    </thead>
-    <tbody>
-    <tr th:each="riskDescription : ${allRisks}">
-        <td class="check-col" th:text="${selectedRisks != null and selectedRisks.contains(riskDescription) ? 'X' : ''}"></td>
-        <td class="risk-col">ERGONÔMICO</td>
-        <td class="factor-col" th:text="${riskDescription}"></td>
-    </tr>
-    </tbody>
-</table>
-
-<div class="signatures">
-    <div class="signature-block">
-        <p style="margin: 0 0 4px 0; padding: 0; font-weight: bold;" th:text="${aep.physiotherapist?.name}"></p>
-        <p style="margin: 0; padding: 0; font-size: 9pt;">
-            <span style="font-weight: bold;">Crefito:</span>
-            <span th:if="${aep.physiotherapist != null}" th:text="' ' + ${aep.physiotherapist.crefito}"></span>
-            <span th:if="${aep.physiotherapist == null}"> _________________</span>
-        </p>
+    <div class="info-card">
+        <div class="card-header-label">Dados do Emissor</div>
+        <div class="data-row">
+            <div class="data-item" style="width: 50%;">
+                <span class="item-label">Empresa</span>
+                <span class="item-value" th:text="${generatingCompanyName}"></span>
+            </div>
+            <div class="data-item" style="width: 50%;">
+                <span class="item-label">CNPJ</span>
+                <span class="item-value" th:text="${generatingCompanyCnpj}"></span>
+            </div>
+        </div>
     </div>
+
+    <div class="info-card">
+        <div class="card-header-label">Dados do Cliente e Avaliação</div>
+        <div class="data-row">
+            <div class="data-item" style="width: 50%;">
+                <span class="item-label">Empresa Cliente</span>
+                <span class="item-value" th:text="${aep.company?.name}"></span>
+            </div>
+            <div class="data-item" style="width: 50%;">
+                <span class="item-label">CNPJ</span>
+                <span class="item-value" th:text="${aep.company?.cnpj}"></span>
+            </div>
+        </div>
+        <div class="data-row">
+            <div class="data-item" style="width: 50%;">
+                <span class="item-label">Data da Avaliação</span>
+                <span class="item-value" th:text="${#temporals.format(aep.evaluationDate, 'dd/MM/yyyy')}"></span>
+            </div>
+            <div class="data-item" style="width: 50%;">
+                <span class="item-label">Função Avaliada</span>
+                <span class="item-value" th:text="${aep.evaluatedFunction}"></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="info-card">
+        <div class="card-header-label">Responsável Técnico</div>
+        <div class="data-row">
+            <div class="data-item" style="width: 50%;">
+                <span class="item-label">Nome</span>
+                <span class="item-value" th:text="${aep.evaluator?.name}"></span>
+            </div>
+            <div class="data-item" style="width: 50%;">
+                <span class="item-label">Registro Conselho</span>
+                <span class="item-value" th:text="${aep.evaluator?.conselhoClasse}"></span>
+            </div>
+        </div>
+        <div class="data-row">
+            <div class="data-item" style="width: 50%;">
+                <span class="item-label">Especialidade</span>
+                <span class="item-value" th:text="${aep.evaluator?.especialidade}"></span>
+            </div>
+            <div class="data-item" style="width: 50%;">
+                <span class="item-label">Sigla Conselho</span>
+                <span class="item-value" th:text="${aep.evaluator?.siglaConselhoClasse}"></span>
+            </div>
+        </div>
+    </div>
+
+    <h2>Riscos Identificados por Função</h2>
+
+    <div class="info-card">
+        <table class="modern-risk-table">
+            <thead>
+            <tr>
+                <th class="check-col">X</th>
+                <th class="risk-col">Risco</th>
+                <th class="factor-col">Fator de Risco</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="riskDescription : ${allRisks}">
+                <td class="check-col" th:text="${selectedRisks != null and selectedRisks.contains(riskDescription) ? 'X' : ''}"></td>
+                <td class="risk-col">ERGONÔMICO</td>
+                <td class="factor-col" th:text="${riskDescription}"></td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(allRisks)}">
+                <td colspan="3" style="text-align: center; padding: 20px; color: #64748b;">
+                    Nenhum fator de risco disponível para exibição.
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="sig-section">
+        <div class="sig-box">
+            <div class="sig-image-container">
+            </div>
+            <div class="sig-line"></div>
+
+            <strong th:text="${aep.physiotherapist?.name ?: 'Nome do Profissional'}"></strong><br/>
+            <span class="sig-meta-text" style="font-weight: 500; color: #333;">
+                Fisioterapeuta do Trabalho
+            </span>
+            <span class="sig-meta-text">
+                CREFITO: <span th:text="${aep.physiotherapist?.crefito ?: '_________________'}"></span>
+            </span>
+        </div>
+    </div>
+
 </div>
 
 </body>

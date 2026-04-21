@@ -13,9 +13,13 @@ import com.gotree.API.enums.AgendaEventType;
 import com.gotree.API.enums.AgendaStatus;
 import com.gotree.API.enums.Shift;
 import com.gotree.API.repositories.AgendaEventRepository;
+import com.gotree.API.repositories.CompanyRepository;
+import com.gotree.API.repositories.SectorRepository;
+import com.gotree.API.repositories.UnitRepository;
 import org.jspecify.annotations.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.util.HtmlUtils;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -29,9 +33,16 @@ import java.util.List;
 public class AgendaService {
 
     private final AgendaEventRepository agendaEventRepository;
+    private final CompanyRepository companyRepository;
+    private final UnitRepository unitRepository;
+    private final SectorRepository sectorRepository;
 
-    public AgendaService(AgendaEventRepository agendaEventRepository) {
+    public AgendaService(AgendaEventRepository agendaEventRepository, CompanyRepository companyRepository,
+                         UnitRepository unitRepository, SectorRepository sectorRepository) {
         this.agendaEventRepository = agendaEventRepository;
+        this.companyRepository = companyRepository;
+        this.unitRepository = unitRepository;
+        this.sectorRepository = sectorRepository;
     }
 
     public void validateReportSubmission(Long visitId, User technician, LocalDate date, String shiftStr, Company targetCompany) {
@@ -98,32 +109,67 @@ public class AgendaService {
 
     @Transactional
     public AgendaEvent createEvent(CreateEventDTO dto, User user) {
+        // 1. Regra de Negócio (Disponibilidade)
         String conflict = checkAvailability(user, dto.getEventDate(), dto.getShift());
-        if (conflict != null) {
-            throw new IllegalStateException(conflict);
-        }
+        if (conflict != null) throw new IllegalStateException(conflict);
 
+        // 2. Instanciação e Sanitização (Lógica que saiu do Controller)
         AgendaEvent event = new AgendaEvent();
-        event.setTitle(dto.getTitle());
-        event.setDescription(dto.getDescription());
-        event.setEventDate(dto.getEventDate());
+        sanitizeAndPopulate(event, dto);
+
         event.setUser(user);
         event.setStatus(AgendaStatus.CONFIRMADO);
-        event.setClientName(dto.getClientName());
-        event.setManualObservation(dto.getManualObservation());
 
+        // 3. Vínculo de Entidades Relacionais
+        bindRelationalEntities(event, dto);
+
+        // 4. Tratamento de Enums
         try {
             if (dto.getShift() != null && !dto.getShift().isBlank()) {
                 event.setShift(Shift.valueOf(dto.getShift().toUpperCase()));
             }
-            AgendaEventType type = AgendaEventType.valueOf(dto.getEventType().toUpperCase());
-            event.setEventType(type);
-
+            event.setEventType(AgendaEventType.valueOf(dto.getEventType().toUpperCase()));
         } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Dados inválidos: " + e.getMessage());
+            throw new IllegalArgumentException("Dados inválidos para turno ou tipo de evento.");
         }
 
         return agendaEventRepository.save(event);
+    }
+
+    /**
+     * Centraliza a sanitização de campos de texto para evitar XSS e poluição de dados.
+     */
+    private void sanitizeAndPopulate(AgendaEvent event, CreateEventDTO dto) {
+        event.setTitle(dto.getTitle() != null ? HtmlUtils.htmlEscape(dto.getTitle()) : null);
+        event.setDescription(dto.getDescription() != null ? HtmlUtils.htmlEscape(dto.getDescription()) : null);
+        event.setManualObservation(dto.getManualObservation() != null ? HtmlUtils.htmlEscape(dto.getManualObservation()) : null);
+        event.setEventDate(dto.getEventDate());
+    }
+
+    /**
+     * Realiza o vínculo obrigatório com as entidades do sistema.
+     */
+    private void bindRelationalEntities(AgendaEvent event, CreateEventDTO dto) {
+        if (dto.getCompanyId() == null) {
+            throw new IllegalArgumentException("A empresa é obrigatória para criar um agendamento.");
+        }
+
+        Company company = companyRepository.findById(dto.getCompanyId())
+                .orElseThrow(() -> new RuntimeException("Empresa não encontrada."));
+        event.setCompany(company);
+
+        // Populamos o CompanyName da entidade automaticamente a partir do nome da empresa
+        event.setCompany(company);
+
+        if (dto.getUnitId() != null) {
+            event.setUnit(unitRepository.findById(dto.getUnitId())
+                    .orElseThrow(() -> new RuntimeException("Unidade não encontrada.")));
+        }
+
+        if (dto.getSectorId() != null) {
+            event.setSector(sectorRepository.findById(dto.getSectorId())
+                    .orElseThrow(() -> new RuntimeException("Setor não encontrado.")));
+        }
     }
 
     @Transactional
@@ -131,17 +177,34 @@ public class AgendaService {
         AgendaEvent event = agendaEventRepository.findById(eventId)
                 .orElseThrow(() -> new RuntimeException("Evento não encontrado."));
 
-        if (!event.getUser().getId().equals(currentUser.getId())) {
-            throw new SecurityException("Sem permissão.");
-        }
+        validateUserPermission(event, currentUser);
 
         event.setTitle(dto.getTitle());
         event.setDescription(dto.getDescription());
         event.setEventDate(dto.getEventDate());
-        event.setClientName(dto.getClientName());
         event.setManualObservation(dto.getManualObservation());
 
         return agendaEventRepository.save(event);
+    }
+
+    @Transactional
+    public void deleteEvent(Long eventId, User currentUser) {
+        AgendaEvent event = agendaEventRepository.findById(eventId)
+                .orElseThrow(() -> new RuntimeException("Evento não encontrado."));
+
+        // Valida se o usuário logado tem permissão (Admin ou Dono)
+        validateUserPermission(event, currentUser);
+
+        // Desvincular o relatório antes de deletar
+        if (event.getTechnicalVisit() != null) {
+
+            event.setTechnicalVisit(null);
+
+            agendaEventRepository.saveAndFlush(event);
+        }
+
+        // O relatório (TechnicalVisit) continuará existindo no banco de dados.
+        agendaEventRepository.delete(event);
     }
 
     @Transactional
@@ -149,9 +212,7 @@ public class AgendaService {
         AgendaEvent event = agendaEventRepository.findById(eventId)
                 .orElseThrow(() -> new RuntimeException("Evento da agenda não encontrado."));
 
-        if (!event.getUser().getId().equals(currentUser.getId())) {
-            throw new SecurityException("Você não tem permissão para reagendar a agenda de outro técnico.");
-        }
+        validateUserPermission(event, currentUser);
 
         if (event.getOriginalVisitDate() == null) {
             event.setOriginalVisitDate(event.getEventDate());
@@ -180,9 +241,7 @@ public class AgendaService {
         AgendaEvent event = agendaEventRepository.findById(eventId)
                 .orElseThrow(() -> new RuntimeException("Evento da agenda não encontrado."));
 
-        if (!event.getUser().getId().equals(currentUser.getId())) {
-            throw new SecurityException("Você não tem permissão para alterar o status do agendamento de outro técnico.");
-        }
+        validateUserPermission(event, currentUser);
 
         event.setIsRealized(false);
         event.setNonCompletionReason(dto.getReason());
@@ -194,24 +253,11 @@ public class AgendaService {
         AgendaEvent event = agendaEventRepository.findById(eventId)
                 .orElseThrow(() -> new RuntimeException("Evento da agenda não encontrado."));
 
-        if (!event.getUser().getId().equals(currentUser.getId())) {
-            throw new SecurityException("Você não tem permissão para alterar a execução da agenda de outro técnico.");
-        }
+        validateUserPermission(event, currentUser);
 
         event.setIsRealized(true);
         event.setNonCompletionReason(null);
         agendaEventRepository.save(event);
-    }
-
-    @Transactional
-    public void deleteEvent(Long eventId, User currentUser) {
-        AgendaEvent event = agendaEventRepository.findById(eventId)
-                .orElseThrow(() -> new RuntimeException("Evento não encontrado."));
-
-        if (!event.getUser().getId().equals(currentUser.getId())) {
-            throw new SecurityException("Sem permissão.");
-        }
-        agendaEventRepository.delete(event);
     }
 
     @Transactional(readOnly = true)
@@ -253,7 +299,7 @@ public class AgendaService {
                 .filter(e -> eventType == null || eventType.isBlank() || (e.getEventType() != null && e.getEventType().name().equalsIgnoreCase(eventType)))
                 .map(this::mapToDto)
                 .filter(dto -> companyName == null || companyName.isBlank() ||
-                        (dto.getClientName() != null && dto.getClientName().toLowerCase().contains(companyName.toLowerCase())))
+                        (dto.getCompanyName() != null && dto.getCompanyName().toLowerCase().contains(companyName.toLowerCase())))
                 .peek(dto -> {
                     if (dto.getStatus() == null || dto.getStatus().isEmpty()) {
                         dto.setStatus(com.gotree.API.enums.AgendaStatus.A_CONFIRMAR.name());
@@ -345,7 +391,6 @@ public class AgendaService {
         dto.setIsRealized(event.getIsRealized());
         dto.setNonCompletionReason(event.getNonCompletionReason());
 
-        // --- MAPEAMENTO DE EMPRESA UNIDADE E SETOR DA AGENDA COM CNPJ ---
         if (event.getUnit() != null) {
             dto.setUnitId(event.getUnit().getId());
             dto.setUnitName(event.getUnit().getName());
@@ -391,7 +436,7 @@ public class AgendaService {
             TechnicalVisit v = event.getTechnicalVisit();
             dto.setSourceVisitId(v.getId());
             if (v.getClientCompany() != null) {
-                dto.setClientName(v.getClientCompany().getName());
+                dto.setCompanyName(v.getClientCompany().getName());
                 dto.setCompanyCnpj(v.getClientCompany().getCnpj());
             }
             if (v.getUnit() != null) {
@@ -400,21 +445,21 @@ public class AgendaService {
             }
             if (v.getSector() != null) dto.setSectorName(v.getSector().getName());
         } else {
-            // CORREÇÃO: Traz o nome do cliente original
-            dto.setClientName(event.getClientName());
+            // Traz o nome do cliente original
+            dto.setCompanyName("Empresa não informada");
 
             if (event.getCompany() != null) {
                 dto.setCompanyCnpj(event.getCompany().getCnpj());
 
                 // NOVO: Se o clientName veio nulo ou vazio do banco, puxa o nome oficial da tabela de Empresa
-                if (dto.getClientName() == null || dto.getClientName().isBlank()) {
-                    dto.setClientName(event.getCompany().getName());
+                if (dto.getCompanyName() == null || dto.getCompanyName().isBlank()) {
+                    dto.setCompanyName(event.getCompany().getName());
                 }
             }
 
             // Tratamento contra null pointer caso nem a empresa, nem o clientName existam
-            if (dto.getClientName() == null || dto.getClientName().isBlank()) {
-                dto.setClientName("Empresa não informada");
+            if (dto.getCompanyName() == null || dto.getCompanyName().isBlank()) {
+                dto.setCompanyName("Empresa não informada");
             }
 
             if (event.getManualObservation() != null) {
@@ -463,11 +508,21 @@ public class AgendaService {
         AgendaEvent event = agendaEventRepository.findById(eventId)
                 .orElseThrow(() -> new RuntimeException("Evento da agenda não encontrado."));
 
-        if (!event.getUser().getId().equals(currentUser.getId())) {
-            throw new SecurityException("Sem permissão para confirmar a agenda de outro técnico.");
-        }
+        validateUserPermission(event, currentUser);
 
         event.setStatus(AgendaStatus.CONFIRMADO);
         agendaEventRepository.save(event);
+    }
+
+    /**
+     * Helper para validar se o usuário tem permissão para modificar o evento.
+     * Permite a modificação se o usuário for o dono do evento ou se for um ADMIN.
+     */
+    private void validateUserPermission(AgendaEvent event, User currentUser) {
+        boolean isAdmin = currentUser.getRole() != null && "ROLE_ADMIN".equals(currentUser.getRole().getRoleName());
+
+        if (!event.getUser().getId().equals(currentUser.getId()) && !isAdmin) {
+            throw new SecurityException("Você não tem permissão para modificar a agenda de outro técnico.");
+        }
     }
 }

@@ -108,8 +108,5 @@ public class AgendaEvent {
     @Column(name = "rescheduled_to_date")
     private LocalDate rescheduledToDate;
 
-    // Serão usados quando o técnico marcar "REUNIAO" ou "OUTROS"
-    private String clientName;
-
     private String manualObservation;
 }

@@ -1,0 +1,1 @@
+ALTER TABLE tb_agenda_event DROP COLUMN client_name;

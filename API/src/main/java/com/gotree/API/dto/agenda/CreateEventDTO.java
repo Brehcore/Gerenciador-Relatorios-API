@@ -26,8 +26,14 @@ public class CreateEventDTO {
     @Schema(description = "Turno do evento", example = "MANHA", allowableValues = {"MANHA", "TARDE"})
     private String shift;
 
-    @Schema(description = "Nome do cliente associado ao evento")
-    private String clientName;
+    @Schema(description = "ID da Empresa associada ao evento")
+    private Long companyId;
+
+    @Schema(description = "ID da Unidade associada ao evento")
+    private Long unitId;
+
+    @Schema(description = "ID do Setor associado ao evento")
+    private Long sectorId;
 
     @Schema(description = "Observação manual sobre o evento")
     private String manualObservation;

@@ -37,8 +37,14 @@ public class AgendaResponseDTO {
     @Schema(description = "ID de referência do evento ou visita técnica")
     private Long referenceId;
 
+    @Schema(description = "ID da Empresa associada")
+    private Long companyId;
+
     @Schema(description = "CNPJ da empresa")
     private String companyCnpj;
+
+    @Schema(description = "Nome da empresa")
+    private String companyName;
 
     @Schema(description = "ID da Unidade associada")
     private Long unitId;
@@ -54,9 +60,6 @@ public class AgendaResponseDTO {
 
     @Schema(description = "Nome do Setor associado")
     private String sectorName;
-
-    @Schema(description = "Nome do cliente")
-    private String clientName;
 
     @Schema(description = "Data original da visita antes do reagendamento")
     private LocalDate originalVisitDate;

@@ -1,331 +1,234 @@
 <!DOCTYPE html>
-<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8"/>
     <title>Checklist de Riscos Ocupacionais</title>
 
     <style>
-        :root {
-            --text-color: #111;
-            --muted: #666;
-            --accent: #222;
-            --title-bg: #f2f2f2;
-            --section-bg: #e0e0e0;
-        }
+        @page { size: A4 portrait; margin: 0; }
 
         body {
-            font-family: 'Montserrat', Arial, sans-serif;
-            font-size: 10pt;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 9pt;
+            color: #000000;
+            background-color: #ffffff;
             margin: 0;
             padding: 0;
-            color: var(--text-color);
         }
 
-        .header {
+        .content-wrapper { padding: 0.8cm 0.8cm; }
+
+        /* --- CABEÇALHO ESCURO (Full Bleed) --- */
+        table.main-header {
             width: 100%;
+            background-color: #004d31;
+            border-bottom: 4px solid #8cc63f;
             border-collapse: collapse;
-            margin-bottom: 20px;
+            table-layout: fixed;
+            margin: 0;
         }
-        .header td {
-            border: 1px solid #ccc;
-            padding: 8px;
+        table.main-header td {
+            padding: 10px 8px;
             vertical-align: middle;
+        }
+        .header-title-text {
             text-align: center;
-        }
-
-        .header .logo {
-            width: 15%;
-            text-align: center; /* Centraliza horizontalmente o conteúdo da célula */
-            vertical-align: middle; /* Centraliza verticalmente */
-        }
-        .header .logo img {
-            height: 60px; /* Altura fixa para consistência */
-            width: auto;
-            object-fit: contain;
-            display: inline-block; /* Necessário para responder ao text-align */
-            margin: 0 auto;
-        }
-
-        .header .title {
-            width: 70%;
-            font-size: 14pt;
-            font-weight: 700;
-            background-color: var(--title-bg);
+            color: #fff;
             text-transform: uppercase;
-        }
-        .header .info {
-            width: 15%;
-            text-align: right;
-            font-size: 8pt;
+            font-weight: 700;
+            font-size: 11pt;
+            letter-spacing: 0.5px;
         }
 
-        .section-title {
-            background-color: var(--section-bg);
-            padding: 6px 10px;
-            margin-top: 15px;
-            margin-bottom: 10px;
-            font-weight: 600;
+        /* --- CARDS MODERNOS --- */
+        .info-card {
+            background-color: #fff;
             border: 1px solid #ccc;
-            font-family: 'Montserrat', Arial, sans-serif;
-        }
-
-        .data-grid {
-            width: 100%;
-            border-collapse: collapse;
+            border-radius: 8px;
             margin-bottom: 15px;
-        }
-        .data-grid td {
-            border: 1px solid #ccc;
-            padding: 6px;
-            vertical-align: top;
-        }
-        .data-grid .label {
-            width: 25%;
-            font-weight: 700;
-            background-color: #f9f9f9;
+            page-break-inside: avoid;
+            overflow: hidden;
         }
 
-        .risk-table {
+        .card-header-label {
+            background-color: #f8f9fa;
+            color: #004d31;
+            font-weight: 700;
+            font-size: 9pt;
+            text-transform: uppercase;
+            border-bottom: 1px solid #ccc;
+            display: block;
+            padding: 6px 12px;
+            margin: 0;
+        }
+
+        .data-row {
+            display: table;
+            width: 100%;
+            border-bottom: 1px solid #eee;
+        }
+        .data-row:last-child {
+            border-bottom: none;
+        }
+
+        .data-item {
+            display: table-cell;
+            padding: 6px 12px;
+            vertical-align: top;
+            border-right: 1px solid #eee;
+        }
+        .data-item:last-child {
+            border-right: none;
+        }
+
+        .item-label {
+            font-weight: 700;
+            color: #004d31;
+            font-size: 7.5pt;
+            display: block;
+            text-transform: uppercase;
+            margin-bottom: 2px;
+        }
+        .item-value {
+            color: #000000;
+            font-size: 9pt;
+            font-weight: 500;
+        }
+
+        /* --- TABELA DE RISCOS (Design Limpo) --- */
+        table.modern-risk-table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 20px;
+            table-layout: fixed;
+            margin: 0;
         }
-        .risk-table th, .risk-table td {
-            border: 1px solid #000;
-            padding: 6px;
-            text-align: left;
-            font-family: 'Montserrat', Arial, sans-serif;
-        }
-        .risk-table thead th {
-            background-color: #d0d0d0;
+        table.modern-risk-table th {
+            background-color: #ffffff;
+            color: #004d31;
             font-weight: 700;
+            font-size: 8pt;
             text-transform: uppercase;
+            border-bottom: 2px solid #e2e8f0;
+            padding: 8px 12px;
+            text-align: left;
         }
-        .risk-table tbody tr:nth-child(even) {
-            background-color: #f5f5f5;
+        table.modern-risk-table td {
+            padding: 8px 12px;
+            border-bottom: 1px solid #eee;
+            vertical-align: top;
+            font-size: 8.5pt;
         }
+        table.modern-risk-table tr:last-child td {
+            border-bottom: none;
+        }
+        table.modern-risk-table tbody tr:nth-child(even) { background-color: #fafafa; }
 
-        /*
-         * Signature area
-         * - centralizado
-         * - imagem maior com proporção controlada
-         * - linha horizontal abaixo da imagem
-         * - nome em Montserrat bold, tamanho maior
-         * - registro em font-size menor
-         */
-        .signature-block {
-            width: 100%;
-            margin-top: 40px;
-            page-break-inside: avoid;
-            text-align: center;
-            font-family: 'Montserrat', Arial, sans-serif;
-        }
+        /* --- ASSINATURAS --- */
+        .sig-section { display: table; width: 100%; margin-top: 30px; page-break-inside: avoid; }
+        .sig-box { display: block; width: 100%; text-align: center; padding: 0 40px; vertical-align: bottom; }
+        .sig-line { border-top: 1px solid #333; margin: 5px auto 8px auto; border-radius: 1px; width: 50%; max-width: 350px; }
+        .sig-meta-text { font-size: 8pt; color: #666; margin-top: 2px; display: block; }
+        .sig-image-container { min-height: 1.6cm; display: block; }
 
-        .signature-block .section-title {
-            text-align: left; /* mantém o título da seção alinhado à esquerda como antes */
-        }
-
-        .signature-inner {
-            margin-top: 18px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .signature-img-wrap {
-            width: 100%;
-            text-align: center;
-        }
-
-        /* Ajuste de tamanho da assinatura para ficar parecido com a referência */
-        .signature-img {
-            max-width: 380px; /* largura alvo */
-            max-height: 120px;
-            width: auto;
-            height: auto;
-            display: inline-block;
-            object-fit: contain;
-        }
-
-        /* Espaço reservado caso não exista imagem (mantém layout) */
-        .signature-placeholder {
-            width: 380px;
-            height: 120px;
-            display: inline-block;
-        }
-
-        /* Linha abaixo da assinatura, centralizada e com espessura parecida com a imagem exemplo */
-        .signature-line {
-            width: 60%;
-            max-width: 420px;
-            margin: 12px auto 6px auto;
-            border-top: 2px solid var(--accent);
-        }
-
-        .sig-name {
+        h2 {
+            color: #004d31;
+            font-size: 11pt;
+            margin: 25px 0 10px 0;
+            text-transform: uppercase;
             font-weight: 700;
-            font-size: 12pt;
-            margin-top: 6px;
-            margin-bottom: 2px;
-            color: var(--text-color);
-            text-align: center;
-        }
-
-        .sig-reg {
-            font-weight: 600;
-            font-size: 10pt;
-            color: #333;
-            margin-bottom: 2px;
-            text-align: center;
-        }
-
-        .sig-role {
-            font-weight: 500;
-            font-size: 10pt;
-            color: #222;
-            margin-bottom: 4px;
-            text-align: center;
-        }
-
-        .sig-timestamp {
-            font-weight: 400;
-            font-size: 10pt;
-            color: var(--muted);
-            margin-top: 6px;
-            text-align: center;
-        }
-
-        /* pequenas responsividades para evitar overflow */
-        @media (max-width: 480px) {
-            .signature-img, .signature-placeholder {
-                max-width: 260px;
-                max-height: 90px;
-            }
-            .signature-line { width: 80%; }
-            .sig-name { font-size: 12pt; }
+            display: block;
         }
     </style>
 </head>
 <body>
 
-<table class="header">
+<table class="main-header">
     <tr>
-        <td class="logo">
-            <img th:if="${generatingCompanyLogo != null}"
-                 th:src="'data:image/png;base64,' + ${generatingCompanyLogo}"
-                 alt="Logo"
-                 style="height: 60px; width: auto;" />
+        <td style="width: 15%; text-align: center;">
+            <img th:if="${generatingCompanyLogo != null}" th:src="'data:image/png;base64,' + ${generatingCompanyLogo}" alt="Logo" style="max-height: 45px; max-width: 100%;" />
         </td>
-
-        <td class="title">
-            CHECKLIST DE RISCOS OCUPACIONAIS
-        </td>
-
-        <td class="logo">
-            <img th:if="${generatingCompanyLogo != null}"
-                 th:src="'data:image/png;base64,' + ${generatingCompanyLogo}"
-                 alt="Logo"
-                 style="height: 60px; width: auto;" />
+        <td class="header-title-text">Checklist de Riscos Ocupacionais</td>
+        <td style="width: 15%; text-align: center;">
+            <img th:if="${generatingCompanyLogo != null}" th:src="'data:image/png;base64,' + ${generatingCompanyLogo}" alt="Logo" style="max-height: 45px; max-width: 100%;" />
         </td>
     </tr>
 </table>
 
-<div class="section-title">DADOS DO EMISSOR</div>
-<table class="data-grid">
-    <tr>
-        <td class="label">Empresa</td>
-        <td th:text="${generatingCompanyName}"></td>
-        <td class="label">CNPJ</td>
-        <td th:text="${generatingCompanyCnpj}"></td>
-    </tr>
-</table>
+<div class="content-wrapper">
 
-<div class="section-title">DADOS DO CLIENTE</div>
-<table class="data-grid">
-    <tr>
-        <td class="label">Empresa</td>
-        <td th:text="${report.company?.name}"></td>
-        <td class="label">CNPJ</td>
-        <td th:text="${report.company?.cnpj}"></td>
-    </tr>
-    <tr>
-        <td class="label">Unidade</td>
-        <td th:text="${report.unit?.name ?: 'N/A'}"></td>
-        <td class="label">Setor</td>
-        <td th:text="${report.sector?.name ?: 'N/A'}"></td>
-    </tr>
-</table>
-
-<div class="section-title">INFORMAÇÕES DO RELATÓRIO</div>
-<table class="data-grid">
-    <tr>
-        <td class="label">Responsável</td>
-        <td th:text="${report.technician?.name}"></td>
-        <td class="label">Registro no Conselho</td>
-        <td th:text="${report.technician?.conselhoClasse} + ' | ' + ${report.technician?.siglaConselhoClasse}"></td>
-    </tr>
-    <tr>
-        <td class="label">Data da Inspeção</td>
-        <td th:text="${#temporals.format(report.inspectionDate, 'dd/MM/yyyy')}"></td>
-        <td class="label">Especialidade</td>
-        <td th:text="${report.technician?.especialidade}"></td>
-    </tr>
-</table>
-
-<div class="section-title" style="text-align: center">FUNÇÕES AVALIADAS E RISCOS IDENTIFICADOS</div>
-
-<div th:each="func : ${functionsData}" style="margin-bottom: 20px; page-break-inside: avoid;">
-    <p><strong>Função Avaliada:</strong> <span th:text="${func.name}"></span></p>
-
-    <table class="risk-table">
-        <thead>
-        <tr>
-            <th style="width: 30%;">TIPO DE RISCO</th>
-            <th style="width: 70%;">RISCOS IDENTIFICADOS</th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr th:each="risk : ${func.risks}">
-            <td th:text="${risk.type}"></td>
-            <td th:text="${risk.factor}"></td>
-        </tr>
-        <tr th:if="${#lists.isEmpty(func.risks)}">
-            <td colspan="2" style="text-align: center;">
-                Nenhum risco identificado para esta função.
-            </td>
-        </tr>
-        </tbody>
-    </table>
-</div>
-
-<!-- BLOC0 DE ASSINATURA - substitua no template original -->
-<div class="signature-block">
-
-    <div class="signature-inner">
-        <div class="signature-img-wrap">
-            <img th:if="${report.technicianSignatureImageBase64 != null}"
-                 th:src="'data:image/png;base64,' + ${report.technicianSignatureImageBase64}"
-                 alt="Assinatura do Técnico"
-                 class="signature-img" />
-
-            <div th:if="${report.technicianSignatureImageBase64 == null}"
-                 class="signature-placeholder"></div>
-        </div>
-
-        <div class="signature-line" aria-hidden="true"></div>
-
-        <div>
-            <div class="sig-name" th:text="${report.technician?.name ?: ''}">Nome do Técnico</div>
-            <div class="sig-reg" th:text="${report.technician?.conselhoClasse} + ' | ' + ${report.technician?.siglaConselhoClasse}">12345/XX | MTE</div>
-            <div class="sig-role" th:text="${report.technician?.especialidade ?: 'Responsável Técnico'}">Responsável Técnico</div>
-            <div class="sig-timestamp" th:if="${report.technicianSignedAt != null}">
-                Assinado em: <span th:text="${#temporals.format(report.technicianSignedAt, 'dd/MM/yyyy HH:mm')}"></span>
-            </div>
+    <div class="info-card">
+        <div class="card-header-label">Dados do Emissor</div>
+        <div class="data-row">
+            <div class="data-item" style="width: 50%;"><span class="item-label">Empresa</span><span class="item-value" th:text="${generatingCompanyName}"></span></div>
+            <div class="data-item" style="width: 50%;"><span class="item-label">CNPJ</span><span class="item-value" th:text="${generatingCompanyCnpj}"></span></div>
         </div>
     </div>
-</div>
-<!-- FIM BLOCO DE ASSINATURA -->
 
+    <div class="info-card">
+        <div class="card-header-label">Dados do Cliente</div>
+        <div class="data-row">
+            <div class="data-item" style="width: 50%;"><span class="item-label">Empresa Cliente</span><span class="item-value" th:text="${report.company?.name}"></span></div>
+            <div class="data-item" style="width: 50%;"><span class="item-label">CNPJ</span><span class="item-value" th:text="${report.company?.cnpj}"></span></div>
+        </div>
+        <div class="data-row">
+            <div class="data-item" style="width: 50%;"><span class="item-label">Unidade</span><span class="item-value" th:text="${report.unit != null ? report.unit.name : 'N/A'}"></span></div>
+            <div class="data-item" style="width: 50%;"><span class="item-label">Setor</span><span class="item-value" th:text="${report.sector != null ? report.sector.name : 'N/A'}"></span></div>
+        </div>
+    </div>
+
+    <div class="info-card">
+        <div class="card-header-label">Informações do Relatório</div>
+        <div class="data-row">
+            <div class="data-item" style="width: 50%;"><span class="item-label">Responsável Técnico</span><span class="item-value" th:text="${report.technician?.name}"></span></div>
+            <div class="data-item" style="width: 50%;"><span class="item-label">Registro Conselho</span><span class="item-value" th:text="${report.technician?.conselhoClasse} + ' | ' + ${report.technician?.siglaConselhoClasse}"></span></div>
+        </div>
+        <div class="data-row">
+            <div class="data-item" style="width: 50%;"><span class="item-label">Data da Inspeção</span><span class="item-value" th:text="${#temporals.format(report.inspectionDate, 'dd/MM/yyyy')}"></span></div>
+            <div class="data-item" style="width: 50%;"><span class="item-label">Especialidade</span><span class="item-value" th:text="${report.technician?.especialidade}"></span></div>
+        </div>
+    </div>
+
+    <h2>Funções Avaliadas e Riscos Identificados</h2>
+
+    <div class="info-card" th:each="func : ${functionsData}">
+        <div class="card-header-label" style="background-color: #e2e8f0;" th:text="'Função: ' + ${func.name}"></div>
+
+        <table class="modern-risk-table">
+            <thead>
+            <tr>
+                <th style="width: 30%;">Tipo de Risco</th>
+                <th style="width: 70%;">Riscos Identificados</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="risk : ${func.risks}">
+                <td style="font-weight: 600;" th:text="${risk.type}"></td>
+                <td th:text="${risk.factor}"></td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(func.risks)}">
+                <td colspan="2" style="text-align: center; padding: 20px; color: #64748b;">
+                    Nenhum risco identificado para esta função.
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="sig-section">
+        <div class="sig-box">
+            <div class="sig-image-container">
+                <img th:if="${report.technicianSignatureImageBase64 != null}"
+                     th:src="'data:image/png;base64,' + ${report.technicianSignatureImageBase64}"
+                     style="max-height: 70px; margin: 0 auto; display: block; width: auto;"/>
+            </div>
+            <div class="sig-line"></div>
+            <strong th:text="${report.technician?.name ?: 'Nome do Técnico'}"></strong><br/>
+            <small th:text="${report.technician?.especialidade ?: 'Responsável Técnico'}"></small><br/>
+            <span class="sig-meta-text" th:text="${report.technician?.conselhoClasse} + ' | ' + ${report.technician?.siglaConselhoClasse}"></span>
+            <span class="sig-meta-text" th:if="${report.technicianSignedAt != null}" th:text="${'Assinado em: ' + #temporals.format(report.technicianSignedAt, 'dd/MM/yyyy HH:mm')}"></span>
+        </div>
+    </div>
+
+</div>
 </body>
 </html>

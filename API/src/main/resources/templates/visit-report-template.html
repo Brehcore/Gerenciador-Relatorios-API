@@ -42,6 +42,7 @@
 
         /* --- CARDS MODERNOS COM LINHAS --- */
         .info-card {
+            font-weight: 500;
             background-color: #fff;
             border: 1px solid #ccc;
             border-radius: 8px;
@@ -106,7 +107,8 @@
         }
         .ref-item {
             font-size: 8pt;
-            color: #555;
+            font-weight: 500;
+            color: #1d1d1d;
             padding: 4px 0;
             border-bottom: 1px solid #f0f0f0;
             display: inline-block;
@@ -167,6 +169,7 @@
         }
 
         .form-control {
+            font-weight: 600;
             border: 1px solid #ccc;
             padding: 8px;
             min-height: 16px;
@@ -241,14 +244,16 @@
         <div class="card-header-label">Dados do Cliente e Local da Visita</div>
         <div class="data-row">
             <div class="data-item" style="width: 50%;"><span class="item-label">Empresa Cliente</span><span class="item-value" th:text="${visit.clientCompany?.name}"></span></div>
-            <div class="data-item" style="width: 50%;"><span class="item-label">CNPJ</span><span class="item-value" th:text="${visit.clientCompany?.cnpj}"></span></div>
+            <div class="data-item" style="width: 50%;"><span class="item-label">CNPJ da Empresa</span><span class="item-value" th:text="${visit.clientCompany?.cnpj}"></span></div>
         </div>
         <div class="data-row">
             <div class="data-item" style="width: 50%;"><span class="item-label">Unidade</span><span class="item-value" th:text="${visit.unit != null ? visit.unit.name : '-'}"></span></div>
-            <div class="data-item" style="width: 50%;"><span class="item-label">Setor</span><span class="item-value" th:text="${visit.sector != null ? visit.sector.name : '-'}"></span></div>
+            <div class="data-item" style="width: 50%;"><span class="item-label">CNPJ da Unidade</span><span class="item-value" th:text="${visit.unit?.cnpj ?: '-'}"></span></div>
+
         </div>
         <div class="data-row">
-            <div class="data-item" style="width: 100%;"><span class="item-label">Local da Visita</span><span class="item-value" th:text="${visit.location}"></span></div>
+            <div class="data-item" style="width: 50%;"><span class="item-label">Setor</span><span class="item-value" th:text="${visit.sector != null ? visit.sector.name : '-'}"></span></div>
+            <div class="data-item" style="width: 50%;"><span class="item-label">Local da Visita</span><span class="item-value" th:text="${visit.location}"></span></div>
         </div>
     </div>
 

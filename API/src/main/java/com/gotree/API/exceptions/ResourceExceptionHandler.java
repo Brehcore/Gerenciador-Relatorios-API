@@ -15,6 +15,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 import org.springframework.web.util.HtmlUtils;
 
 import com.fasterxml.jackson.databind.exc.InvalidFormatException;
@@ -130,5 +131,15 @@ public class ResourceExceptionHandler {
         body.put("path", request.getRequestURI() != null ? HtmlUtils.htmlEscape(request.getRequestURI()) : null);
 
         return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
+    }
+
+    // Tratamento para Rotas/Endpoints Inexistentes (Erro 404 real)
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<StandardError> handleNoResourceFound(NoResourceFoundException e, HttpServletRequest request) {
+        HttpStatus status = HttpStatus.NOT_FOUND;
+        StandardError err = new StandardError(Instant.now(), status.value(), "Rota não encontrada",
+                "O endpoint que você tentou acessar não existe: " + request.getRequestURI(),
+                request.getRequestURI());
+        return ResponseEntity.status(status).body(err);
     }
 }

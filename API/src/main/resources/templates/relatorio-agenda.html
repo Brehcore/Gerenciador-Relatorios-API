@@ -155,7 +155,7 @@
                 <td>
                     <div class="hierarchy-main">
                         <span class="item-label">Emp</span>
-                        <span class="item-value" th:text="${item.clientName}"></span>
+                        <span class="item-value" th:text="${item.companyName}"></span>
                         <span class="doc-number" th:if="${item.companyCnpj != null}" th:text="' - CNPJ: ' + ${item.companyCnpj}"></span>
                     </div>
                     <div class="hierarchy-sub" th:if="${item.unitName != null}">
