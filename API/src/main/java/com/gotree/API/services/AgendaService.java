@@ -7,11 +7,11 @@ import com.gotree.API.dto.agenda.ReportNotRealizedDTO;
 import com.gotree.API.dto.agenda.RescheduleVisitDTO;
 import com.gotree.API.entities.AgendaEvent;
 import com.gotree.API.entities.Company;
-import com.gotree.API.entities.TechnicalVisit;
 import com.gotree.API.entities.User;
-import com.gotree.API.enums.AgendaEventType;
+
 import com.gotree.API.enums.AgendaStatus;
 import com.gotree.API.enums.Shift;
+import com.gotree.API.mappers.AgendaMapper;
 import com.gotree.API.repositories.AgendaEventRepository;
 import com.gotree.API.repositories.CompanyRepository;
 import com.gotree.API.repositories.SectorRepository;
@@ -19,10 +19,7 @@ import com.gotree.API.repositories.UnitRepository;
 import org.jspecify.annotations.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.util.HtmlUtils;
-
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -36,13 +33,15 @@ public class AgendaService {
     private final CompanyRepository companyRepository;
     private final UnitRepository unitRepository;
     private final SectorRepository sectorRepository;
+    private final AgendaMapper agendaMapper;
 
     public AgendaService(AgendaEventRepository agendaEventRepository, CompanyRepository companyRepository,
-                         UnitRepository unitRepository, SectorRepository sectorRepository) {
+                         UnitRepository unitRepository, SectorRepository sectorRepository, AgendaMapper agendaMapper) {
         this.agendaEventRepository = agendaEventRepository;
         this.companyRepository = companyRepository;
         this.unitRepository = unitRepository;
         this.sectorRepository = sectorRepository;
+        this.agendaMapper = agendaMapper;
     }
 
     public void validateReportSubmission(Long visitId, User technician, LocalDate date, String shiftStr, Company targetCompany) {
@@ -107,84 +106,50 @@ public class AgendaService {
         }
     }
 
-    @Transactional
-    public AgendaEvent createEvent(CreateEventDTO dto, User user) {
-        // 1. Regra de Negócio (Disponibilidade)
-        String conflict = checkAvailability(user, dto.getEventDate(), dto.getShift());
-        if (conflict != null) throw new IllegalStateException(conflict);
-
-        // 2. Instanciação e Sanitização (Lógica que saiu do Controller)
-        AgendaEvent event = new AgendaEvent();
-        sanitizeAndPopulate(event, dto);
-
-        event.setUser(user);
-        event.setStatus(AgendaStatus.CONFIRMADO);
-
-        // 3. Vínculo de Entidades Relacionais
-        bindRelationalEntities(event, dto);
-
-        // 4. Tratamento de Enums
-        try {
-            if (dto.getShift() != null && !dto.getShift().isBlank()) {
-                event.setShift(Shift.valueOf(dto.getShift().toUpperCase()));
-            }
-            event.setEventType(AgendaEventType.valueOf(dto.getEventType().toUpperCase()));
-        } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Dados inválidos para turno ou tipo de evento.");
-        }
-
-        return agendaEventRepository.save(event);
-    }
-
-    /**
-     * Centraliza a sanitização de campos de texto para evitar XSS e poluição de dados.
-     */
-    private void sanitizeAndPopulate(AgendaEvent event, CreateEventDTO dto) {
-        event.setTitle(dto.getTitle() != null ? HtmlUtils.htmlEscape(dto.getTitle()) : null);
-        event.setDescription(dto.getDescription() != null ? HtmlUtils.htmlEscape(dto.getDescription()) : null);
-        event.setManualObservation(dto.getManualObservation() != null ? HtmlUtils.htmlEscape(dto.getManualObservation()) : null);
-        event.setEventDate(dto.getEventDate());
-    }
-
-    /**
-     * Realiza o vínculo obrigatório com as entidades do sistema.
-     */
     private void bindRelationalEntities(AgendaEvent event, CreateEventDTO dto) {
         if (dto.getCompanyId() == null) {
             throw new IllegalArgumentException("A empresa é obrigatória para criar um agendamento.");
         }
 
-        Company company = companyRepository.findById(dto.getCompanyId())
-                .orElseThrow(() -> new RuntimeException("Empresa não encontrada."));
-        event.setCompany(company);
+        // Removida a linha duplicada de event.setCompany
+        event.setCompany(companyRepository.findById(dto.getCompanyId())
+                .orElseThrow(() -> new RuntimeException("Empresa não encontrada.")));
 
-        // Populamos o CompanyName da entidade automaticamente a partir do nome da empresa
-        event.setCompany(company);
-
-        if (dto.getUnitId() != null) {
-            event.setUnit(unitRepository.findById(dto.getUnitId())
-                    .orElseThrow(() -> new RuntimeException("Unidade não encontrada.")));
-        }
-
-        if (dto.getSectorId() != null) {
-            event.setSector(sectorRepository.findById(dto.getSectorId())
-                    .orElseThrow(() -> new RuntimeException("Setor não encontrado.")));
-        }
+        // Agora permite que o usuário remova a unidade/setor no update setando para null
+        event.setUnit(dto.getUnitId() != null ? unitRepository.findById(dto.getUnitId()).orElse(null) : null);
+        event.setSector(dto.getSectorId() != null ? sectorRepository.findById(dto.getSectorId()).orElse(null) : null);
     }
 
     @Transactional
-    public AgendaEvent updateEvent(Long eventId, CreateEventDTO dto, User currentUser) {
+    public AgendaResponseDTO createEvent(CreateEventDTO dto, User user) {
+        String conflict = checkAvailability(user, dto.getEventDate(), dto.getShift());
+        if (conflict != null) throw new IllegalStateException(conflict);
+
+        AgendaEvent event = new AgendaEvent();
+        agendaMapper.updateEntityFromDto(event, dto);
+        event.setUser(user);
+        event.setStatus(AgendaStatus.CONFIRMADO);
+        bindRelationalEntities(event, dto);
+
+        AgendaEvent savedEvent = agendaEventRepository.save(event);
+
+        // CHAMA O MAPPER AQUI DENTRO, COM A CONEXÃO AINDA ABERTA!
+        return agendaMapper.mapToDto(savedEvent);
+    }
+
+    @Transactional
+    public AgendaResponseDTO updateEvent(Long eventId, CreateEventDTO dto, User currentUser) {
         AgendaEvent event = agendaEventRepository.findById(eventId)
                 .orElseThrow(() -> new RuntimeException("Evento não encontrado."));
 
         validateUserPermission(event, currentUser);
+        agendaMapper.updateEntityFromDto(event, dto);
+        bindRelationalEntities(event, dto);
 
-        event.setTitle(dto.getTitle());
-        event.setDescription(dto.getDescription());
-        event.setEventDate(dto.getEventDate());
-        event.setManualObservation(dto.getManualObservation());
+        AgendaEvent savedEvent = agendaEventRepository.save(event);
 
-        return agendaEventRepository.save(event);
+        // CHAMA O MAPPER AQUI DENTRO!
+        return agendaMapper.mapToDto(savedEvent);
     }
 
     @Transactional
@@ -228,11 +193,6 @@ public class AgendaService {
 
         event.setStatus(AgendaStatus.REAGENDADO);
 
-        if (dto.getReason() != null && !dto.getReason().trim().isEmpty()) {
-            String obs = event.getManualObservation() != null ? event.getManualObservation() + " | " : "";
-            event.setManualObservation(obs + "Motivo Reagendamento: " + dto.getReason());
-        }
-
         agendaEventRepository.save(event);
     }
 
@@ -264,7 +224,7 @@ public class AgendaService {
     public List<AgendaResponseDTO> findAllEventsForUser(User user) {
         return agendaEventRepository.findByUserOrderByEventDateAsc(user)
                 .stream()
-                .map(this::mapToDto)
+                .map(agendaMapper::mapToDto)
                 .toList();
     }
 
@@ -273,7 +233,7 @@ public class AgendaService {
         LocalDate today = LocalDate.now();
         return agendaEventRepository.findByUserAndEventDateGreaterThanEqualOrderByEventDateAsc(user, today)
                 .stream()
-                .map(this::mapToDto)
+                .map(agendaMapper::mapToDto)
                 .toList();
     }
 
@@ -287,7 +247,7 @@ public class AgendaService {
             persistentEvents = agendaEventRepository.findAllByOrderByEventDateAsc();
         }
 
-        return persistentEvents.stream().map(this::mapToDto).toList();
+        return persistentEvents.stream().map(agendaMapper::mapToDto).toList();
     }
 
     @Transactional(readOnly = true)
@@ -297,7 +257,7 @@ public class AgendaService {
         return allEventsInPeriod.stream()
                 .filter(e -> userId == null || (e.getUser() != null && e.getUser().getId().equals(userId)))
                 .filter(e -> eventType == null || eventType.isBlank() || (e.getEventType() != null && e.getEventType().name().equalsIgnoreCase(eventType)))
-                .map(this::mapToDto)
+                .map(agendaMapper::mapToDto)
                 .filter(dto -> companyName == null || companyName.isBlank() ||
                         (dto.getCompanyName() != null && dto.getCompanyName().toLowerCase().contains(companyName.toLowerCase())))
                 .peek(dto -> {
@@ -348,127 +308,6 @@ public class AgendaService {
         return dto;
     }
 
-    /**
-     * Converte um evento de agenda (tabela tb_agenda_event) para DTO.
-     */
-    public AgendaResponseDTO mapToDto(AgendaEvent event) {
-        AgendaResponseDTO dto = new AgendaResponseDTO();
-        dto.setReferenceId(event.getId());
-        dto.setTitle(event.getTitle());
-        dto.setDate(event.getEventDate());
-        dto.setOriginalVisitDate(event.getOriginalVisitDate());
-        if (event.getEventType() != null) {
-            String tipoRaw = event.getEventType().name();
-            switch (tipoRaw) {
-                case "EVENTO":
-                    dto.setType("Evento");
-                    break;
-                case "TREINAMENTO":
-                    dto.setType("Treinamento");
-                    break;
-                case "VISITA_TECNICA":
-                    dto.setType("Visita Técnica");
-                    break;
-                case "VISITA_COMERCIAL":
-                    dto.setType("Visita Comercial");
-                    break;
-                case "VISITA_SAUDE":
-                    dto.setType("Visita Saúde");
-                    break;
-                case "GESTÃO":
-                    dto.setType("Gestão");
-                    break;
-                case "PERICIA":
-                    dto.setType("Perícia");
-                    break;
-                default:
-                    // Fallback genérico: remove sublinhados e capitaliza
-                    String formatado = tipoRaw.replace("_", " ").toLowerCase();
-                    dto.setType(formatado.substring(0, 1).toUpperCase() + formatado.substring(1));
-            }
-        }
-        dto.setDescription(event.getDescription());
-        dto.setIsRealized(event.getIsRealized());
-        dto.setNonCompletionReason(event.getNonCompletionReason());
-
-        if (event.getUnit() != null) {
-            dto.setUnitId(event.getUnit().getId());
-            dto.setUnitName(event.getUnit().getName());
-            dto.setUnitCnpj(event.getUnit().getCnpj());
-        }
-        if (event.getSector() != null) {
-            dto.setSectorId(event.getSector().getId());
-            dto.setSectorName(event.getSector().getName());
-        }
-        // FORMATAÇÃO DO TURNO
-        if (event.getShift() != null) {
-            String turnoRaw = event.getShift().name();
-            if (turnoRaw.equals("MANHA") || turnoRaw.equals("MORNING")) {
-                dto.setShift("Manhã");
-            } else if (turnoRaw.equals("TARDE") || turnoRaw.equals("AFTERNOON")) {
-                dto.setShift("Tarde");
-            } else {
-                // Prevenção genérica: Primeira maiúscula, resto minúscula
-                dto.setShift(turnoRaw.substring(0, 1).toUpperCase() + turnoRaw.substring(1).toLowerCase());
-            }
-        }
-        if (event.getUser() != null) {
-            dto.setResponsibleName(event.getUser().getName());
-            dto.setResponsibleId(event.getUser().getId());
-        }
-
-        if (event.getStatus() != null) {
-            dto.setStatus(event.getStatus().name());
-            if (event.getStatus() == AgendaStatus.REAGENDADO && event.getRescheduledToDate() != null) {
-                String novaDataStr = event.getRescheduledToDate().format(DateTimeFormatter.ofPattern("dd/MM"));
-                dto.setStatusDescricao("Reagendado p/ " + novaDataStr);
-            } else {
-                dto.setStatusDescricao(event.getStatus().getDescricao());
-            }
-        } else {
-            dto.setStatus(AgendaStatus.A_CONFIRMAR.name());
-            dto.setStatusDescricao(AgendaStatus.A_CONFIRMAR.getDescricao());
-        }
-
-        // --- DADOS DO CLIENTE COM CNPJ ---
-        // Dados do Cliente
-        if (event.getTechnicalVisit() != null) {
-            TechnicalVisit v = event.getTechnicalVisit();
-            dto.setSourceVisitId(v.getId());
-            if (v.getClientCompany() != null) {
-                dto.setCompanyName(v.getClientCompany().getName());
-                dto.setCompanyCnpj(v.getClientCompany().getCnpj());
-            }
-            if (v.getUnit() != null) {
-                dto.setUnitName(v.getUnit().getName());
-                dto.setUnitCnpj(v.getUnit().getCnpj());
-            }
-            if (v.getSector() != null) dto.setSectorName(v.getSector().getName());
-        } else {
-            // Traz o nome do cliente original
-            dto.setCompanyName("Empresa não informada");
-
-            if (event.getCompany() != null) {
-                dto.setCompanyCnpj(event.getCompany().getCnpj());
-
-                // NOVO: Se o clientName veio nulo ou vazio do banco, puxa o nome oficial da tabela de Empresa
-                if (dto.getCompanyName() == null || dto.getCompanyName().isBlank()) {
-                    dto.setCompanyName(event.getCompany().getName());
-                }
-            }
-
-            // Tratamento contra null pointer caso nem a empresa, nem o clientName existam
-            if (dto.getCompanyName() == null || dto.getCompanyName().isBlank()) {
-                dto.setCompanyName("Empresa não informada");
-            }
-
-            if (event.getManualObservation() != null) {
-                String obs = dto.getDescription() != null ? dto.getDescription() + " | " : "";
-                dto.setDescription(obs + event.getManualObservation());
-            }
-        }
-        return dto;
-    }
 
     @Transactional(readOnly = true)
     public String checkGlobalConflicts(LocalDate date, String shiftStr, User currentUser) {
@@ -499,7 +338,7 @@ public class AgendaService {
     public List<AgendaResponseDTO> getGlobalEvents(LocalDate startDate, LocalDate endDate) {
         return agendaEventRepository.findAllByEventDateBetween(startDate, endDate)
                 .stream()
-                .map(this::mapToDto)
+                .map(agendaMapper::mapToDto)
                 .toList();
     }
 
@@ -521,7 +360,10 @@ public class AgendaService {
     private void validateUserPermission(AgendaEvent event, User currentUser) {
         boolean isAdmin = currentUser.getRole() != null && "ROLE_ADMIN".equals(currentUser.getRole().getRoleName());
 
-        if (!event.getUser().getId().equals(currentUser.getId()) && !isAdmin) {
+        // Proteção contra usuários nulos no banco
+        Long ownerId = (event.getUser() != null) ? event.getUser().getId() : null;
+
+        if (!currentUser.getId().equals(ownerId) && !isAdmin) {
             throw new SecurityException("Você não tem permissão para modificar a agenda de outro técnico.");
         }
     }

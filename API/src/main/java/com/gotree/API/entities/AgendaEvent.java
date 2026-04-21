@@ -31,9 +31,8 @@ public class AgendaEvent {
 
     /**
      * Descrição detalhada do evento.
-     * Pode conter informações como motivo de reagendamento ou cancelamento.
      */
-    @Lob
+    @Column(columnDefinition = "TEXT")
     private String description;
 
     /**
@@ -107,6 +106,5 @@ public class AgendaEvent {
     // Só será preenchido se status == REAGENDADO
     @Column(name = "rescheduled_to_date")
     private LocalDate rescheduledToDate;
-
-    private String manualObservation;
+    
 }

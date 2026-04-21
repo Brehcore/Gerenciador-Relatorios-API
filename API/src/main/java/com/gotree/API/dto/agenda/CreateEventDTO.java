@@ -27,6 +27,7 @@ public class CreateEventDTO {
     private String shift;
 
     @Schema(description = "ID da Empresa associada ao evento")
+    @NotNull(message = "A empresa é obrigatória.")
     private Long companyId;
 
     @Schema(description = "ID da Unidade associada ao evento")
@@ -34,7 +35,4 @@ public class CreateEventDTO {
 
     @Schema(description = "ID do Setor associado ao evento")
     private Long sectorId;
-
-    @Schema(description = "Observação manual sobre o evento")
-    private String manualObservation;
 }

@@ -6,7 +6,6 @@ import com.gotree.API.dto.agenda.CreateEventDTO;
 import com.gotree.API.dto.agenda.MonthlyAvailabilityDTO;
 import com.gotree.API.dto.agenda.ReportNotRealizedDTO;
 import com.gotree.API.dto.agenda.RescheduleVisitDTO;
-import com.gotree.API.entities.AgendaEvent;
 import com.gotree.API.entities.User;
 import com.gotree.API.services.AgendaService;
 import com.gotree.API.services.ReportService;
@@ -31,7 +30,7 @@ import java.util.Map;
 
 @Tag(name = "Agenda e Visitas", description = "Gerenciamento do calendário e agendamento de eventos.")
 @RestController
-@RequestMapping("/api/agenda")
+@RequestMapping(value = "/api/agenda", produces = MediaType.APPLICATION_JSON_VALUE)
 public class AgendaController {
 
     private final AgendaService agendaService;
@@ -51,12 +50,13 @@ public class AgendaController {
     ) {
         User currentUser = ((CustomUserDetails) authentication.getPrincipal()).user();
 
-        AgendaEvent newEvent = agendaService.createEvent(dto, currentUser);
+        // O Service já devolve o DTO pronto!
+        AgendaResponseDTO response = agendaService.createEvent(dto, currentUser);
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(agendaService.mapToDto(newEvent));
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @Operation(summary = "Atualiza um evento", description = "Atualiza os dados de um evento manual existente na agenda do usuário autenticado.")
+    @Operation(summary = "Atualiza um evento")
     @PutMapping("/eventos/{id}")
     @PreAuthorize("hasAuthority('EDIT_AGENDA') or hasRole('ADMIN')")
     public ResponseEntity<AgendaResponseDTO> updateEvent(
@@ -65,8 +65,11 @@ public class AgendaController {
             Authentication authentication) {
 
         User currentUser = ((CustomUserDetails) authentication.getPrincipal()).user();
-        AgendaEvent updatedEvent = agendaService.updateEvent(id, dto, currentUser);
-        return ResponseEntity.ok(agendaService.mapToDto(updatedEvent));
+
+        // O Service já devolve o DTO pronto!
+        AgendaResponseDTO response = agendaService.updateEvent(id, dto, currentUser);
+
+        return ResponseEntity.ok(response);
     }
 
     @Operation(summary = "Remove um evento", description = "Exclui permanentemente um evento da agenda do usuário.")
