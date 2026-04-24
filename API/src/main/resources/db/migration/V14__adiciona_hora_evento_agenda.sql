@@ -1,0 +1,1 @@
+ALTER TABLE tb_agenda_event ADD COLUMN event_hour TIME;

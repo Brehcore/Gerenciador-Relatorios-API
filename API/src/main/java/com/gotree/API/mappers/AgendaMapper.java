@@ -23,6 +23,7 @@ public class AgendaMapper {
         dto.setDescription(event.getDescription());
         dto.setIsRealized(event.getIsRealized());
         dto.setNonCompletionReason(event.getNonCompletionReason());
+        dto.setEventHour(event.getEventHour());
 
         if (event.getEventType() != null) dto.setType(formatEventType(event.getEventType().name()));
         if (event.getShift() != null) dto.setShift(formatShift(event.getShift().name()));
@@ -44,7 +45,6 @@ public class AgendaMapper {
         return dto;
     }
 
-    // --- NOVA FUNÇÃO QUE SAIU DO SERVICE ---
     public void updateEntityFromDto(AgendaEvent event, com.gotree.API.dto.agenda.CreateEventDTO dto) {
         event.setTitle(dto.getTitle());
         event.setDescription(dto.getDescription());
@@ -57,7 +57,7 @@ public class AgendaMapper {
                 event.setShift(null);
             }
             if (dto.getEventType() != null) {
-                event.setEventType(com.gotree.API.enums.AgendaEventType.valueOf(dto.getEventType().toUpperCase()));
+                event.setEventType(dto.getEventType());
             }
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException("Valores de Turno ou Tipo inválidos.");

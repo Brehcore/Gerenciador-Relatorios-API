@@ -2,6 +2,7 @@ package com.gotree.API.controllers;
 
 import com.gotree.API.config.security.CustomUserDetails;
 import com.gotree.API.dto.agenda.AgendaResponseDTO;
+import com.gotree.API.dto.agenda.CancelEventDTO;
 import com.gotree.API.dto.agenda.CreateEventDTO;
 import com.gotree.API.dto.agenda.MonthlyAvailabilityDTO;
 import com.gotree.API.dto.agenda.ReportNotRealizedDTO;
@@ -135,9 +136,9 @@ public class AgendaController {
         return ResponseEntity.ok().build();
     }
 
-    @Operation(summary = "Lista todos os eventos (Admin)", description = "Retorna todos os eventos cadastrados no sistema, permitindo filtrar por usuário.")
+    @Operation(summary = "Lista todos os eventos", description = "Retorna todos os eventos cadastrados no sistema, permitindo filtrar por usuário.")
     @GetMapping("/eventos/all")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('VIEW_AGENDA') or hasRole('ADMIN')")
     public ResponseEntity<List<AgendaResponseDTO>> getAllEventsForAdmin(
             @RequestParam(required = false) Long userId
     ) {
@@ -267,6 +268,21 @@ public class AgendaController {
         agendaService.confirmVisit(visitId, currentUser);
 
         return ResponseEntity.ok().build();
+    }
+
+    @PatchMapping("/{id}/cancelar")
+    @Operation(summary = "Cancelar evento", description = "Altera o status de um evento para CANCELADO e libera o horário na agenda, guardando o motivo no histórico.")
+    @PreAuthorize("hasAuthority('DELETE_AGENDA') or hasRole('ADMIN')")
+    public ResponseEntity<Void> cancelEvent(
+            @PathVariable Long id,
+            @Valid @RequestBody CancelEventDTO dto,
+            Authentication authentication) {
+
+        User currentUser = ((CustomUserDetails) authentication.getPrincipal()).user();
+
+        agendaService.cancelEvent(id, dto, currentUser);
+
+        return ResponseEntity.noContent().build();
     }
 
     @PatchMapping("/{id}/not-realized")

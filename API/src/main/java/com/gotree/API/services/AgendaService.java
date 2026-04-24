@@ -1,6 +1,7 @@
 package com.gotree.API.services;
 
 import com.gotree.API.dto.agenda.AgendaResponseDTO;
+import com.gotree.API.dto.agenda.CancelEventDTO;
 import com.gotree.API.dto.agenda.CreateEventDTO;
 import com.gotree.API.dto.agenda.MonthlyAvailabilityDTO;
 import com.gotree.API.dto.agenda.ReportNotRealizedDTO;
@@ -88,14 +89,17 @@ public class AgendaService {
 
     public String checkAvailability(User technician, LocalDate date, String shiftStr) {
         try {
-            long eventsInDay = agendaEventRepository.countByUserAndEventDate(technician, date);
+            // Conta os eventos do dia, IGNORANDO os cancelados
+            long eventsInDay = agendaEventRepository.countByUserAndEventDateAndStatusNot(technician, date, AgendaStatus.CANCELADO);
             if (eventsInDay >= 2) {
                 return "Você já possui 2 eventos agendados nesta data. Escolha outra data.";
             }
 
             if (shiftStr != null && !shiftStr.isBlank()) {
                 Shift shift = Shift.valueOf(shiftStr.toUpperCase());
-                long eventsInShift = agendaEventRepository.countByUserAndEventDateAndShift(technician, date, shift);
+
+                // Conta os eventos do turno, IGNORANDO os cancelados
+                long eventsInShift = agendaEventRepository.countByUserAndEventDateAndShiftAndStatusNot(technician, date, shift, AgendaStatus.CANCELADO);
                 if (eventsInShift > 0) {
                     return "Você já possui uma visita agendada neste turno (" + shift + "). Escolha outro turno.";
                 }
@@ -133,7 +137,6 @@ public class AgendaService {
 
         AgendaEvent savedEvent = agendaEventRepository.save(event);
 
-        // CHAMA O MAPPER AQUI DENTRO, COM A CONEXÃO AINDA ABERTA!
         return agendaMapper.mapToDto(savedEvent);
     }
 
@@ -350,6 +353,31 @@ public class AgendaService {
         validateUserPermission(event, currentUser);
 
         event.setStatus(AgendaStatus.CONFIRMADO);
+        agendaEventRepository.save(event);
+    }
+
+    @Transactional
+    public void cancelEvent(Long eventId, CancelEventDTO dto, User currentUser) {
+        AgendaEvent event = agendaEventRepository.findById(eventId)
+                .orElseThrow(() -> new RuntimeException("Evento da agenda não encontrado."));
+
+        // Valida se o usuário tem permissão para alterar este evento
+        validateUserPermission(event, currentUser);
+
+        // Altera o status para CANCELADO
+        event.setStatus(AgendaStatus.CANCELADO);
+
+        // Opcional: Se quiser garantir que um evento cancelado não conte como "realizado"
+        event.setIsRealized(false);
+
+        // Salva o motivo do cancelamento no histórico (descrição)
+        if (dto.getReason() != null && !dto.getReason().trim().isEmpty()) {
+            String prefixo = (event.getDescription() != null && !event.getDescription().isBlank())
+                    ? event.getDescription() + " | "
+                    : "";
+            event.setDescription(prefixo + "Motivo Cancelamento: " + dto.getReason());
+        }
+
         agendaEventRepository.save(event);
     }
 

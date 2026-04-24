@@ -66,6 +66,9 @@ public class CreateTechnicalVisitRequestDTO {
     @Schema(description = "Data sugerida para a próxima visita", example = "2024-06-26")
     private LocalDate nextVisitDate;
 
+    @Schema(description = "Horário previsto para o evento no calendário do técnico (Opcional)", type = "string", format = "time", example = "09:00:00")
+    private LocalTime eventHour;
+
     @Schema(description = "Turno sugerido para a próxima visita", example = "MANHA")
     private String nextVisitShift;
 }

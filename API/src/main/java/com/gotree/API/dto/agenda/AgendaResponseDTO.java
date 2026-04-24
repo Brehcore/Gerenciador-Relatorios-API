@@ -3,6 +3,7 @@ package com.gotree.API.dto.agenda;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import java.time.LocalDate;
+import java.time.LocalTime;
 
 @Data
 @Schema(description = "DTO de resposta contendo informações da agenda")
@@ -12,6 +13,9 @@ public class AgendaResponseDTO {
 
     @Schema(description = "Data do evento")
     private LocalDate date;
+
+    @Schema(description = "Horário do evento", type = "string", format = "time", example = "14:30:00")
+    private LocalTime eventHour; // Alterado de startTime para eventHour
 
     @Schema(description = "Tipo do evento", example = "VISITA_TECNICA")
     private String type;

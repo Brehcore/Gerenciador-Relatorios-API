@@ -1,10 +1,11 @@
 package com.gotree.API.dto.agenda;
 
+import com.gotree.API.enums.AgendaEventType;
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import java.time.LocalDate;
+import java.time.LocalTime;
 
 @Data
 @Schema(description = "DTO para criação de eventos na agenda")
@@ -19,9 +20,12 @@ public class CreateEventDTO {
     @NotNull(message = "A data é obrigatória.")
     private LocalDate eventDate;
 
-    @Schema(description = "Tipo do evento", example = "EVENTO", allowableValues = {"EVENTO", "TREINAMENTO"})
-    @NotBlank(message = "O tipo de evento é obrigatório.")
-    private String eventType;
+    @Schema(description = "Horário do evento", type = "string", format = "time", example = "14:30:00")
+    private LocalTime eventHour;
+
+    @Schema(description = "Tipo do evento (Valores automáticos via ENUM", example = "EVENTO")
+    @NotNull(message = "O tipo de evento é obrigatório.")
+    private AgendaEventType eventType;
 
     @Schema(description = "Turno do evento", example = "MANHA", allowableValues = {"MANHA", "TARDE"})
     private String shift;

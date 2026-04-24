@@ -6,6 +6,7 @@ import com.gotree.API.enums.Shift;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDate;
+import java.time.LocalTime;
 
 /**
  * Entidade que representa eventos de agenda no sistema.
@@ -40,6 +41,9 @@ public class AgendaEvent {
      * No caso de reagendamentos, representa a nova data agendada.
      */
     private LocalDate eventDate;
+
+    @Column(name = "event_hour")
+    private LocalTime eventHour;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

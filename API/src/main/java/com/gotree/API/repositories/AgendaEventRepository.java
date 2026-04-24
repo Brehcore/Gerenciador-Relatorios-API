@@ -2,6 +2,7 @@ package com.gotree.API.repositories;
 
 import com.gotree.API.entities.AgendaEvent;
 import com.gotree.API.entities.User;
+import com.gotree.API.enums.AgendaStatus;
 import com.gotree.API.enums.Shift;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -62,4 +63,10 @@ public interface AgendaEventRepository extends JpaRepository<AgendaEvent, Long> 
 
     // Busca eventos do usuário a partir de uma data específica
     List<AgendaEvent> findByUserAndEventDateGreaterThanEqualOrderByEventDateAsc(User user, LocalDate date);
+
+    // No seu AgendaEventRepository.java
+
+    long countByUserAndEventDateAndStatusNot(User user, LocalDate date, AgendaStatus status);
+
+    long countByUserAndEventDateAndShiftAndStatusNot(User user, LocalDate date, Shift shift, AgendaStatus status);
 }

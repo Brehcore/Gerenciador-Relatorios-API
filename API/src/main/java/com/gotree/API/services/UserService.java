@@ -24,8 +24,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import br.com.caelum.stella.validation.CPFValidator;
-import br.com.caelum.stella.validation.InvalidStateException;
+
 
 @Service
 public class UserService implements UserDetailsService {
@@ -39,6 +38,7 @@ public class UserService implements UserDetailsService {
     private final ClientRepository clientRepository;
     private final SymmetricCryptoService cryptoService;
     private final AccessProfileRepository accessProfileRepository;
+    private final CpfValidatorService cpfValidatorService;
 
     @Value("${file.storage.path}")
     private String fileStoragePath;
@@ -46,7 +46,8 @@ public class UserService implements UserDetailsService {
     public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, UserMapper userMapper,
                        AepReportRepository aepReportRepository, OccupationalRiskReportRepository riskReportRepository,
                        TechnicalVisitRepository technicalVisitRepository, ClientRepository clientRepository,
-                       SymmetricCryptoService cryptoService, AccessProfileRepository accessProfileRepository) {
+                       SymmetricCryptoService cryptoService, AccessProfileRepository accessProfileRepository,
+                       CpfValidatorService cpfValidatorService) {
         this.passwordEncoder = passwordEncoder;
         this.userRepository = userRepository;
         this.userMapper = userMapper;
@@ -56,6 +57,7 @@ public class UserService implements UserDetailsService {
         this.clientRepository = clientRepository;
         this.cryptoService = cryptoService;
         this.accessProfileRepository = accessProfileRepository;
+        this.cpfValidatorService = cpfValidatorService;
     }
 
     public List<User> findAll() { return userRepository.findAll(); }
@@ -84,6 +86,7 @@ public class UserService implements UserDetailsService {
 
     public User updateUser(Long id, UserUpdateDTO dto) {
         User user = findById(id);
+
         if (dto.getName() != null) user.setName(dto.getName());
         if (dto.getPhone() != null) user.setPhone(dto.getPhone());
         if (dto.getSiglaConselhoClasse() != null) user.setSiglaConselhoClasse(dto.getSiglaConselhoClasse());
@@ -100,8 +103,8 @@ public class UserService implements UserDetailsService {
         if (dto.getCpf() != null) {
             String cleanCpf = dto.getCpf().replaceAll("\\D", "");
             try {
-                new CPFValidator().assertValid(cleanCpf);
-            } catch (InvalidStateException e) {
+                cpfValidatorService.validateCpf(cleanCpf);
+            } catch (IllegalArgumentException e) { // CORREÇÃO: Apanhar IllegalArgumentException
                 throw new CpfValidationException("CPF inválido: " + dto.getCpf());
             }
             user.setCpf(dto.getCpf());
@@ -166,9 +169,15 @@ public class UserService implements UserDetailsService {
         userRepository.findByEmail(userDTO.getEmail()).ifPresent(u -> {
             throw new DataIntegrityViolationException("Email já cadastrado.");
         });
-        String cleanCpf = userDTO.getCpf().replaceAll("\\D", "");
-        try { new CPFValidator().assertValid(cleanCpf); }
-        catch (InvalidStateException e) { throw new CpfValidationException("CPF inválido."); }
+
+        if (userDTO.getCpf() != null) {
+            String cleanCpf = userDTO.getCpf().replaceAll("\\D", "");
+            try {
+                cpfValidatorService.validateCpf(cleanCpf);
+            } catch (IllegalArgumentException e) { // CORREÇÃO: Apanhar IllegalArgumentException
+                throw new CpfValidationException("CPF inválido.");
+            }
+        }
     }
 
     @Transactional
