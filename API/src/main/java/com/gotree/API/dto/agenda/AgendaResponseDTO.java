@@ -15,7 +15,7 @@ public class AgendaResponseDTO {
     private LocalDate date;
 
     @Schema(description = "Horário do evento", type = "string", format = "time", example = "14:30:00")
-    private LocalTime eventHour; // Alterado de startTime para eventHour
+    private LocalTime eventHour;
 
     @Schema(description = "Tipo do evento", example = "VISITA_TECNICA")
     private String type;

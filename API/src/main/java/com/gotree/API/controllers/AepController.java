@@ -41,7 +41,7 @@ public class AepController {
      */
     @Operation(summary = "Cria uma AEP", description = "Utiliza autenticação para identificar qual usuário está criando a AEP")
     @PostMapping
-    @PreAuthorize("hasAuthority('EMIT_REPORT') or hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('EMIT_REPORTS') or hasRole('ADMIN')")
     public ResponseEntity<?> createAepReport(@RequestBody @Valid AepRequestDTO dto, Authentication authentication) {
         CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
         User evaluator = userDetails.user();
@@ -67,7 +67,7 @@ public class AepController {
      */
     @Operation(summary = "Atualiza uma AEP", description = "Utiliza autenticação do usuário e ID da AEP existente para atualização.")
     @PutMapping("/{id}")
-    @PreAuthorize("hasAuthority('EDIT_REPORT') or hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('EDIT_REPORTS') or hasRole('ADMIN')")
     public ResponseEntity<?> updateAepReport(@PathVariable Long id, @RequestBody @Valid AepRequestDTO dto, Authentication authentication) {
         CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
         User evaluator = userDetails.user();
@@ -92,7 +92,7 @@ public class AepController {
      */
     @Operation(summary = "Recupera os detalhes de uma AEP", description = "Utiliza autenticação do usuário e ID da AEP existente pegando os detalhes que estavam previamente selecionados.")
     @GetMapping("/{id}")
-    @PreAuthorize("hasAuthority('VIEW_REPORT') or hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('VIEW_REPORTS') or hasRole('ADMIN')")
     public ResponseEntity<AepDetailDTO> getAepReportDetails(@PathVariable Long id, Authentication authentication) {
         CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
         User currentUser = userDetails.user();

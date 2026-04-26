@@ -1,5 +1,8 @@
 package com.gotree.API.dto.user;
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.gotree.API.config.UserRoleDeserializer;
+import com.gotree.API.enums.UserRole;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
@@ -20,6 +23,10 @@ public class UserUpdateDTO {
 
 	@Schema(description = "CPF do usuário", example = "123.456.789-00")
 	private String cpf;
+
+	@JsonDeserialize(using = UserRoleDeserializer.class)
+	@Schema(description = "Papel/Perfil do usuário no sistema", example = "USER")
+	private UserRole role;
 
 	@Schema(description = "Sigla do conselho de classe", example = "CREFITO")
 	private String siglaConselhoClasse;

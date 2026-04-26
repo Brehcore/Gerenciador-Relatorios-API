@@ -35,7 +35,7 @@ public class UnitController {
      */
     @Operation(summary = "Remove uma unidade", description = "Remove uma unidade do sistema")
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAuthority('DELETE_REPORTS') or hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('DELETE_COMPANIES') or hasRole('ADMIN')")
     public ResponseEntity<?> deleteUnit(@PathVariable Long id) {
         try {
             unitService.deleteUnit(id);

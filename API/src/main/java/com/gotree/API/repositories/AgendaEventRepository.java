@@ -9,21 +9,13 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 
 public interface AgendaEventRepository extends JpaRepository<AgendaEvent, Long> {
 
     List<AgendaEvent> findAllByOrderByEventDateAsc();
-
-    // Busca pelo relacionamento com TechnicalVisit
-    Optional<AgendaEvent> findByTechnicalVisit_Id(Long technicalVisitId);
-
-    // 1. Conta eventos (existente - usado para verificar disponibilidade geral)
-    long countByUserAndEventDate(User user, LocalDate date);
-
-    // 2. Conta eventos por turno (existente)
-    long countByUserAndEventDateAndShift(User user, LocalDate date, Shift shift);
 
     // 3. Validação de Bloqueio (Usado no validateReportSubmission)
     List<AgendaEvent> findByUserAndEventDateAndShift(User user, LocalDate eventDate, Shift shift);
@@ -69,4 +61,12 @@ public interface AgendaEventRepository extends JpaRepository<AgendaEvent, Long> 
     long countByUserAndEventDateAndStatusNot(User user, LocalDate date, AgendaStatus status);
 
     long countByUserAndEventDateAndShiftAndStatusNot(User user, LocalDate date, Shift shift, AgendaStatus status);
+
+    // Adicione este método na interface
+    List<AgendaEvent> findByUserAndEventDateAndEventHourAndStatusNot(
+            User user,
+            LocalDate eventDate,
+            LocalTime eventHour,
+            AgendaStatus status
+    );
 }

@@ -93,6 +93,10 @@ public class UserService implements UserDetailsService {
         if (dto.getConselhoClasse() != null) user.setConselhoClasse(dto.getConselhoClasse());
         if (dto.getEspecialidade() != null) user.setEspecialidade(dto.getEspecialidade());
 
+        if (dto.getRole() != null) {
+            user.setRole(dto.getRole());
+        }
+
         if (dto.getEmail() != null && !dto.getEmail().isBlank() && !dto.getEmail().equalsIgnoreCase(user.getEmail())) {
             userRepository.findByEmail(dto.getEmail()).ifPresent(u -> {
                 throw new DataIntegrityViolationException("Email já cadastrado: " + u.getEmail());

@@ -21,6 +21,7 @@ import org.jspecify.annotations.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -45,7 +46,7 @@ public class AgendaService {
         this.agendaMapper = agendaMapper;
     }
 
-    public void validateReportSubmission(Long visitId, User technician, LocalDate date, String shiftStr, Company targetCompany) {
+    public String validateReportSubmission(Long visitId, User technician, LocalDate date, String shiftStr, Company targetCompany) {
         try {
             Shift shift = Shift.valueOf(shiftStr.toUpperCase());
             List<AgendaEvent> conflictingEvents = agendaEventRepository.findByUserAndEventDateAndShift(technician, date, shift);
@@ -73,18 +74,18 @@ public class AgendaService {
                     continue;
                 }
 
-                throw new IllegalStateException("BLOQUEIO DE AGENDA: Você já possui um compromisso na empresa '"
-                        + conflictingClientName + "' neste turno (" + shift + "). "
-                        + "Agendamentos simultâneos só são permitidos na mesma empresa.");
+                return ("AVISO DE AGENDA: Você já possui um compromisso na empresa '"
+                        + conflictingClientName + "' neste turno (" + shift + "). ");
             }
 
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException("Turno inválido fornecido para validação.");
         }
+        return null;
     }
 
-    public void validateReportSubmission(Long visitId, User technician, LocalDate date, String shiftStr) {
-        validateReportSubmission(visitId, technician, date, shiftStr, null);
+    public String validateReportSubmission(Long visitId, User technician, LocalDate date, String shiftStr) {
+        return validateReportSubmission(visitId, technician, date, shiftStr, null);
     }
 
     public String checkAvailability(User technician, LocalDate date, String shiftStr) {
@@ -126,13 +127,12 @@ public class AgendaService {
 
     @Transactional
     public AgendaResponseDTO createEvent(CreateEventDTO dto, User user) {
-        String conflict = checkAvailability(user, dto.getEventDate(), dto.getShift());
-        if (conflict != null) throw new IllegalStateException(conflict);
+        validateExactHourConflict(user, dto.getEventDate(), dto.getEventHour(), null);
 
         AgendaEvent event = new AgendaEvent();
         agendaMapper.updateEntityFromDto(event, dto);
         event.setUser(user);
-        event.setStatus(AgendaStatus.CONFIRMADO);
+        event.setStatus(AgendaStatus.A_CONFIRMAR);
         bindRelationalEntities(event, dto);
 
         AgendaEvent savedEvent = agendaEventRepository.save(event);
@@ -146,12 +146,15 @@ public class AgendaService {
                 .orElseThrow(() -> new RuntimeException("Evento não encontrado."));
 
         validateUserPermission(event, currentUser);
+
+        validateExactHourConflict(currentUser, dto.getEventDate(), dto.getEventHour(), null);
+
+        validateUserPermission(event, currentUser);
         agendaMapper.updateEntityFromDto(event, dto);
         bindRelationalEntities(event, dto);
 
         AgendaEvent savedEvent = agendaEventRepository.save(event);
 
-        // CHAMA O MAPPER AQUI DENTRO!
         return agendaMapper.mapToDto(savedEvent);
     }
 
@@ -393,6 +396,19 @@ public class AgendaService {
 
         if (!currentUser.getId().equals(ownerId) && !isAdmin) {
             throw new SecurityException("Você não tem permissão para modificar a agenda de outro técnico.");
+        }
+    }
+
+    private void validateExactHourConflict(User technician, LocalDate date, LocalTime eventHour, Long currentEventId) {
+        if (eventHour != null) {
+            List<AgendaEvent> conflictingEvents = agendaEventRepository.findByUserAndEventDateAndEventHourAndStatusNot(
+                    technician, date, eventHour, AgendaStatus.CANCELADO);
+
+            for (AgendaEvent conflict : conflictingEvents) {
+                if (!conflict.getId().equals(currentEventId)) {
+                    throw new IllegalStateException("Bloqueio de Agenda: Você já possui um compromisso agendado exatamente às " + eventHour + ".");
+                }
+            }
         }
     }
 }

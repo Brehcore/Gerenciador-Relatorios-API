@@ -146,7 +146,7 @@ public class AgendaController {
         return ResponseEntity.ok(allEvents);
     }
 
-    @Operation(summary = "Valida submissão de relatório", description = "Verifica se o relatório de uma visita pode ser enviado com base na data e turno.")
+    @Operation(summary = "Valida submissão de relatório", description = "Verifica se há conflitos na agenda e retorna um aviso caso o turno já esteja ocupado.")
     @GetMapping("/validate-report")
     @PreAuthorize("hasAuthority('VIEW_AGENDA') or hasRole('ADMIN')")
     public ResponseEntity<?> validateReportSubmission(
@@ -158,18 +158,19 @@ public class AgendaController {
         User user = ((CustomUserDetails) auth.getPrincipal()).user();
 
         try {
-            // Chama a validação criada no Service
-            agendaService.validateReportSubmission(visitId, user, date, shift);
+            // 1. Agora capturamos a String retornada pelo Service
+            String warningMessage = agendaService.validateReportSubmission(visitId, user, date, shift);
 
-            // Se passar sem erro, retorna 200 OK
+            // 2. Se houver mensagem, retorna 200 OK com o aviso no JSON
+            if (warningMessage != null) {
+                return ResponseEntity.ok().body(Map.of("warning", warningMessage));
+            }
+
+            // 3. Se for null (sem conflitos), retorna 200 OK vazio
             return ResponseEntity.ok().build();
 
-        } catch (IllegalStateException e) {
-            // Se houver conflito (bloqueio), retorna 409 Conflict com a mensagem do Service
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message", HtmlUtils.htmlEscape(e.getMessage())));
         } catch (IllegalArgumentException e) {
-            // Erro de dados (ex: turno inválido)
-            return ResponseEntity.badRequest().body(Map.of("message", HtmlUtils.htmlEscape(e.getMessage())));
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
     }
 

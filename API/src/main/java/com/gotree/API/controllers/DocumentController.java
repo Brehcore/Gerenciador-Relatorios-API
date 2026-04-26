@@ -208,7 +208,7 @@ public class DocumentController {
      */
     @Operation(summary = "Exportar documentos (ZIP)", description = "Baixa todos os documentos do sistema em um arquivo .zip, podendo filtrar por intervalo de datas.")
     @GetMapping("/export/zip")
-    @PreAuthorize("hasAuthority('VIEW_REPORT') or hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('VIEW_REPORTS') or hasRole('ADMIN')")
     public void exportDocumentsAsZip(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,

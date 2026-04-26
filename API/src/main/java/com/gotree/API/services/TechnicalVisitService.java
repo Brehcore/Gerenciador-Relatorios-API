@@ -72,7 +72,7 @@ public class TechnicalVisitService {
 
         TechnicalVisit savedVisit = technicalVisitRepository.save(visit);
 
-        createAgendaEventForNextVisit(savedVisit, dto.getNextVisitDate(), dto.getNextVisitShift(), technician);
+        createAgendaEventForNextVisit(savedVisit, dto.getNextVisitDate(), dto.getNextVisitShift(), dto.getEventHour(), technician);
 
         return generateAndSavePdf(savedVisit, dto.getNextVisitDate(), dto.getNextVisitShift());
     }
@@ -178,18 +178,21 @@ public class TechnicalVisitService {
         }
 
         try {
-            // Validação 1: Limite global de visitas no dia (Independente do turno)
-            long eventsInDay = agendaEventRepository.countByUserAndEventDate(currentUser, nextDate);
+            // Validação 1: Limite global de visitas no dia (IGNORANDO CANCELADOS)
+            long eventsInDay = agendaEventRepository.countByUserAndEventDateAndStatusNot(
+                    currentUser, nextDate, com.gotree.API.enums.AgendaStatus.CANCELADO);
+
             if (eventsInDay >= 2) {
                 response.put("blocked", true);
                 response.put("blockMessage", "Você já possui 2 eventos agendados nesta data. Escolha outra data.");
                 return response;
             }
 
-            // Validação 2: Se enviou o turno, valida conflito específico do turno
+            // Validação 2: Se enviou o turno, valida conflito específico do turno (IGNORANDO CANCELADOS)
             if (nextShiftStr != null && !nextShiftStr.isBlank()) {
                 Shift shift = Shift.valueOf(nextShiftStr.toUpperCase());
-                long eventConflict = agendaEventRepository.countByUserAndEventDateAndShift(currentUser, nextDate, shift);
+                long eventConflict = agendaEventRepository.countByUserAndEventDateAndShiftAndStatusNot(
+                        currentUser, nextDate, shift, com.gotree.API.enums.AgendaStatus.CANCELADO);
 
                 if (eventConflict > 0) {
                     response.put("blocked", true);
@@ -197,6 +200,8 @@ public class TechnicalVisitService {
                     return response;
                 }
             }
+
+            // ... (o restante do código a partir do List<AgendaEvent> otherEvents continua igualzinho)
 
             List<AgendaEvent> otherEvents = agendaEventRepository.findAllByEventDate(nextDate).stream()
                     .filter(event -> event.getStatus() != com.gotree.API.enums.AgendaStatus.CANCELADO)
@@ -250,7 +255,7 @@ public class TechnicalVisitService {
         }
     }
 
-    private void createAgendaEventForNextVisit(TechnicalVisit visit, LocalDate nextDate, String nextShift, User currentUser) {
+    private void createAgendaEventForNextVisit(TechnicalVisit visit, LocalDate nextDate, String nextShift, LocalTime eventHour,User currentUser) {
         if (nextDate == null) return;
 
         if (nextShift != null) {
@@ -262,6 +267,7 @@ public class TechnicalVisitService {
 
         AgendaEvent futureEvent = new AgendaEvent();
         futureEvent.setEventDate(nextDate);
+        futureEvent.setEventHour(eventHour);
 
         if (nextShift != null && !nextShift.isBlank()) {
             try {
