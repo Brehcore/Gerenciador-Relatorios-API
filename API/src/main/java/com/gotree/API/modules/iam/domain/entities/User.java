@@ -1,0 +1,86 @@
+package com.gotree.API.modules.iam.domain.entities;
+
+import com.gotree.API.modules.iam.infrastructure.security.UserRoleConverter;
+import com.gotree.API.modules.iam.domain.enums.UserRole;
+import jakarta.persistence.*;
+import lombok.*;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+
+import java.io.Serial;
+import java.io.Serializable;
+import java.time.LocalDate;
+import java.util.Collection;
+import java.util.List;
+
+@Entity
+@Table(name = "tb_user")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@EqualsAndHashCode(of = "id")
+public class User implements Serializable, UserDetails {
+
+    @Serial
+    private static final long serialVersionUID = 1L;
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String name;
+    private String email;
+    private String password;
+    private LocalDate birthDate;
+    private String phone;
+    private String cpf;
+
+    @Column(nullable = false)
+    @Convert(converter = UserRoleConverter.class)
+    private UserRole role = UserRole.USER;
+
+    // Relacionamento com o perfil.
+    // nullable = true garante que os usuários antigos no banco não quebrem a aplicação.
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "access_profile_id")
+    private AccessProfile profile;
+
+    @Column(name = "password_reset_required")
+    private Boolean passwordResetRequired = false;
+
+    private String siglaConselhoClasse;
+    private String conselhoClasse;
+    private String especialidade;
+
+    // Assinatura Digital
+    @Column(name = "certificate_path")
+    private String certificatePath;
+
+    @Column(name = "certificate_password")
+    private String certificatePassword;
+
+    @Column(name = "certificate_validity")
+    private LocalDate certificateValidity;
+
+
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        // Pega o nome da role (ex: "ADMIN" ou "ROLE_ADMIN")
+        String roleName = role.getRoleName();
+
+        // Garante que tenha o prefixo ROLE_ para o Spring Security reconhecer
+        if (!roleName.startsWith("ROLE_")) {
+            roleName = "ROLE_" + roleName;
+        }
+
+        return List.of(new SimpleGrantedAuthority(roleName));
+    }
+
+    @Override
+    public String getUsername() {
+        return email;
+    }
+
+}
