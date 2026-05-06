@@ -35,6 +35,7 @@ API/src/main/resources/entrypoint.sh
 # Ignora a classe geradora de certificado
 src/main/java/com/gotree/API/utils/DevCertificateTool.java
 **/DevCertificateTool.java
+**/devtools/admin/
 
 # Ignora certificados digitais e chaves
 *.pfx
