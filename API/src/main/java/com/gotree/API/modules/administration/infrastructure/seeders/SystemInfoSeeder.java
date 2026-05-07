@@ -1,7 +1,7 @@
 package com.gotree.API.modules.administration.infrastructure.seeders;
 
 import com.gotree.API.modules.administration.domain.entities.SystemInfo;
-import com.gotree.API.modules.operations.infrastructure.repositories.SystemInfoRepository;
+import com.gotree.API.modules.administration.infrastructure.repositories.SystemInfoRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;

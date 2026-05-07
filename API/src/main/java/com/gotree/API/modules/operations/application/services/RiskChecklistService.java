@@ -5,7 +5,7 @@ import com.gotree.API.modules.administration.infrastructure.repositories.SectorR
 import com.gotree.API.modules.administration.infrastructure.repositories.UnitRepository;
 import com.gotree.API.modules.iam.domain.entities.User;
 import com.gotree.API.modules.operations.infrastructure.repositories.OccupationalRiskReportRepository;
-import com.gotree.API.modules.operations.infrastructure.repositories.SystemInfoRepository;
+import com.gotree.API.modules.administration.infrastructure.repositories.SystemInfoRepository;
 import com.gotree.API.modules.operations.presentation.dto.EvaluatedFunctionRequestDTO;
 import com.gotree.API.modules.operations.presentation.dto.SaveRiskReportRequestDTO;
 import com.gotree.API.modules.administration.domain.entities.Company;

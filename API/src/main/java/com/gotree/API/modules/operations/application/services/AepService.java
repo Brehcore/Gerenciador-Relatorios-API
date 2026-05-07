@@ -10,7 +10,7 @@ import com.gotree.API.modules.administration.domain.entities.SystemInfo;
 import com.gotree.API.modules.operations.infrastructure.repositories.AepReportRepository;
 import com.gotree.API.modules.administration.infrastructure.repositories.CompanyRepository;
 import com.gotree.API.modules.professionals.infrastructure.repositories.PhysiotherapistRepository;
-import com.gotree.API.modules.operations.infrastructure.repositories.SystemInfoRepository;
+import com.gotree.API.modules.administration.infrastructure.repositories.SystemInfoRepository;
 import com.gotree.API.modules.shared.application.services.ReportService;
 import com.gotree.API.modules.shared.utils.XmlSanitizer;
 import org.springframework.stereotype.Service;

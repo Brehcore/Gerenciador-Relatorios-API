@@ -1,5 +1,7 @@
 package com.gotree.API.modules.agenda.application.services;
 
+import com.gotree.API.modules.administration.domain.entities.SystemInfo;
+import com.gotree.API.modules.administration.infrastructure.repositories.SystemInfoRepository;
 import com.gotree.API.modules.agenda.presentation.dto.AgendaResponseDTO;
 import com.gotree.API.modules.agenda.presentation.dto.CancelEventDTO;
 import com.gotree.API.modules.agenda.presentation.dto.CreateEventDTO;
@@ -17,13 +19,17 @@ import com.gotree.API.modules.agenda.infrastructure.repositories.AgendaEventRepo
 import com.gotree.API.modules.administration.infrastructure.repositories.CompanyRepository;
 import com.gotree.API.modules.administration.infrastructure.repositories.SectorRepository;
 import com.gotree.API.modules.administration.infrastructure.repositories.UnitRepository;
+import com.gotree.API.modules.shared.application.services.ReportService;
 import org.jspecify.annotations.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Serviço responsável pelo gerenciamento de eventos de agenda e visitas técnicas.
@@ -35,15 +41,20 @@ public class AgendaService {
     private final CompanyRepository companyRepository;
     private final UnitRepository unitRepository;
     private final SectorRepository sectorRepository;
+    private final SystemInfoRepository systemInfoRepository;
     private final AgendaMapper agendaMapper;
+    private final ReportService reportService;
 
     public AgendaService(AgendaEventRepository agendaEventRepository, CompanyRepository companyRepository,
-                         UnitRepository unitRepository, SectorRepository sectorRepository, AgendaMapper agendaMapper) {
+                         UnitRepository unitRepository, SectorRepository sectorRepository, AgendaMapper agendaMapper,
+                         ReportService reportService, SystemInfoRepository systemInfoRepository) {
         this.agendaEventRepository = agendaEventRepository;
         this.companyRepository = companyRepository;
         this.unitRepository = unitRepository;
         this.sectorRepository = sectorRepository;
         this.agendaMapper = agendaMapper;
+        this.reportService = reportService;
+        this.systemInfoRepository = systemInfoRepository;
     }
 
     public String validateReportSubmission(Long visitId, User technician, LocalDate date, String shiftStr, Company targetCompany) {
@@ -338,6 +349,39 @@ public class AgendaService {
         } catch (IllegalArgumentException e) {
             return null;
         }
+    }
+
+    @Transactional(readOnly = true)
+    public byte[] generateAgendaReport(LocalDate start, LocalDate end, Long userId, String type, String company) {
+        // 1. Busca os dados dos eventos
+        List<AgendaResponseDTO> events = getReportData(start, end, userId, type, company);
+
+        // 2. Busca os dados globais do sistema (Sua marca/logo)
+        // Pega o primeiro registro (já que só existe 1 SystemInfo no banco)
+        SystemInfo systemInfo = systemInfoRepository.findAll().stream().findFirst().orElse(null);
+
+        // 3. Prepara o contexto do relatório
+        Map<String, Object> data = new HashMap<>();
+        data.put("itens", events);
+        data.put("systemInfo", systemInfo); // <- ENVIANDO A LOGO PARA O PDF AQUI!
+
+        // Formata o período
+        String periodText = start.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) +
+                " a " + end.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+        data.put("periodo", periodText);
+
+        data.put("filtroTipo", (type != null && !type.isBlank()) ? type : "TODOS");
+        data.put("filtroEmpresa", (company != null && !company.isBlank()) ? company.toUpperCase() : "TODAS");
+        data.put("filtroColaborador", resolveCollaboratorLabel(userId, events));
+
+        // 4. Chama o serviço compartilhado de PDF
+        return reportService.generatePdfFromHtml("relatorio-agenda", data);
+    }
+
+    private String resolveCollaboratorLabel(Long userId, List<AgendaResponseDTO> events) {
+        if (userId == null) return "TODOS";
+        if (events.isEmpty()) return "ID: " + userId + " (Sem eventos)";
+        return events.getFirst().getResponsibleName();
     }
 
     @Transactional(readOnly = true)

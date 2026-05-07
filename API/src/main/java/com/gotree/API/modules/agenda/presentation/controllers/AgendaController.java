@@ -35,11 +35,10 @@ import java.util.Map;
 public class AgendaController {
 
     private final AgendaService agendaService;
-    private final ReportService reportService;
 
-    public AgendaController(AgendaService agendaService, ReportService reportService) {
+
+    public AgendaController(AgendaService agendaService) {
         this.agendaService = agendaService;
-        this.reportService = reportService;
     }
 
     @Operation(summary = "Cria um novo evento")
@@ -213,7 +212,7 @@ public class AgendaController {
         return ResponseEntity.ok(Map.of());
     }
 
-    @Operation(summary = "Exporta agenda em PDF", description = "Gera um documento PDF com os eventos da agenda, permitindo filtros por data, colaborador, tipo e empresa.")
+    @Operation(summary = "Exporta agenda em PDF", description = "Gera um documento PDF com os eventos da agenda.")
     @GetMapping("/export/pdf")
     @PreAuthorize("hasAuthority('VIEW_AGENDA') or hasRole('ADMIN')")
     public ResponseEntity<byte[]> exportAgendaPdf(
@@ -223,33 +222,9 @@ public class AgendaController {
             @RequestParam(required = false) String eventType,
             @RequestParam(required = false) String companyName) {
 
-        // 1. Busca os dados com TODOS os filtros
-        List<AgendaResponseDTO> listaEventos = agendaService.getReportData(startDate, endDate, userId, eventType, companyName);
-
-        // 2. Prepara os dados para o ReportService
-        Map<String, Object> data = new HashMap<>();
-        data.put("itens", listaEventos);
-
-        String periodoTexto = startDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) +
-                " a " + endDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
-        data.put("periodo", periodoTexto);
-
-        // 3. Envia os rótulos dos filtros para exibir no cabeçalho do PDF
-        data.put("filtroTipo", (eventType != null && !eventType.isBlank()) ? eventType : "TODOS");
-        data.put("filtroEmpresa", (companyName != null && !companyName.isBlank()) ? companyName.toUpperCase() : "TODAS");
-
-        if (userId != null && !listaEventos.isEmpty()) {
-            data.put("filtroColaborador", listaEventos.getFirst().getResponsibleName());
-        } else if (userId != null) {
-            data.put("filtroColaborador", "ID: " + userId + " (Sem eventos)");
-        } else {
-            data.put("filtroColaborador", "TODOS");
-        }
-
-        byte[] pdfBytes = reportService.generatePdfFromHtml("relatorio-agenda", data);
+        byte[] pdfBytes = agendaService.generateAgendaReport(startDate, endDate, userId, eventType, companyName);
 
         return ResponseEntity.ok()
-                // Atualizado o nome do arquivo baixado também
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=relatorio_agendamentos.pdf")
                 .contentType(MediaType.APPLICATION_PDF)
                 .body(pdfBytes);

@@ -1,7 +1,7 @@
 package com.gotree.API.modules.shared.application.services;
 
 import com.gotree.API.modules.administration.domain.entities.SystemInfo;
-import com.gotree.API.modules.operations.infrastructure.repositories.SystemInfoRepository;
+import com.gotree.API.modules.administration.infrastructure.repositories.SystemInfoRepository;
 import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
