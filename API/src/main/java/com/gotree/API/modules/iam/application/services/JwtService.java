@@ -9,8 +9,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
-import javax.crypto.SecretKey; // NOVO IMPORT
-
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -20,14 +18,19 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 
+import javax.crypto.SecretKey;
+
+
 /**
  * Serviço responsável por gerenciar operações relacionadas a JSON Web Tokens (JWT).
  * Fornece funcionalidades para geração, validação e extração de informações de tokens.
+ * Classe dedicada apenas ao VPS
  */
 @Service
 public class JwtService {
 
-    @Value("${jwt.secret}")
+
+    @Value("${jwt.secret_path}")
     private String secretKeyPath;
 
     private static final long EXPIRATION_TIME = 86_400_000L; // 1 dia
