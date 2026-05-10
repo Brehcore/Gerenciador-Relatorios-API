@@ -23,6 +23,21 @@ public class JwtSecurityExceptionHandler {
 
 		return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(err);
 	}
+
+	// Captura erros de regra de negócio, como "Token inválido" ou "Token expirado"
+	@ExceptionHandler(IllegalArgumentException.class)
+	public ResponseEntity<StandardError> illegalArgument(IllegalArgumentException e, HttpServletRequest request) {
+
+		StandardError err = new StandardError(
+				Instant.now(),
+				HttpStatus.BAD_REQUEST.value(),
+				"Requisição Inválida",
+				e.getMessage(),
+				request.getRequestURI()
+		);
+
+		return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(err);
+	}
 	
 	@ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<StandardError> accessDenied(HttpServletRequest request) {

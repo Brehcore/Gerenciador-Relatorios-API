@@ -55,12 +55,14 @@ public class SecurityConfig {
 				.csrf(AbstractHttpConfigurer::disable)
 				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 				.authorizeHttpRequests(auth -> auth
-						.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Permite requisições de preflight (CORS)
+						.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 						.requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
-						.requestMatchers("/auth/login").permitAll()            // Libera o endpoint de login
-						.requestMatchers("/client-portal/login").permitAll() //Login do cliente
-						.requestMatchers("/client-portal/first-access/**").permitAll() //Solicita o código / Cria a senha
-						.anyRequest().authenticated()                             // Exige autenticação para todas as outras requisições
+						.requestMatchers("/auth/login").permitAll()
+						.requestMatchers("/users/me/forgot-password").permitAll()
+						.requestMatchers("/users/me/reset-password").permitAll()
+						.requestMatchers("/client-portal/login").permitAll()
+						.requestMatchers("/client-portal/first-access/**").permitAll()
+						.anyRequest().authenticated()
 				)
 				.exceptionHandling(exception -> exception
 						.authenticationEntryPoint(jwtAuthenticationEntryPoint)

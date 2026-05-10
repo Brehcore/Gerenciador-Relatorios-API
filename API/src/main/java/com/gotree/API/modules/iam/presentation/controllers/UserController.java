@@ -5,6 +5,8 @@ import com.gotree.API.modules.iam.presentation.dto.CertificateUploadDTO;
 import com.gotree.API.modules.iam.presentation.dto.ChangeEmailRequestDTO;
 import com.gotree.API.modules.iam.presentation.dto.ChangePasswordRequestDTO;
 import com.gotree.API.modules.iam.presentation.dto.CompletePasswordResetDTO;
+import com.gotree.API.modules.iam.presentation.dto.ForgotPasswordRequestDTO;
+import com.gotree.API.modules.iam.presentation.dto.ResetPasswordRequestDTO;
 import com.gotree.API.modules.iam.presentation.dto.UserRequestDTO;
 import com.gotree.API.modules.iam.presentation.dto.UserResponseDTO;
 import com.gotree.API.modules.iam.presentation.dto.UserUpdateDTO;
@@ -233,6 +235,24 @@ public class UserController {
 		userService.changePassword(userEmail, dto.getNewPassword(), dto.getCurrentPassword());
 
 		return ResponseEntity.ok(Map.of("message", "Senha alterada com sucesso."));
+	}
+
+	@Operation(summary = "Esqueci minha senha", description = "Permite que o usuário envie um token através do e-mail informado.")
+	@PostMapping("/me/forgot-password")
+	@PreAuthorize("permitAll()")
+	public ResponseEntity<Map<String, String>> forgotPassword(@Valid @RequestBody ForgotPasswordRequestDTO dto) {
+		userService.forgotPassword(dto.getEmail());
+
+		return ResponseEntity.ok(Map.of("message", "Email enviado com sucesso."));
+	}
+
+	@Operation(summary = "Redefine a senha usando um token", description = "Valida o token recebido por e-mail e atualiza a senha do usuário.")
+	@PostMapping("/me/reset-password")
+	@PreAuthorize("permitAll()")
+	public ResponseEntity<Map<String, String>> resetPassword(@RequestBody @Valid ResetPasswordRequestDTO dto) {
+		userService.resetPasswordWithToken(dto.email(), dto.token(), dto.newPassword());
+
+		return ResponseEntity.ok(Map.of("message", "Senha redefinida com sucesso!"));
 	}
 
 	/**
