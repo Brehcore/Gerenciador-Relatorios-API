@@ -24,7 +24,6 @@ import org.jspecify.annotations.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
-import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -99,29 +98,6 @@ public class AgendaService {
         return validateReportSubmission(visitId, technician, date, shiftStr, null);
     }
 
-    public String checkAvailability(User technician, LocalDate date, String shiftStr) {
-        try {
-            // Conta os eventos do dia, IGNORANDO os cancelados
-            long eventsInDay = agendaEventRepository.countByUserAndEventDateAndStatusNot(technician, date, AgendaStatus.CANCELADO);
-            if (eventsInDay >= 2) {
-                return "Você já possui 2 eventos agendados nesta data. Escolha outra data.";
-            }
-
-            if (shiftStr != null && !shiftStr.isBlank()) {
-                Shift shift = Shift.valueOf(shiftStr.toUpperCase());
-
-                // Conta os eventos do turno, IGNORANDO os cancelados
-                long eventsInShift = agendaEventRepository.countByUserAndEventDateAndShiftAndStatusNot(technician, date, shift, AgendaStatus.CANCELADO);
-                if (eventsInShift > 0) {
-                    return "Você já possui uma visita agendada neste turno (" + shift + "). Escolha outro turno.";
-                }
-            }
-            return null;
-        } catch (IllegalArgumentException e) {
-            return "Turno inválido.";
-        }
-    }
-
     private void bindRelationalEntities(AgendaEvent event, CreateEventDTO dto) {
         if (dto.getCompanyId() == null) {
             throw new IllegalArgumentException("A empresa é obrigatória para criar um agendamento.");
@@ -138,7 +114,6 @@ public class AgendaService {
 
     @Transactional
     public AgendaResponseDTO createEvent(CreateEventDTO dto, User user) {
-        validateExactHourConflict(user, dto.getEventDate(), dto.getEventHour());
 
         AgendaEvent event = new AgendaEvent();
         agendaMapper.updateEntityFromDto(event, dto);
@@ -157,8 +132,6 @@ public class AgendaService {
                 .orElseThrow(() -> new RuntimeException("Evento não encontrado."));
 
         validateUserPermission(event, currentUser);
-
-        validateExactHourConflict(currentUser, dto.getEventDate(), dto.getEventHour());
 
         validateUserPermission(event, currentUser);
         agendaMapper.updateEntityFromDto(event, dto);
@@ -443,16 +416,4 @@ public class AgendaService {
         }
     }
 
-    private void validateExactHourConflict(User technician, LocalDate date, LocalTime eventHour) {
-        if (eventHour != null) {
-            List<AgendaEvent> conflictingEvents = agendaEventRepository.findByUserAndEventDateAndEventHourAndStatusNot(
-                    technician, date, eventHour, AgendaStatus.CANCELADO);
-
-            for (AgendaEvent conflict : conflictingEvents) {
-                if (conflict.getId() != null) {
-                    throw new IllegalStateException("Bloqueio de Agenda: Você já possui um compromisso agendado exatamente às " + eventHour + ".");
-                }
-            }
-        }
-    }
 }

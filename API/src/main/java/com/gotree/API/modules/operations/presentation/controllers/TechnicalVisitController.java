@@ -19,10 +19,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -90,36 +88,6 @@ public class TechnicalVisitController {
         List<TechnicalVisitResponseDTO> responseDtos = technicalVisitMapper.toDtoList(visits);
 
         return ResponseEntity.ok(responseDtos);
-    }
-
-    /**
-     * Verifica a disponibilidade do técnico para uma próxima visita em uma data e turno específicos.
-     * Este endpoint valida se já existe alguma visita técnica agendada para a data e turno informados
-     * antes de permitir um novo agendamento. Também retorna avisos sobre outros técnicos agendados
-     * no mesmo dia e turno.
-     * @param auth  Informações de autenticação do técnico que está verificando disponibilidade
-     * @param date  Data proposta para a próxima visita (formato: yyyy-MM-dd)
-     * @param shift Turno proposto para a próxima visita (valores aceitos: MORNING, AFTERNOON)
-     * @return ResponseEntity com status 200 (OK) contendo informações de disponibilidade se livre,
-     *         ou status 409 (CONFLICT) contendo detalhes do bloqueio se já houver agendamento
-     */
-    @Operation(summary = "Verificar Disponibilidade", description = "Verifica se o técnico tem a agenda livre e retorna avisos de outros técnicos no mesmo dia.")
-    @GetMapping("/check-availability")
-    @PreAuthorize("hasAuthority('VIEW_REPORTS') or hasRole('ADMIN')")
-    public ResponseEntity<Map<String, Object>> checkNextVisitAvailability(
-            Authentication auth,
-            @RequestParam LocalDate date,
-            @RequestParam String shift
-    ) {
-        User currentUser = ((CustomUserDetails) auth.getPrincipal()).user();
-
-        Map<String, Object> validationResult = technicalVisitService.validateNextVisitSchedule(date, shift, currentUser);
-
-        if ((Boolean) validationResult.get("blocked")) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(validationResult);
-        }
-
-        return ResponseEntity.ok(validationResult);
     }
 
     /**

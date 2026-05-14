@@ -33,7 +33,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.ArrayList;
 
 /**
  * Serviço responsável por gerenciar visitas técnicas, incluindo criação,
@@ -133,14 +132,6 @@ public class TechnicalVisitService {
         technicalVisitRepository.deleteById(visitId);
     }
 
-    /**
-     * Endpoint exposto para o Controller validar a agenda
-     */
-    @Transactional(readOnly = true)
-    public Map<String, Object> validateNextVisitSchedule(LocalDate nextDate, String nextShiftStr, User currentUser) {
-        return internalValidateNextVisitSchedule(nextDate, nextShiftStr, currentUser);
-    }
-
 
     // ===================================================================================
     // MÉTODOS PRIVADOS AUXILIARES (Para evitar duplicação de código)
@@ -164,67 +155,6 @@ public class TechnicalVisitService {
         visit.setClientSignedAt(LocalDateTime.now());
 
         updateFindings(visit, dto.getFindings());
-    }
-
-    /**
-     * Metodo interno sem anotação transacional para evitar alerta de Self-Invocation.
-     */
-    private Map<String, Object> internalValidateNextVisitSchedule(LocalDate nextDate, String nextShiftStr, User currentUser) {
-        Map<String, Object> response = new HashMap<>();
-        List<String> warnings = new ArrayList<>();
-
-        response.put("blocked", false);
-        response.put("blockMessage", null);
-        response.put("warnings", warnings);
-
-        if (nextDate == null) {
-            return response;
-        }
-
-        try {
-            // Validação 1: Limite global de visitas no dia (IGNORANDO CANCELADOS)
-            long eventsInDay = agendaEventRepository.countByUserAndEventDateAndStatusNot(
-                    currentUser, nextDate, AgendaStatus.CANCELADO);
-
-            if (eventsInDay >= 2) {
-                response.put("blocked", true);
-                response.put("blockMessage", "Você já possui 2 eventos agendados nesta data. Escolha outra data.");
-                return response;
-            }
-
-            // Validação 2: Se enviou o turno, valida conflito específico do turno (IGNORANDO CANCELADOS)
-            if (nextShiftStr != null && !nextShiftStr.isBlank()) {
-                Shift shift = Shift.valueOf(nextShiftStr.toUpperCase());
-                long eventConflict = agendaEventRepository.countByUserAndEventDateAndShiftAndStatusNot(
-                        currentUser, nextDate, shift, AgendaStatus.CANCELADO);
-
-                if (eventConflict > 0) {
-                    response.put("blocked", true);
-                    response.put("blockMessage", "Você já possui um compromisso neste turno. Escolha outro turno ou data.");
-                    return response;
-                }
-            }
-
-            // ... (o restante do código a partir do List<AgendaEvent> otherEvents continua igualzinho)
-
-            List<AgendaEvent> otherEvents = agendaEventRepository.findAllByEventDate(nextDate).stream()
-                    .filter(event -> event.getStatus() != AgendaStatus.CANCELADO)
-                    .filter(event -> !event.getUser().getId().equals(currentUser.getId()))
-                    .toList();
-
-            for (AgendaEvent event : otherEvents) {
-                String shiftName = event.getShift() != null ? event.getShift().name() : "A DEFINIR";
-                warnings.add(event.getUser().getName() + " marcou visita neste dia (" + shiftName + ").");
-            }
-
-            response.put("warnings", warnings);
-            return response;
-
-        } catch (IllegalArgumentException e) {
-            response.put("blocked", true);
-            response.put("blockMessage", "Turno inválido fornecido.");
-            return response;
-        }
     }
 
     private void applySignaturesToVisit(TechnicalVisit visit, String techBase64, String clientBase64, String clientName, Double lat, Double lon) {
@@ -261,13 +191,6 @@ public class TechnicalVisitService {
 
     private void createAgendaEventForNextVisit(TechnicalVisit visit, LocalDate nextDate, String nextShift, LocalTime eventHour,User currentUser) {
         if (nextDate == null) return;
-
-        if (nextShift != null) {
-            Map<String, Object> validation = internalValidateNextVisitSchedule(nextDate, nextShift, currentUser);
-            if ((Boolean) validation.get("blocked")) {
-                throw new IllegalStateException("BLOQUEIO DE AGENDA: " + validation.get("blockMessage"));
-            }
-        }
 
         AgendaEvent futureEvent = new AgendaEvent();
         futureEvent.setEventDate(nextDate);

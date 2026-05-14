@@ -9,7 +9,6 @@ import com.gotree.API.modules.agenda.presentation.dto.ReportNotRealizedDTO;
 import com.gotree.API.modules.agenda.presentation.dto.RescheduleVisitDTO;
 import com.gotree.API.modules.iam.domain.entities.User;
 import com.gotree.API.modules.agenda.application.services.AgendaService;
-import com.gotree.API.modules.shared.application.services.ReportService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -21,11 +20,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.util.HtmlUtils;
 
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -82,26 +78,6 @@ public class AgendaController {
         User currentUser = ((CustomUserDetails) authentication.getPrincipal()).user();
         agendaService.deleteEvent(id, currentUser);
         return ResponseEntity.noContent().build();
-    }
-
-    @Operation(summary = "Verifica disponibilidade", description = "Verifica se uma determinada data e turno estão disponíveis na agenda do usuário autenticado.")
-    @GetMapping("/check-availability")
-    @PreAuthorize("hasAuthority('VIEW_AGENDA') or hasRole('ADMIN')")
-    public ResponseEntity<?> checkAvailability(
-            Authentication auth,
-            @RequestParam LocalDate date,
-            @RequestParam String shift
-    ) {
-        User user = ((CustomUserDetails) auth.getPrincipal()).user();
-
-        String warning = agendaService.checkAvailability(user, date, shift);
-
-        if (warning != null) {
-            // 409 Conflict: Informa o frontend que a agenda está cheia
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message", HtmlUtils.htmlEscape(warning)));
-        }
-
-        return ResponseEntity.ok().build();
     }
 
     @Operation(summary = "Lista todos os eventos do usuário", description = "Retorna todos os eventos e visitas agendadas para o usuário autenticado.")
