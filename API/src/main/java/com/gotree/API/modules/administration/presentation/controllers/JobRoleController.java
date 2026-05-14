@@ -1,99 +1,43 @@
 package com.gotree.API.modules.administration.presentation.controllers;
 
-import com.gotree.API.modules.operations.presentation.dto.JobRoleDTO;
-import com.gotree.API.modules.operations.presentation.dto.JobRoleResponseDTO;
-import com.gotree.API.modules.administration.domain.entities.Company;
-import com.gotree.API.modules.administration.domain.entities.JobRole;
-import com.gotree.API.modules.administration.infrastructure.repositories.CompanyRepository;
-import com.gotree.API.modules.administration.infrastructure.repositories.JobRoleRepository;
+import com.gotree.API.modules.administration.application.services.JobRoleService;
+import com.gotree.API.modules.administration.presentation.dto.JobRoleDTO;
+import com.gotree.API.modules.administration.presentation.dto.JobRoleResponseDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-/**
- * Controller responsável por gerenciar operações relacionadas aos cargos (JobRole).
- * Fornece endpoints para criação e consulta de cargos por empresa.
- */
 @Tag(name = "Cargos", description = "Gerenciamento de cargos")
 @RestController
 @RequestMapping("/job-roles")
 public class JobRoleController {
 
-    private final JobRoleRepository jobRoleRepository;
-    private final CompanyRepository companyRepository;
+    private final JobRoleService jobRoleService;
 
-    public JobRoleController(JobRoleRepository jobRoleRepository, CompanyRepository companyRepository) {
-        this.jobRoleRepository = jobRoleRepository;
-        this.companyRepository = companyRepository;
+    public JobRoleController(JobRoleService jobRoleService) {
+        this.jobRoleService = jobRoleService;
     }
 
-    /**
-     * Recupera todos os cargos de uma empresa específica, ordenados por nome em ordem alfabética.
-     *
-     * @param companyId ID da empresa para filtrar os cargos
-     * @return ResponseEntity contendo a lista de cargos da empresa
-     * @throws java.util.NoSuchElementException se a empresa não for encontrada
-     */
     @Operation(summary = "Recupera todos os cargos", description = "Recupera todos os cargos de uma empresa específica, ordenados por nome e em ordem alfabética.")
     @GetMapping("/company/{companyId}")
     @PreAuthorize("hasAuthority('VIEW_COMPANIES') or hasRole('ADMIN')")
     public ResponseEntity<List<JobRoleResponseDTO>> getByCompany(@PathVariable Long companyId) {
-        // 1. Busca a empresa
-        Company company = companyRepository.findById(companyId).orElseThrow();
-
-        // 2. Busca a lista de entidades (JobRole)
-        List<JobRole> roles = jobRoleRepository.findByCompanyOrderByNameAsc(company);
-
-        // 3. Converte a lista de Entidades para a lista de DTOs
-        List<JobRoleResponseDTO> responseList = roles.stream()
-                .map(role -> {
-                    JobRoleResponseDTO dto = new JobRoleResponseDTO();
-                    dto.setId(role.getId());
-                    dto.setName(role.getName());
-                    dto.setCompanyId(role.getCompany().getId());
-                    dto.setCompanyName(role.getCompany().getName());
-                    return dto;
-                })
-                .toList(); // (Ou .collect(Collectors.toList()) se estiver em Java < 16)
-
-        return ResponseEntity.ok(responseList);
+        return ResponseEntity.ok(jobRoleService.getByCompany(companyId));
     }
 
-    /**
-     * Cria um novo cargo para uma empresa específica.
-     *
-     * @param dto DTO contendo as informações do cargo a ser criado
-     * @return ResponseEntity contendo o cargo criado
-     * @throws java.util.NoSuchElementException                 se a empresa não for encontrada
-     */
     @Operation(summary = "Criação de cargo", description = "Cria um novo cargo para uma empresa específica.")
     @PostMapping
     @PreAuthorize("hasAuthority('CREATE_COMPANIES') or hasRole('ADMIN')")
-    public ResponseEntity<JobRoleResponseDTO> create(@RequestBody @Valid JobRoleDTO dto) { // <-- Mude o retorno
-        Company company = companyRepository.findById(dto.getCompanyId()).orElseThrow();
-
-        if(jobRoleRepository.existsByNameAndCompany(dto.getName(), company)) {
-            return ResponseEntity.badRequest().build();
-        }
-
-        JobRole role = new JobRole();
-        role.setName(dto.getName());
-        role.setCompany(company);
-
-        JobRole savedRole = jobRoleRepository.save(role);
-
-        // Mapeamento manual para o DTO de resposta
-        JobRoleResponseDTO response = new JobRoleResponseDTO();
-        response.setId(savedRole.getId());
-        response.setName(savedRole.getName());
-        response.setCompanyId(savedRole.getCompany().getId());
-        response.setCompanyName(savedRole.getCompany().getName());
-
-        return ResponseEntity.ok(response);
+    public ResponseEntity<JobRoleResponseDTO> create(@RequestBody @Valid JobRoleDTO dto) {
+        JobRoleResponseDTO response = jobRoleService.create(dto);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
+
+    //TODO: Criar endpoints para editar e excluir cargos
 }

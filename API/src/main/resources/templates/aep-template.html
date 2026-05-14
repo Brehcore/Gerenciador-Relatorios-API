@@ -271,12 +271,13 @@
             </div>
             <div class="sig-line"></div>
 
-            <strong th:text="${aep.physiotherapist?.name ?: 'Nome do Profissional'}"></strong><br/>
+            <strong th:text="${aep.physiotherapist != null and aep.physiotherapist.name != null ? aep.physiotherapist.name : 'Nome do Profissional'}"></strong><br/>
+
             <span class="sig-meta-text" style="font-weight: 500; color: #333;">
                 Fisioterapeuta do Trabalho
             </span>
             <span class="sig-meta-text">
-                CREFITO: <span th:text="${aep.physiotherapist?.crefito ?: '_________________'}"></span>
+                CREFITO: <span th:text="${aep.physiotherapist != null and aep.physiotherapist.crefito != null ? aep.physiotherapist.crefito : 'Não informado'}"></span>
             </span>
         </div>
     </div>

@@ -393,7 +393,7 @@ public class AgendaService {
     }
 
     @Transactional
-    public void confirmVisit(Long eventId, User currentUser) {
+    public void confirmEvent(Long eventId, User currentUser) {
         AgendaEvent event = agendaEventRepository.findById(eventId)
                 .orElseThrow(() -> new RuntimeException("Evento da agenda não encontrado."));
 

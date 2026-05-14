@@ -1,4 +1,4 @@
-package com.gotree.API.modules.operations.presentation.dto;
+package com.gotree.API.modules.administration.presentation.dto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 

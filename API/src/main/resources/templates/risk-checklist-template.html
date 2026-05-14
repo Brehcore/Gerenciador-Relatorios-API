@@ -128,7 +128,52 @@
         .sig-box { display: block; width: 100%; text-align: center; padding: 0 40px; vertical-align: bottom; }
         .sig-line { border-top: 1px solid #333; margin: 5px auto 8px auto; border-radius: 1px; width: 50%; max-width: 350px; }
         .sig-meta-text { font-size: 8pt; color: #666; margin-top: 2px; display: block; }
-        .sig-image-container { min-height: 1.6cm; display: block; }
+        /* --- ASSINATURAS --- */
+        .sig-section {
+            display: table;
+            width: 100%;
+            margin-top: 30px;
+            page-break-inside: avoid;
+        }
+
+        .sig-box {
+            display: block;
+            width: 100%;
+            text-align: center;
+            padding: 0 40px;
+            vertical-align: bottom;
+        }
+
+        .sig-image-container {
+            width: 50%;
+            max-width: 350px;
+            min-height: 1.6cm;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .sig-image-container img {
+            display: inline-block;
+            max-height: 70px;
+            max-width: 100%;
+            width: auto;
+            height: auto;
+        }
+
+        .sig-line {
+            border-top: 1px solid #333;
+            margin: 5px auto 8px auto;
+            border-radius: 1px;
+            width: 50%;
+            max-width: 350px;
+        }
+
+        .sig-meta-text {
+            font-size: 8pt;
+            color: #666;
+            margin-top: 2px;
+            display: block;
+        }
 
         h2 {
             color: #004d31;
@@ -219,7 +264,7 @@
             <div class="sig-image-container">
                 <img th:if="${report.technicianSignatureImageBase64 != null}"
                      th:src="'data:image/png;base64,' + ${report.technicianSignatureImageBase64}"
-                     style="max-height: 70px; margin: 0 auto; display: block; width: auto;"/>
+                     alt="Assinatura do Técnico Responsável"/>
             </div>
             <div class="sig-line"></div>
             <strong th:text="${report.technician?.name ?: 'Nome do Técnico'}"></strong><br/>

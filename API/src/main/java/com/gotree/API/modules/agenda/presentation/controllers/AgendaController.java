@@ -231,17 +231,17 @@ public class AgendaController {
     }
 
     @Operation(summary = "Confirma uma visita", description = "Marca uma visita agendada como confirmada pelo técnico responsável.")
-    @PutMapping("/visitas/{visitId}/confirmar")
+    @PutMapping("/event/{eventId}/confirmar")
     @PreAuthorize("hasAuthority('EDIT_AGENDA') or hasRole('ADMIN')")
-    public ResponseEntity<Void> confirmVisit(
-            @PathVariable Long visitId,
+    public ResponseEntity<Void> confirmEvent(
+            @PathVariable Long eventId,
             Authentication authentication) {
 
         // Extrai o utilizador atual do token de autenticação
         User currentUser = ((CustomUserDetails) authentication.getPrincipal()).user();
 
         // Passa o utilizador para o serviço validar
-        agendaService.confirmVisit(visitId, currentUser);
+        agendaService.confirmEvent(eventId, currentUser);
 
         return ResponseEntity.ok().build();
     }
